@@ -19,6 +19,7 @@ pub enum Statement {
 #[derive(Debug)]
 pub struct LiteralExpr {
     pub value: Value,
+    #[allow(dead_code)]
     pub expr_type: Type, // Track the expression's type
 }
 
@@ -41,6 +42,7 @@ pub struct BinaryExpr {
     pub left: Box<Expression>,
     pub operator: Tokentype,
     pub right: Box<Expression>,
+    #[allow(dead_code)]
     pub expr_type: Type, // Track the expression's type
 }
 
