@@ -35,7 +35,7 @@ fn repl() {
         }
 
         match parse(&tokens) {
-            Ok(mut ast) => {
+            Ok(ast) => {
                 // Type check the AST
                 match type_checker.check(& ast) {
                     Ok(_) => {

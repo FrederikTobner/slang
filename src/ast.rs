@@ -19,7 +19,6 @@ pub enum Statement {
 #[derive(Debug)]
 pub struct LiteralExpr {
     pub value: Value,
-    pub expr_type: Type, // Track the expression's type
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -41,7 +40,6 @@ pub struct BinaryExpr {
     pub left: Box<Expression>,
     pub operator: Tokentype,
     pub right: Box<Expression>,
-    pub expr_type: Type, // Track the expression's type
 }
 
 #[derive(Debug)]
