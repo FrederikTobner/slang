@@ -26,8 +26,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 
                 match identifier.as_str() {
                     "let" => tokens.push(Token::new(Tokentype::Let, identifier)),
-                    "int" => tokens.push(Token::new(Tokentype::TypeInt, identifier)),
-                    "string" => tokens.push(Token::new(Tokentype::TypeString, identifier)),
+                    "Int" => tokens.push(Token::new(Tokentype::TypeInt, identifier)),
+                    "String" => tokens.push(Token::new(Tokentype::TypeString, identifier)),
                     _ => tokens.push(Token::new(Tokentype::Identifier, identifier)),
                 }
             }
