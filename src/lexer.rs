@@ -6,12 +6,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 
     while let Some(&c) = chars.peek() {
         match c {
-            // Skip whitespace
             c if c.is_whitespace() => {
                 chars.next();
             }
 
-            // Identifiers and keywords
             c if c.is_alphabetic() => {
                 let mut identifier = String::new();
 
@@ -30,7 +28,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
             }
 
-            // Integer literals
             c if c.is_digit(10) => {
                 let mut number = String::new();
 
@@ -46,14 +43,13 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 tokens.push(Token::new(Tokentype::IntegerLiteral, number));
             }
 
-            // String literals
             '"' => {
-                chars.next(); // Skip opening quote
+                chars.next(); 
                 let mut string = String::new();
 
                 while let Some(&c) = chars.peek() {
                     if c == '"' {
-                        chars.next(); // Skip closing quote
+                        chars.next(); 
                         break;
                     } else {
                         string.push(c);
@@ -67,7 +63,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 chars.next();
                 tokens.push(Token::new(Tokentype::Colon, ":".to_string()));
             }
-            // Operators
             '+' => {
                 chars.next();
                 tokens.push(Token::new(Tokentype::Plus, "+".to_string()));
@@ -93,7 +88,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 tokens.push(Token::new(Tokentype::Semicolon, ";".to_string()));
             }
 
-            // Invalid characters
             _ => {
                 let invalid_char = chars.next().unwrap();
                 tokens.push(Token::new(Tokentype::Invalid, invalid_char.to_string()));

@@ -44,12 +44,11 @@ fn repl() {
 
         match parse(&tokens) {
             Ok(ast) => {
-                // Type check the AST
                 match type_checker.check(&ast) {
                     Ok(_) => {
                         println!("Type checking passed!");
                         let mut printer = ASTPrinter::new();
-                        printer.print(&ast); // Compile the AST to bytecode
+                        printer.print(&ast); 
                         let mut compiler = Compiler::new();
                         match compiler.compile(&ast) {
                             Ok(chunk) => {

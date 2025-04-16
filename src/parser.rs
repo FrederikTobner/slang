@@ -11,7 +11,6 @@ pub struct Parser<'a> {
 impl<'a> Parser<'a> {
     pub fn new(tokens: &'a [Token]) -> Self {
         let mut type_map = HashMap::new();
-        // Register all built-in types
         type_map.insert("String".to_string(), Type::String);
         type_map.insert("i32".to_string(), Type::I32);
         type_map.insert("i64".to_string(), Type::I64);
@@ -59,19 +58,16 @@ impl<'a> Parser<'a> {
 
         let token = self.advance();
         let name = token.value.to_string();
-        let mut var_type = Type::Unknown; // Default to unknown, will be inferred
+        let mut var_type = Type::Unknown; 
 
-        // Check for type annotation (let x: int = ...)
         if self.match_token(Tokentype::Colon) {
             if !self.check(Tokentype::Identifier) {
                 return Err("Expected type name after colon".to_string());
             }
 
-            // Get the type name
             let type_token = self.advance();
             let type_name = type_token.value.to_string();
 
-            // Look up the type in our registry
             if let Some(type_value) = self.type_map.get(&type_name) {
                 var_type = type_value.clone();
             } else {
@@ -108,7 +104,7 @@ impl<'a> Parser<'a> {
             return Ok(Expression::Unary(UnaryExpr {
                 operator,
                 right: Box::new(right),
-                expr_type: Type::Unknown, // Will be inferred by type checker
+                expr_type: Type::Unknown, 
             }));
         }
 
@@ -125,7 +121,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: Type::Unknown, // Default to unknown, will be inferred
+                expr_type: Type::Unknown, 
             });
         }
 
@@ -142,7 +138,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: Type::Unknown, // Default to unknown, will be inferred
+                expr_type: Type::Unknown, 
             });
         }
 
@@ -156,15 +152,12 @@ impl<'a> Parser<'a> {
                 .parse::<i64>()
                 .map_err(|_| format!("Invalid integer: {}", value_str))?;
 
-            // Check if the next token is an identifier that could be a type suffix
             if self.check(Tokentype::Identifier) {
                 let type_name = self.peek().value.clone();
 
-                // If it's a valid type suffix, consume it and create the appropriate literal
                 match type_name.as_str() {
                     "i32" => {
-                        self.advance(); // Consume the type token
-                        // Check if value fits in i32
+                        self.advance(); 
                         if base_value > i32::MAX as i64 || base_value < i32::MIN as i64 {
                             return Err(format!("Value {} is out of range for i32", base_value));
                         }
@@ -174,15 +167,14 @@ impl<'a> Parser<'a> {
                         }));
                     }
                     "i64" => {
-                        self.advance(); // Consume the type token
+                        self.advance(); 
                         return Ok(Expression::Literal(LiteralExpr {
                             value: Value::I64(base_value),
                             expr_type: Type::I64,
                         }));
                     }
                     "u32" => {
-                        self.advance(); // Consume the type token
-                        // Check if value fits in u32
+                        self.advance(); 
                         if base_value < 0 || base_value > u32::MAX as i64 {
                             return Err(format!("Value {} is out of range for u32", base_value));
                         }
@@ -192,8 +184,7 @@ impl<'a> Parser<'a> {
                         }));
                     }
                     "u64" => {
-                        self.advance(); // Consume the type token
-                        // Check if value fits in u64
+                        self.advance(); 
                         if base_value < 0 {
                             return Err(format!("Value {} is out of range for u64", base_value));
                         }
@@ -202,10 +193,9 @@ impl<'a> Parser<'a> {
                             expr_type: Type::U64,
                         }));
                     }
-                    _ => {} // Not a type suffix, treat as regular integer
+                    _ => {} 
                 }
             }
-            // If no type suffix, use default integer type
             return Ok(Expression::Literal(LiteralExpr {
                 value: Value::I32(base_value as i32),
                 expr_type: Type::I32,

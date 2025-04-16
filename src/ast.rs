@@ -1,7 +1,6 @@
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
 
-// AST Node types
 #[derive(Debug)]
 pub enum Expression {
     Literal(LiteralExpr),
@@ -21,7 +20,7 @@ pub enum Statement {
 pub struct LiteralExpr {
     pub value: Value,
     #[allow(dead_code)]
-    pub expr_type: Type, // Track the expression's type
+    pub expr_type: Type, 
 }
 
 #[derive(Debug)]
@@ -29,7 +28,7 @@ pub struct UnaryExpr {
     pub operator: Tokentype,
     pub right: Box<Expression>,
     #[allow(dead_code)]
-    pub expr_type: Type, // Track the expression's type
+    pub expr_type: Type, 
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -39,7 +38,7 @@ pub enum Type {
     U32,
     U64,
     String,
-    Unknown, // Used during type inference
+    Unknown, 
 }
 
 #[derive(Debug)]
@@ -58,14 +57,14 @@ pub struct BinaryExpr {
     pub operator: Tokentype,
     pub right: Box<Expression>,
     #[allow(dead_code)] 
-    pub expr_type: Type, // Track the expression's type
+    pub expr_type: Type, 
 }
 
 #[derive(Debug)]
 pub struct LetStatement {
     pub name: String,
     pub value: Expression,
-    pub expr_type: Type, // Track the expression's type
+    pub expr_type: Type, 
 }
 
 impl Statement {

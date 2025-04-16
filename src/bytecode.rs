@@ -96,6 +96,7 @@ impl Chunk {
     }
 
     // Serialization methods
+   #[allow(dead_code)]
     pub fn serialize(&self, writer: &mut dyn Write) -> std::io::Result<()> {
         // Write code size and bytes
         let code_len = self.code.len() as u32;
@@ -138,6 +139,7 @@ impl Chunk {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn deserialize(reader: &mut dyn Read) -> std::io::Result<Self> {
         let mut chunk = Chunk::new();
 

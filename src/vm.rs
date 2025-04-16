@@ -24,7 +24,7 @@ impl VM {
             }
         }
 
-        // Print all values left on the stack when the program ends
+        // Print all values left on the stack when the program ends for debugging
         if !self.stack.is_empty() {
             println!("\n=== Values on stack at end of execution ===");
             for value in &self.stack {
@@ -36,10 +36,7 @@ impl VM {
     }
 
     fn execute_instruction(&mut self, chunk: &Chunk) -> Result<(), String> {
-        // Read the next byte and advance the instruction pointer
         let instruction = self.read_byte(chunk);
-
-        // Convert to opcode
         let op = OpCode::from_u8(instruction)
             .ok_or_else(|| format!("Unknown opcode: {}", instruction))?;
 
@@ -92,7 +89,6 @@ impl VM {
                 }
             }
             OpCode::Return => {
-                // End execution
                 self.ip = chunk.code.len();
             }
             OpCode::Print => {
@@ -105,7 +101,6 @@ impl VM {
                     return Err("Invalid variable index".to_string());
                 }
                 let var_name = &chunk.identifiers[var_index];
-
                 if let Some(value) = self.variables.get(var_name) {
                     self.stack.push(value.clone());
                 } else {
@@ -113,18 +108,14 @@ impl VM {
                 }
             }
             OpCode::SetVariable => {
-                // Don't pop yet - we want to leave the value on the stack
                 if self.stack.is_empty() {
                     return Err("Stack underflow".to_string());
                 }
-
                 let var_index = self.read_byte(chunk) as usize;
                 if var_index >= chunk.identifiers.len() {
                     return Err("Invalid variable index".to_string());
                 }
                 let var_name = chunk.identifiers[var_index].clone();
-
-                // Get the value but leave it on the stack
                 let value = self.stack.last().unwrap().clone();
                 self.variables.insert(var_name, value);
             }
@@ -155,13 +146,10 @@ impl VM {
         if self.stack.len() < 2 {
             return Err("Stack underflow".to_string());
         }
-
         let b = self.pop()?;
         let a = self.pop()?;
-
         let result = op(a, b)?;
         self.stack.push(result);
-
         Ok(())
     }
 }
