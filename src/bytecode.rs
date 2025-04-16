@@ -117,23 +117,23 @@ impl Chunk {
         for value in &self.constants {
             match value {
                 Value::I32(i) => {
-                    writer.write_all(&[1])?; // Type tag: 0 for integer
+                    writer.write_all(&[0])?; // Type tag: 0 for integer
                     writer.write_all(&i.to_le_bytes())?;
                 }
                 Value::I64(i) => {
-                    writer.write_all(&[2])?; // Type tag: 0 for integer
+                    writer.write_all(&[1])?; // Type tag: 0 for integer
                     writer.write_all(&i.to_le_bytes())?;
                 }
                 Value::U32(i) => {
-                    writer.write_all(&[3])?; // Type tag: 0 for integer
+                    writer.write_all(&[2])?; // Type tag: 0 for integer
                     writer.write_all(&i.to_le_bytes())?;
                 }
                 Value::U64(i) => {
-                    writer.write_all(&[4])?; // Type tag: 0 for integer
+                    writer.write_all(&[3])?; // Type tag: 0 for integer
                     writer.write_all(&i.to_le_bytes())?;
                 }
                 Value::String(s) => {
-                    writer.write_all(&[5])?; // Type tag: 1 for string
+                    writer.write_all(&[4])?; // Type tag: 4 for string
                     let bytes = s.as_bytes();
                     let len = bytes.len() as u32;
                     writer.write_all(&len.to_le_bytes())?;
@@ -186,13 +186,34 @@ impl Chunk {
 
             match type_tag[0] {
                 0 => {
-                    // Integer
+                    // Integer 64 bit
                     let mut int_bytes = [0u8; 8];
                     reader.read_exact(&mut int_bytes)?;
                     let value = i64::from_le_bytes(int_bytes);
                     chunk.constants.push(Value::I64(value));
                 }
                 1 => {
+                    // Integer 32 bit
+                    let mut int_bytes = [0u8; 4];
+                    reader.read_exact(&mut int_bytes)?;
+                    let value = i32::from_le_bytes(int_bytes);
+                    chunk.constants.push(Value::I32(value));
+                }
+                2 => {
+                    // Unsigned Integer 64 bit
+                    let mut int_bytes = [0u8; 8];
+                    reader.read_exact(&mut int_bytes)?;
+                    let value = u64::from_le_bytes(int_bytes);
+                    chunk.constants.push(Value::U64(value));
+                }
+                3 => {
+                    // Unsigned Integer 32 bit
+                    let mut int_bytes = [0u8; 4];
+                    reader.read_exact(&mut int_bytes)?;
+                    let value = u32::from_le_bytes(int_bytes);
+                    chunk.constants.push(Value::U32(value));
+                }
+                4 => {
                     // String
                     let mut len_bytes = [0u8; 4];
                     reader.read_exact(&mut len_bytes)?;
