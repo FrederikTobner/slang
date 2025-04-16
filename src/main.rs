@@ -127,11 +127,11 @@ fn read_bytecode(input_path: &str) -> Result<Chunk, String> {
     
     // Find and extract the bytecode file
     if let Ok(mut bytecode_file) = archive.by_name("bytecode.bin") {
-        let mut cursor = std::io::Cursor::new(Vec::new());
-        std::io::copy(&mut bytecode_file, &mut cursor)
+        let mut buffer = Vec::new();
+        std::io::copy(&mut bytecode_file, &mut buffer)
             .map_err(|e| format!("Failed to read bytecode data: {}", e))?;
         
-        cursor.set_position(0);
+        let mut cursor = std::io::Cursor::new(buffer);
         let chunk = Chunk::deserialize(&mut cursor)
             .map_err(|e| format!("Failed to deserialize bytecode: {}", e))?;
         

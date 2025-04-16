@@ -186,18 +186,18 @@ impl Chunk {
 
             match type_tag[0] {
                 0 => {
-                    // Integer 64 bit
-                    let mut int_bytes = [0u8; 8];
-                    reader.read_exact(&mut int_bytes)?;
-                    let value = i64::from_le_bytes(int_bytes);
-                    chunk.constants.push(Value::I64(value));
-                }
-                1 => {
                     // Integer 32 bit
                     let mut int_bytes = [0u8; 4];
                     reader.read_exact(&mut int_bytes)?;
                     let value = i32::from_le_bytes(int_bytes);
                     chunk.constants.push(Value::I32(value));
+                }
+                1 => {
+                    // Integer 64 bit
+                    let mut int_bytes = [0u8; 8];
+                    reader.read_exact(&mut int_bytes)?;
+                    let value = i64::from_le_bytes(int_bytes);
+                    chunk.constants.push(Value::I64(value));
                 }
                 2 => {
                     // Unsigned Integer 64 bit
