@@ -11,8 +11,6 @@ pub enum Tokentype {
     Invalid,        // Unrecognized token
     Equal,          // =
     Colon,          // :     
-    TypeInt,        // Int
-    TypeString,     // String
     Semicolon,      // ;
 }
 

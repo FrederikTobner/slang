@@ -1,4 +1,4 @@
-use crate::ast::{BinaryExpr, Expression, LetStatement, LiteralExpr, Statement};
+use crate::ast::{BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, UnaryExpr};
 use crate::bytecode::{Chunk, OpCode, Value};
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
@@ -51,7 +51,6 @@ impl Compiler {
         self.emit_op(OpCode::Constant);
         self.emit_byte(constant_index as u8);
     }
-
 }
 
 impl Visitor<Result<(), String>> for Compiler {
@@ -100,13 +99,26 @@ impl Visitor<Result<(), String>> for Compiler {
             Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
             Expression::Variable(name) => self.visit_variable_expression(name),
+            Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
         }
     }
 
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> Result<(), String> {
         match &lit_expr.value {
-            crate::ast::Value::Integer(i) => {
+            crate::ast::Value::I32(i) => {
+                self.emit_constant(Value::Integer(*i as i64)); // Convert to generic Integer for VM
+            }
+            crate::ast::Value::I64(i) => {
                 self.emit_constant(Value::Integer(*i));
+            }
+            crate::ast::Value::U32(i) => {
+                self.emit_constant(Value::Integer(*i as i64)); // Convert to generic Integer for VM
+            }
+            crate::ast::Value::U64(i) => {
+                if *i > i64::MAX as u64 {
+                    return Err(format!("Value {} is too large for VM", i));
+                }
+                self.emit_constant(Value::Integer(*i as i64)); // Convert to generic Integer for VM
             }
             crate::ast::Value::String(s) => {
                 self.emit_constant(Value::String(s.clone()));
@@ -140,6 +152,18 @@ impl Visitor<Result<(), String>> for Compiler {
         Ok(())
     }
 
+    fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> Result<(), String> {
+        // Compile the operand
+        self.visit_expression(&unary_expr.right)?;
+        
+        // Emit the appropriate operation
+        match unary_expr.operator {
+            Tokentype::Minus => self.emit_op(OpCode::Negate),
+            _ => return Err(format!("Unsupported unary operator: {:?}", unary_expr.operator)),
+        }
+        
+        Ok(())
+    }
     fn visit_variable_expression(&mut self, name: &str) -> Result<(), String> {
         // Add variable name to identifiers table
         let var_index = self.chunk.add_identifier(name.to_string());

@@ -1,4 +1,6 @@
-use crate::ast::{Expression, Statement, Type, Value, LiteralExpr, BinaryExpr, LetStatement};
+use crate::ast::{
+    BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, Type, UnaryExpr, Value,
+};
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
 
@@ -24,6 +26,43 @@ impl TypeChecker {
         }
         Ok(())
     }
+
+    fn can_coerce_numeric(&self, value: &Value, target_type: &Type) -> bool {
+        match (value, target_type) {
+            // I32 can fit in I64
+            (Value::I32(_), Type::I64) => true,
+
+            // U32 can fit in U64 or I64 (if positive)
+            (Value::U32(_), Type::U64) => true,
+            (Value::U32(_), Type::I64) => true,
+
+            // I32 can fit in U32/U64 if non-negative
+            (Value::I32(n), Type::U32) => *n >= 0 && *n <= i32::MAX,
+            (Value::I32(n), Type::U64) => *n >= 0,
+
+            // I64 can fit in I32 if within range
+            (Value::I64(n), Type::I32) => *n >= i32::MIN as i64 && *n <= i32::MAX as i64,
+
+            // I64 can fit in U32/U64 if non-negative and within range
+            (Value::I64(n), Type::U32) => *n >= 0 && *n <= u32::MAX as i64,
+            (Value::I64(n), Type::U64) => *n >= 0,
+
+            // U64 can fit in U32/I32/I64 if within range
+            (Value::U64(n), Type::U32) => *n <= u32::MAX as u64,
+            (Value::U64(n), Type::I32) => *n <= i32::MAX as u64,
+            (Value::U64(n), Type::I64) => *n <= i64::MAX as u64,
+
+            // Same types always coerce
+            (Value::I32(_), Type::I32) => true,
+            (Value::I64(_), Type::I64) => true,
+            (Value::U32(_), Type::U32) => true,
+            (Value::U64(_), Type::U64) => true,
+            (Value::String(_), Type::String) => true,
+
+            // Other combinations are not coercible
+            _ => false,
+        }
+    }
 }
 
 impl Visitor<Result<Type, String>> for TypeChecker {
@@ -46,11 +85,27 @@ impl Visitor<Result<Type, String>> for TypeChecker {
         let final_type = if let_stmt.expr_type == Type::Unknown {
             expr_type.clone()
         } else if let_stmt.expr_type != expr_type {
-            // Type mismatch
-            return Err(format!(
-                "Type mismatch: variable {} is {:?} but expression is {:?}",
-                let_stmt.name, let_stmt.expr_type, expr_type
-            ));
+            // Check if this is a numeric literal that can be coerced
+            match &let_stmt.value {
+                Expression::Literal(lit) => {
+                    if self.can_coerce_numeric(&lit.value, &let_stmt.expr_type) {
+                        let_stmt.expr_type.clone()
+                    } else {
+                        // Type mismatch
+                        return Err(format!(
+                            "Type mismatch: variable {} is {:?} but expression is {:?}",
+                            let_stmt.name, let_stmt.expr_type, expr_type
+                        ));
+                    }
+                }
+                _ => {
+                    // Type mismatch for non-literal expressions
+                    return Err(format!(
+                        "Type mismatch: variable {} is {:?} but expression is {:?}",
+                        let_stmt.name, let_stmt.expr_type, expr_type
+                    ));
+                }
+            }
         } else {
             let_stmt.expr_type.clone()
         };
@@ -66,13 +121,17 @@ impl Visitor<Result<Type, String>> for TypeChecker {
             Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
             Expression::Variable(name) => self.visit_variable_expression(name),
+            Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
         }
     }
 
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> Result<Type, String> {
         // Infer type from literal
         let inferred = match lit_expr.value {
-            Value::Integer(_) => Type::Integer,
+            Value::I32(_) => Type::I32,
+            Value::I64(_) => Type::I64,
+            Value::U32(_) => Type::U32,
+            Value::U64(_) => Type::U64,
             Value::String(_) => Type::String,
         };
         Ok(inferred)
@@ -85,11 +144,30 @@ impl Visitor<Result<Type, String>> for TypeChecker {
 
         // Type checking rules for binary operations
         match (bin_expr.operator, &left_type, &right_type) {
-            // Integer arithmetic
-            (Tokentype::Plus, Type::Integer, Type::Integer) => Ok(Type::Integer),
-            (Tokentype::Minus, Type::Integer, Type::Integer) => Ok(Type::Integer),
-            (Tokentype::Multiply, Type::Integer, Type::Integer) => Ok(Type::Integer),
-            (Tokentype::Divide, Type::Integer, Type::Integer) => Ok(Type::Integer),
+            // Integer arithmetic for all numeric types
+            (
+                Tokentype::Plus | Tokentype::Minus | Tokentype::Multiply | Tokentype::Divide,
+                Type::I32,
+                Type::I32,
+            ) => Ok(Type::I32),
+
+            (
+                Tokentype::Plus | Tokentype::Minus | Tokentype::Multiply | Tokentype::Divide,
+                Type::I64,
+                Type::I64,
+            ) => Ok(Type::I64),
+
+            (
+                Tokentype::Plus | Tokentype::Minus | Tokentype::Multiply | Tokentype::Divide,
+                Type::U32,
+                Type::U32,
+            ) => Ok(Type::U32),
+
+            (
+                Tokentype::Plus | Tokentype::Minus | Tokentype::Multiply | Tokentype::Divide,
+                Type::U64,
+                Type::U64,
+            ) => Ok(Type::U64),
 
             // String concatenation
             (Tokentype::Plus, Type::String, Type::String) => Ok(Type::String),
@@ -102,6 +180,26 @@ impl Visitor<Result<Type, String>> for TypeChecker {
         }
     }
 
+    fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> Result<Type, String> {
+        let operand_type = self.visit_expression(&unary_expr.right)?;
+
+        match (unary_expr.operator, &operand_type) {
+            // Negation for numeric types
+            (Tokentype::Minus, Type::I32) => Ok(Type::I32),
+            (Tokentype::Minus, Type::I64) => Ok(Type::I64),
+            // Cannot negate unsigned types
+            (Tokentype::Minus, Type::U32) => Err("Cannot negate unsigned type U32".to_string()),
+            (Tokentype::Minus, Type::U64) => Err("Cannot negate unsigned type U64".to_string()),
+            // Cannot negate strings
+            (Tokentype::Minus, Type::String) => Err("Cannot negate string type".to_string()),
+
+            // Other unary operators could be added here
+            _ => Err(format!(
+                "Invalid unary operation: {:?} {:?}",
+                unary_expr.operator, operand_type
+            )),
+        }
+    }
     fn visit_variable_expression(&mut self, name: &str) -> Result<Type, String> {
         // Look up variable type
         if let Some(var_type) = self.variables.get(name) {

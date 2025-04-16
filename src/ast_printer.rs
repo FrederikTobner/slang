@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Statement, BinaryExpr, LiteralExpr, Value, LetStatement};
+use crate::ast::{Expression, Statement, BinaryExpr, LiteralExpr, Value, LetStatement, UnaryExpr};
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
 
@@ -51,12 +51,16 @@ impl Visitor<()> for ASTPrinter {
             Expression::Literal(lit) => self.visit_literal_expression(lit),
             Expression::Binary(bin) => self.visit_binary_expression(bin),
             Expression::Variable(name) => self.visit_variable_expression(name),
+            Expression::Unary(unary) => self.visit_unary_expression(unary)
         }
     }
 
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> () {
         match &lit_expr.value {
-            Value::Integer(i) => println!("{}Int: {}", self.indent(), i),
+            Value::I32(i) => println!("{}I32: {}", self.indent(), i),
+            Value::I64(i) => println!("{}I64: {}", self.indent(), i),
+            Value::U32(u) => println!("{}U32: {}", self.indent(), u),
+            Value::U64(u) => println!("{}U64: {}", self.indent(), u),
             Value::String(s) => println!("{}String: \"{}\"", self.indent(), s),
         }
     }
@@ -75,6 +79,19 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level += 1;
         self.visit_expression(&bin_expr.left);
         self.visit_expression(&bin_expr.right);
+        self.indent_level -= 1;
+    }
+
+    fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> () {
+        let op_str = match unary_expr.operator {
+            Tokentype::Minus => "-",
+            _ => "?",
+        };
+        
+        println!("{}Unary: {}", self.indent(), op_str);
+        
+        self.indent_level += 1;
+        self.visit_expression(&unary_expr.right);
         self.indent_level -= 1;
     }
 

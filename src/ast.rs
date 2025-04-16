@@ -7,6 +7,7 @@ pub enum Expression {
     Literal(LiteralExpr),
     Binary(BinaryExpr),
     Variable(String),
+    Unary(UnaryExpr),
 }
 
 #[derive(Debug)]
@@ -23,16 +24,30 @@ pub struct LiteralExpr {
     pub expr_type: Type, // Track the expression's type
 }
 
+#[derive(Debug)]
+pub struct UnaryExpr {
+    pub operator: Tokentype,
+    pub right: Box<Expression>,
+    #[allow(dead_code)]
+    pub expr_type: Type, // Track the expression's type
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
-    Integer,
+    I32,
+    I64,
+    U32,
+    U64,
     String,
     Unknown, // Used during type inference
 }
 
 #[derive(Debug)]
 pub enum Value {
-    Integer(i64),
+    I32(i32),
+    I64(i64),
+    U32(u32),
+    U64(u64),
     String(String),
 }
 
@@ -42,7 +57,7 @@ pub struct BinaryExpr {
     pub left: Box<Expression>,
     pub operator: Tokentype,
     pub right: Box<Expression>,
-    #[allow(dead_code)]
+    #[allow(dead_code)] 
     pub expr_type: Type, // Track the expression's type
 }
 
@@ -67,6 +82,7 @@ impl Expression {
             Expression::Literal(lit) => visitor.visit_literal_expression(lit),
             Expression::Binary(bin) => visitor.visit_binary_expression(bin),
             Expression::Variable(name) => visitor.visit_variable_expression(name),
+            Expression::Unary(unary) => visitor.visit_unary_expression(unary),
         }
     }
 }
