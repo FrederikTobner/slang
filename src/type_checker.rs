@@ -53,6 +53,51 @@ impl TypeChecker {
             _ => false,
         }
     }
+
+    fn promote_numeric_types(
+        &self,
+        left: &Type,
+        right: &Type,
+        op: &Tokentype,
+    ) -> Result<Type, String> {
+        match (left, right) {
+            (Type::I32, Type::I64) => Ok(Type::I64),
+            (Type::I64, Type::I32) => Ok(Type::I64),
+
+            (Type::U32, Type::U64) => Ok(Type::U64),
+            (Type::U64, Type::U32) => Ok(Type::U64),
+
+            (Type::I32, Type::U32) => Ok(Type::I64),
+            (Type::U32, Type::I32) => Ok(Type::I64),
+
+            (Type::I32, Type::U64) => {
+                if *op == Tokentype::Minus {
+                    Err("Subtracting U64 from I32 might cause underflow".to_string())
+                } else {
+                    Ok(Type::I64)
+                }
+            }
+            (Type::U64, Type::I32) => Ok(Type::I64),
+
+            (Type::I64, Type::U32) => Ok(Type::I64),
+            (Type::U32, Type::I64) => Ok(Type::I64),
+            (Type::I64, Type::U64) => {
+                if *op == Tokentype::Minus {
+                    Err("Subtracting U64 from I64 might cause underflow".to_string())
+                } else {
+                    Ok(Type::I64)
+                }
+            }
+            (Type::U64, Type::I64) => Ok(Type::I64),
+
+            (Type::String, Type::String) => Ok(Type::String),
+
+            _ => Err(format!(
+                "Cannot perform operation {:?} on types {:?} and {:?}",
+                op, left, right
+            )),
+        }
+    }
 }
 
 impl Visitor<Result<Type, String>> for TypeChecker {
@@ -131,38 +176,29 @@ impl Visitor<Result<Type, String>> for TypeChecker {
         let left_type = self.visit_expression(&bin_expr.left)?;
         let right_type = self.visit_expression(&bin_expr.right)?;
 
-        match (bin_expr.operator, &left_type, &right_type) {
-            (
-                Tokentype::Plus | Tokentype::Minus | Tokentype::Multiply | Tokentype::Divide,
-                Type::I32,
-                Type::I32,
-            ) => Ok(Type::I32),
+        // Handle arithmetic operations
+        if matches!(
+            bin_expr.operator,
+            Tokentype::Plus | Tokentype::Minus | Tokentype::Multiply | Tokentype::Divide
+        ) {
+            if left_type == right_type {
+                return Ok(left_type);
+            }
 
-            (
-                Tokentype::Plus | Tokentype::Minus | Tokentype::Multiply | Tokentype::Divide,
-                Type::I64,
-                Type::I64,
-            ) => Ok(Type::I64),
-
-            (
-                Tokentype::Plus | Tokentype::Minus | Tokentype::Multiply | Tokentype::Divide,
-                Type::U32,
-                Type::U32,
-            ) => Ok(Type::U32),
-
-            (
-                Tokentype::Plus | Tokentype::Minus | Tokentype::Multiply | Tokentype::Divide,
-                Type::U64,
-                Type::U64,
-            ) => Ok(Type::U64),
-
-            (Tokentype::Plus, Type::String, Type::String) => Ok(Type::String),
-
-            _ => Err(format!(
-                "Invalid operation: {:?} {:?} {:?}",
-                left_type, bin_expr.operator, right_type
-            )),
+            return self.promote_numeric_types(&left_type, &right_type, &bin_expr.operator);
         }
+
+        if bin_expr.operator == Tokentype::Plus
+            && left_type == Type::String
+            && right_type == Type::String
+        {
+            return Ok(Type::String);
+        }
+
+        Err(format!(
+            "Invalid operation: {:?} {:?} {:?}",
+            left_type, bin_expr.operator, right_type
+        ))
     }
 
     fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> Result<Type, String> {
