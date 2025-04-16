@@ -37,14 +37,20 @@ impl OpCode {
 
 #[derive(Debug, Clone)]
 pub enum Value {
-    Integer(i64),
+    I32(i32),
+    I64(i64),
+    U32(u32),
+    U64(u64),
     String(String),
 }
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Value::Integer(i) => write!(f, "{}", i),
+            Value::I32(i) => write!(f, "{}", i),
+            Value::I64(i) => write!(f, "{}", i),
+            Value::U32(i) => write!(f, "{}", i),
+            Value::U64(i) => write!(f, "{}", i),
             Value::String(s) => write!(f, "\"{}\"", s),
         }
     }
@@ -110,12 +116,24 @@ impl Chunk {
         // Write each constant
         for value in &self.constants {
             match value {
-                Value::Integer(i) => {
-                    writer.write_all(&[0])?; // Type tag: 0 for integer
+                Value::I32(i) => {
+                    writer.write_all(&[1])?; // Type tag: 0 for integer
+                    writer.write_all(&i.to_le_bytes())?;
+                }
+                Value::I64(i) => {
+                    writer.write_all(&[2])?; // Type tag: 0 for integer
+                    writer.write_all(&i.to_le_bytes())?;
+                }
+                Value::U32(i) => {
+                    writer.write_all(&[3])?; // Type tag: 0 for integer
+                    writer.write_all(&i.to_le_bytes())?;
+                }
+                Value::U64(i) => {
+                    writer.write_all(&[4])?; // Type tag: 0 for integer
                     writer.write_all(&i.to_le_bytes())?;
                 }
                 Value::String(s) => {
-                    writer.write_all(&[1])?; // Type tag: 1 for string
+                    writer.write_all(&[5])?; // Type tag: 1 for string
                     let bytes = s.as_bytes();
                     let len = bytes.len() as u32;
                     writer.write_all(&len.to_le_bytes())?;
@@ -172,7 +190,7 @@ impl Chunk {
                     let mut int_bytes = [0u8; 8];
                     reader.read_exact(&mut int_bytes)?;
                     let value = i64::from_le_bytes(int_bytes);
-                    chunk.constants.push(Value::Integer(value));
+                    chunk.constants.push(Value::I64(value));
                 }
                 1 => {
                     // String

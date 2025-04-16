@@ -6,7 +6,6 @@ use crate::visitor::Visitor;
 pub struct Compiler {
     pub chunk: Chunk,
     line: usize,
-    // Track variables that are in scope
     variables: Vec<String>,
 }
 
@@ -14,7 +13,7 @@ impl Compiler {
     pub fn new() -> Self {
         Compiler {
             chunk: Chunk::new(),
-            line: 1, // Start at line 1
+            line: 1, 
             variables: Vec::new(),
         }
     }
@@ -44,7 +43,6 @@ impl Compiler {
     fn emit_constant(&mut self, value: Value) {
         let constant_index = self.chunk.add_constant(value);
         if constant_index > 255 {
-            // This is a limitation for now - we can extend later to support more constants
             panic!("Too many constants in one chunk");
         }
 
@@ -65,29 +63,23 @@ impl Visitor<Result<(), String>> for Compiler {
         // Compile the expression
         self.visit_expression(expr)?;
 
-        // For expression statements, we print the value
         self.emit_op(OpCode::Print);
 
-        // Then pop it from the stack (clean up)
         self.emit_op(OpCode::Pop);
 
         Ok(())
     }
 
     fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> Result<(), String> {
-        // First compile the value expression
         self.visit_expression(&let_stmt.value)?;
 
-        // Store the variable name for scope tracking
         self.variables.push(let_stmt.name.clone());
 
-        // Add variable name to identifiers table
         let var_index = self.chunk.add_identifier(let_stmt.name.clone());
         if var_index > 255 {
             return Err("Too many variables in one scope".to_string());
         }
 
-        // Emit the set variable instruction
         self.emit_op(OpCode::SetVariable);
         self.emit_byte(var_index as u8);
 
@@ -105,37 +97,31 @@ impl Visitor<Result<(), String>> for Compiler {
 
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> Result<(), String> {
         match &lit_expr.value {
-            crate::ast::Value::I32(i) => {
-                self.emit_constant(Value::Integer(*i as i64)); // Convert to generic Integer for VM
-            }
-            crate::ast::Value::I64(i) => {
-                self.emit_constant(Value::Integer(*i));
-            }
-            crate::ast::Value::U32(i) => {
-                self.emit_constant(Value::Integer(*i as i64)); // Convert to generic Integer for VM
-            }
-            crate::ast::Value::U64(i) => {
-                if *i > i64::MAX as u64 {
-                    return Err(format!("Value {} is too large for VM", i));
-                }
-                self.emit_constant(Value::Integer(*i as i64)); // Convert to generic Integer for VM
-            }
-            crate::ast::Value::String(s) => {
-                self.emit_constant(Value::String(s.clone()));
-            }
+        crate::ast::Value::I32(i) => {
+            self.emit_constant(Value::I32(*i));
         }
+        crate::ast::Value::I64(i) => {
+            self.emit_constant(Value::I64(*i)); // Keep as Integer for backward compatibility
+        }
+        crate::ast::Value::U32(i) => {
+            self.emit_constant(Value::U32(*i));
+        }
+        crate::ast::Value::U64(i) => {
+            self.emit_constant(Value::U64(*i));
+        }
+        crate::ast::Value::String(s) => {
+            self.emit_constant(Value::String(s.clone()));
+        }
+    }
 
-        Ok(())
+    Ok(())
     }
 
     fn visit_binary_expression(&mut self, bin_expr: &BinaryExpr) -> Result<(), String> {
-        // Compile the left side
         self.visit_expression(&bin_expr.left)?;
 
-        // Compile the right side
         self.visit_expression(&bin_expr.right)?;
 
-        // Emit the appropriate operation
         match bin_expr.operator {
             Tokentype::Plus => self.emit_op(OpCode::Add),
             Tokentype::Minus => self.emit_op(OpCode::Subtract),
@@ -153,10 +139,8 @@ impl Visitor<Result<(), String>> for Compiler {
     }
 
     fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> Result<(), String> {
-        // Compile the operand
         self.visit_expression(&unary_expr.right)?;
         
-        // Emit the appropriate operation
         match unary_expr.operator {
             Tokentype::Minus => self.emit_op(OpCode::Negate),
             _ => return Err(format!("Unsupported unary operator: {:?}", unary_expr.operator)),
@@ -165,13 +149,11 @@ impl Visitor<Result<(), String>> for Compiler {
         Ok(())
     }
     fn visit_variable_expression(&mut self, name: &str) -> Result<(), String> {
-        // Add variable name to identifiers table
         let var_index = self.chunk.add_identifier(name.to_string());
         if var_index > 255 {
             return Err("Too many variables".to_string());
         }
 
-        // Emit the get variable instruction
         self.emit_op(OpCode::GetVariable);
         self.emit_byte(var_index as u8);
 

@@ -51,7 +51,10 @@ impl VM {
             }
             OpCode::Add => {
                 self.binary_op(|a, b| match (a, b) {
-                    (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a + b)),
+                    (Value::I32(a), Value::I32(b)) => Ok(Value::I32(a + b)),
+                    (Value::I64(a), Value::I64(b)) => Ok(Value::I64(a + b)),
+                    (Value::U32(a), Value::U32(b)) => Ok(Value::U32(a + b)),
+                    (Value::U64(a), Value::U64(b)) => Ok(Value::U64(a + b)),
                     (Value::String(a), Value::String(b)) => {
                         Ok(Value::String(format!("{}{}", a, b)))
                     }
@@ -60,23 +63,71 @@ impl VM {
             }
             OpCode::Subtract => {
                 self.binary_op(|a, b| match (a, b) {
-                    (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a - b)),
+                    (Value::I32(a), Value::I32(b)) => Ok(Value::I32(a - b)),
+                    (Value::I64(a), Value::I64(b)) => Ok(Value::I64(a - b)),
+                    (Value::U32(a), Value::U32(b)) => {
+                        if a >= b {
+                            Ok(Value::U32(a - b))
+                        } else {
+                            Err("Unsigned underflow".to_string())
+                        }
+                    }
+                    (Value::U64(a), Value::U64(b)) => {
+                        if a >= b {
+                            Ok(Value::U64(a - b))
+                        } else {
+                            Err("Unsigned underflow".to_string())
+                        }
+                    }
                     _ => Err("Cannot subtract these types".to_string()),
                 })?;
             }
             OpCode::Multiply => {
                 self.binary_op(|a, b| match (a, b) {
-                    (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a * b)),
+                    (Value::I32(a), Value::I32(b)) => match a.checked_mul(b) {
+                        Some(result) => Ok(Value::I32(result)),
+                        None => Err("Integer overflow in I32 multiplication".to_string()),
+                    },
+                    (Value::I64(a), Value::I64(b)) => match a.checked_mul(b) {
+                        Some(result) => Ok(Value::I64(result)),
+                        None => Err("Integer overflow in I64 multiplication".to_string()),
+                    },
+                    (Value::U32(a), Value::U32(b)) => match a.checked_mul(b) {
+                        Some(result) => Ok(Value::U32(result)),
+                        None => Err("Integer overflow in U32 multiplication".to_string()),
+                    },
+                    (Value::U64(a), Value::U64(b)) => match a.checked_mul(b) {
+                        Some(result) => Ok(Value::U64(result)),
+                        None => Err("Integer overflow in U64 multiplication".to_string()),
+                    },
                     _ => Err("Cannot multiply these types".to_string()),
                 })?;
             }
             OpCode::Divide => {
                 self.binary_op(|a, b| match (a, b) {
-                    (Value::Integer(a), Value::Integer(b)) => {
+                    (Value::I32(a), Value::I32(b)) => {
                         if b == 0 {
                             return Err("Division by zero".to_string());
                         }
-                        Ok(Value::Integer(a / b))
+                        Ok(Value::I32(a / b))
+                    }
+                    (Value::I64(a), Value::I64(b)) => {
+                        if b == 0 {
+                            return Err("Division by zero".to_string());
+                        }
+                        Ok(Value::I64(a / b))
+                    }
+                    (Value::U32(a), Value::U32(b)) => {
+                        if b == 0 {
+                            return Err("Division by zero".to_string());
+                        }
+                        Ok(Value::U32(a / b))
+                    }
+                    (Value::U64(a), Value::U64(b)) => {
+                        if b == 0 {
+                            return Err("Division by zero".to_string());
+                        }
+                        Ok(Value::U64(a / b))
                     }
                     _ => Err("Cannot divide these types".to_string()),
                 })?;
@@ -84,7 +135,10 @@ impl VM {
             OpCode::Negate => {
                 let value = self.pop()?;
                 match value {
-                    Value::Integer(i) => self.stack.push(Value::Integer(-i)),
+                    Value::I32(i) => self.stack.push(Value::I32(-i)),
+                    Value::I64(i) => self.stack.push(Value::I64(-i)),
+                    Value::U32(_) => return Err("Cannot negate unsigned integer U32".to_string()),
+                    Value::U64(_) => return Err("Cannot negate unsigned integer U64".to_string()),
                     _ => return Err("Can only negate numbers".to_string()),
                 }
             }
