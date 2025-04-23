@@ -19,9 +19,7 @@ impl VM {
     pub fn interpret(&mut self, chunk: &Chunk) -> Result<(), String> {
         self.ip = 0;
         while self.ip < chunk.code.len() {
-            if let Err(e) = self.execute_instruction(&chunk) {
-                return Err(e);
-            }
+            self.execute_instruction(chunk)?;
         }
 
         // Print all values left on the stack when the program ends for debugging
@@ -55,6 +53,7 @@ impl VM {
                     (Value::I64(a), Value::I64(b)) => Ok(Value::I64(a + b)),
                     (Value::U32(a), Value::U32(b)) => Ok(Value::U32(a + b)),
                     (Value::U64(a), Value::U64(b)) => Ok(Value::U64(a + b)),
+                    (Value::F64(a), Value::F64(b)) => Ok(Value::F64(a + b)),
                     (Value::String(a), Value::String(b)) => {
                         Ok(Value::String(format!("{}{}", a, b)))
                     }
@@ -79,6 +78,7 @@ impl VM {
                             Err("Unsigned underflow".to_string())
                         }
                     }
+                    (Value::F64(a), Value::F64(b)) => Ok(Value::F64(a - b)),
                     _ => Err("Cannot subtract these types".to_string()),
                 })?;
             }
@@ -100,6 +100,7 @@ impl VM {
                         Some(result) => Ok(Value::U64(result)),
                         None => Err("Integer overflow in U64 multiplication".to_string()),
                     },
+                    (Value::F64(a), Value::F64(b)) => Ok(Value::F64(a * b)),
                     _ => Err("Cannot multiply these types".to_string()),
                 })?;
             }
@@ -129,6 +130,12 @@ impl VM {
                         }
                         Ok(Value::U64(a / b))
                     }
+                    (Value::F64(a), Value::F64(b)) => {
+                        if b == 0.0 {
+                            return Err("Division by zero".to_string());
+                        }
+                        Ok(Value::F64(a / b))
+                    }
                     _ => Err("Cannot divide these types".to_string()),
                 })?;
             }
@@ -139,6 +146,7 @@ impl VM {
                     Value::I64(i) => self.stack.push(Value::I64(-i)),
                     Value::U32(_) => return Err("Cannot negate unsigned integer U32".to_string()),
                     Value::U64(_) => return Err("Cannot negate unsigned integer U64".to_string()),
+                    Value::F64(f) => self.stack.push(Value::F64(-f)),
                     _ => return Err("Can only negate numbers".to_string()),
                 }
             }

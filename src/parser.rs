@@ -1,4 +1,6 @@
-use crate::ast::{BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, Type, Value, UnaryExpr};
+use crate::ast::{
+    BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, Type, UnaryExpr, Value,
+};
 use crate::token::{Token, Tokentype};
 use std::collections::HashMap;
 
@@ -16,6 +18,7 @@ impl<'a> Parser<'a> {
         type_map.insert("i64".to_string(), Type::I64);
         type_map.insert("u32".to_string(), Type::U32);
         type_map.insert("u64".to_string(), Type::U64);
+        type_map.insert("f64".to_string(), Type::F64);
 
         Parser {
             tokens,
@@ -58,7 +61,7 @@ impl<'a> Parser<'a> {
 
         let token = self.advance();
         let name = token.value.to_string();
-        let mut var_type = Type::Unknown; 
+        let mut var_type = Type::Unknown;
 
         if self.match_token(Tokentype::Colon) {
             if !self.check(Tokentype::Identifier) {
@@ -104,7 +107,7 @@ impl<'a> Parser<'a> {
             return Ok(Expression::Unary(UnaryExpr {
                 operator,
                 right: Box::new(right),
-                expr_type: Type::Unknown, 
+                expr_type: Type::Unknown,
             }));
         }
 
@@ -121,7 +124,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: Type::Unknown, 
+                expr_type: Type::Unknown,
             });
         }
 
@@ -132,13 +135,13 @@ impl<'a> Parser<'a> {
         let mut expr = self.unary()?;
 
         while self.match_any(&[Tokentype::Multiply, Tokentype::Divide]) {
-            let operator = self.previous().token_type.clone();
+            let operator = self.previous().token_type;
             let right = self.primary()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: Type::Unknown, 
+                expr_type: Type::Unknown,
             });
         }
 
@@ -147,58 +150,17 @@ impl<'a> Parser<'a> {
 
     fn primary(&mut self) -> Result<Expression, String> {
         if self.match_token(Tokentype::IntegerLiteral) {
+            return self.parse_integer();
+        }
+
+        if self.match_token(Tokentype::FloatLiteral) {
             let value_str = self.previous().value.clone();
-            let base_value = value_str
-                .parse::<i64>()
-                .map_err(|_| format!("Invalid integer: {}", value_str))?;
-
-            if self.check(Tokentype::Identifier) {
-                let type_name = self.peek().value.clone();
-
-                match type_name.as_str() {
-                    "i32" => {
-                        self.advance(); 
-                        if base_value > i32::MAX as i64 || base_value < i32::MIN as i64 {
-                            return Err(format!("Value {} is out of range for i32", base_value));
-                        }
-                        return Ok(Expression::Literal(LiteralExpr {
-                            value: Value::I32(base_value as i32),
-                            expr_type: Type::I32,
-                        }));
-                    }
-                    "i64" => {
-                        self.advance(); 
-                        return Ok(Expression::Literal(LiteralExpr {
-                            value: Value::I64(base_value),
-                            expr_type: Type::I64,
-                        }));
-                    }
-                    "u32" => {
-                        self.advance(); 
-                        if base_value < 0 || base_value > u32::MAX as i64 {
-                            return Err(format!("Value {} is out of range for u32", base_value));
-                        }
-                        return Ok(Expression::Literal(LiteralExpr {
-                            value: Value::U32(base_value as u32),
-                            expr_type: Type::U32,
-                        }));
-                    }
-                    "u64" => {
-                        self.advance(); 
-                        if base_value < 0 {
-                            return Err(format!("Value {} is out of range for u64", base_value));
-                        }
-                        return Ok(Expression::Literal(LiteralExpr {
-                            value: Value::U64(base_value as u64),
-                            expr_type: Type::U64,
-                        }));
-                    }
-                    _ => {} 
-                }
-            }
+            let value = value_str
+                .parse::<f64>()
+                .map_err(|_| format!("Invalid float: {}", value_str))?;
             return Ok(Expression::Literal(LiteralExpr {
-                value: Value::I32(base_value as i32),
-                expr_type: Type::I32,
+                value: Value::F64(value),
+                expr_type: Type::F64,
             }));
         }
 
@@ -215,6 +177,62 @@ impl<'a> Parser<'a> {
         }
 
         Err(format!("Expected expression, found {:?}", self.peek()))
+    }
+
+    fn parse_integer(&mut self) -> Result<Expression, String> {
+        let value_str = self.previous().value.clone();
+        let base_value = value_str
+            .parse::<i64>()
+            .map_err(|_| format!("Invalid integer: {}", value_str))?;
+
+        if self.check(Tokentype::Identifier) {
+            let type_name = self.peek().value.clone();
+
+            match type_name.as_str() {
+                "i32" => {
+                    self.advance();
+                    if base_value > i32::MAX as i64 || base_value < i32::MIN as i64 {
+                        return Err(format!("Value {} is out of range for i32", base_value));
+                    }
+                    return Ok(Expression::Literal(LiteralExpr {
+                        value: Value::I32(base_value as i32),
+                        expr_type: Type::I32,
+                    }));
+                }
+                "i64" => {
+                    self.advance();
+                    return Ok(Expression::Literal(LiteralExpr {
+                        value: Value::I64(base_value),
+                        expr_type: Type::I64,
+                    }));
+                }
+                "u32" => {
+                    self.advance();
+                    if base_value < 0 || base_value > u32::MAX as i64 {
+                        return Err(format!("Value {} is out of range for u32", base_value));
+                    }
+                    return Ok(Expression::Literal(LiteralExpr {
+                        value: Value::U32(base_value as u32),
+                        expr_type: Type::U32,
+                    }));
+                }
+                "u64" => {
+                    self.advance();
+                    if base_value < 0 {
+                        return Err(format!("Value {} is out of range for u64", base_value));
+                    }
+                    return Ok(Expression::Literal(LiteralExpr {
+                        value: Value::U64(base_value as u64),
+                        expr_type: Type::U64,
+                    }));
+                }
+                _ => {}
+            }
+        }
+        Ok(Expression::Literal(LiteralExpr {
+            value: Value::UnspecifiedInteger(base_value),
+            expr_type: Type::UnspecifiedInteger,
+        }))
     }
 
     fn match_token(&mut self, token_type: Tokentype) -> bool {

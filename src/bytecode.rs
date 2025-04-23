@@ -41,7 +41,74 @@ pub enum Value {
     I64(i64),
     U32(u32),
     U64(u64),
+    F64(f64),
     String(String),
+}
+
+impl Value {
+    pub fn type_tag(&self) -> u8 {
+        match self {
+            Value::I32(_) => 0,
+            Value::I64(_) => 1,
+            Value::U32(_) => 2,
+            Value::U64(_) => 3,
+            Value::String(_) => 4,
+            Value::F64(_) => 5,
+        }
+    }
+
+    pub fn deserialize_from_type_tag(type_tag: u8, reader: &mut dyn Read) -> std::io::Result<Self> {
+        match type_tag {
+            // I32 
+            0 => {
+                let mut bytes = [0u8; 4];
+                reader.read_exact(&mut bytes)?;
+                Ok(Value::I32(i32::from_le_bytes(bytes)))
+            }
+            // I64
+            1 => {
+                let mut bytes = [0u8; 8];
+                reader.read_exact(&mut bytes)?;
+                Ok(Value::I64(i64::from_le_bytes(bytes)))
+            }
+            // U32
+            2 => {
+                let mut bytes = [0u8; 4];
+                reader.read_exact(&mut bytes)?;
+                Ok(Value::U32(u32::from_le_bytes(bytes)))
+            }
+            // U64
+            3 => {
+                let mut bytes = [0u8; 8];
+                reader.read_exact(&mut bytes)?;
+                Ok(Value::U64(u64::from_le_bytes(bytes)))
+            }
+            // String
+            4 => {
+                let mut len_bytes = [0u8; 4];
+                reader.read_exact(&mut len_bytes)?;
+                let len = u32::from_le_bytes(len_bytes) as usize;
+
+                let mut string_bytes = vec![0u8; len];
+                reader.read_exact(&mut string_bytes)?;
+                String::from_utf8(string_bytes)
+                    .map(Value::String)
+                    .map_err(|_| {
+                        std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UTF-8")
+                    })
+            }
+            // F64
+            5 => {
+                let mut bytes = [0u8; 8];
+                reader.read_exact(&mut bytes)?;
+                Ok(Value::F64(f64::from_le_bytes(bytes)))
+            }
+            _ => Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "Invalid value type tag",
+            )),
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -51,6 +118,7 @@ impl fmt::Display for Value {
             Value::I64(i) => write!(f, "{}", i),
             Value::U32(i) => write!(f, "{}", i),
             Value::U64(i) => write!(f, "{}", i),
+            Value::F64(flo) => write!(f, "{}", flo),
             Value::String(s) => write!(f, "\"{}\"", s),
         }
     }
@@ -101,52 +169,44 @@ impl Chunk {
         self.identifiers.len() - 1
     }
 
-    // Serialization methods
-   #[allow(dead_code)]
     pub fn serialize(&self, writer: &mut dyn Write) -> std::io::Result<()> {
-        // Write code size and bytes
         let code_len = self.code.len() as u32;
         writer.write_all(&code_len.to_le_bytes())?;
         writer.write_all(&self.code)?;
 
-        // Write constants count
         let constants_len = self.constants.len() as u32;
         writer.write_all(&constants_len.to_le_bytes())?;
 
-        // Write each constant
         for value in &self.constants {
+            writer.write_all(&[value.type_tag()])?;
             match value {
                 Value::I32(i) => {
-                    writer.write_all(&[0])?; // Type tag: 0 for integer
                     writer.write_all(&i.to_le_bytes())?;
                 }
                 Value::I64(i) => {
-                    writer.write_all(&[1])?; // Type tag: 0 for integer
                     writer.write_all(&i.to_le_bytes())?;
                 }
                 Value::U32(i) => {
-                    writer.write_all(&[2])?; // Type tag: 0 for integer
                     writer.write_all(&i.to_le_bytes())?;
                 }
                 Value::U64(i) => {
-                    writer.write_all(&[3])?; // Type tag: 0 for integer
                     writer.write_all(&i.to_le_bytes())?;
                 }
                 Value::String(s) => {
-                    writer.write_all(&[4])?; // Type tag: 4 for string
                     let bytes = s.as_bytes();
                     let len = bytes.len() as u32;
                     writer.write_all(&len.to_le_bytes())?;
                     writer.write_all(bytes)?;
                 }
+                Value::F64(f) => {
+                    writer.write_all(&f.to_le_bytes())?;
+                }
             }
         }
 
-        // Write identifiers count
         let identifiers_len = self.identifiers.len() as u32;
         writer.write_all(&identifiers_len.to_le_bytes())?;
 
-        // Write each identifier
         for id in &self.identifiers {
             let bytes = id.as_bytes();
             let len = bytes.len() as u32;
@@ -161,12 +221,10 @@ impl Chunk {
     pub fn deserialize(reader: &mut dyn Read) -> std::io::Result<Self> {
         let mut chunk = Chunk::new();
 
-        // Read code size and bytes
         let mut code_len_bytes = [0u8; 4];
         reader.read_exact(&mut code_len_bytes)?;
         let code_len = u32::from_le_bytes(code_len_bytes) as usize;
 
-        // Read code bytes
         let mut code = vec![0u8; code_len];
         reader.read_exact(&mut code)?;
         chunk.code = code;
@@ -174,74 +232,22 @@ impl Chunk {
         // Initialize lines (will be filled with dummy values)
         chunk.lines = vec![0; code_len];
 
-        // Read constants count
         let mut constants_len_bytes = [0u8; 4];
         reader.read_exact(&mut constants_len_bytes)?;
         let constants_len = u32::from_le_bytes(constants_len_bytes) as usize;
 
-        // Read each constant
         for _ in 0..constants_len {
             let mut type_tag = [0u8; 1];
             reader.read_exact(&mut type_tag)?;
 
-            match type_tag[0] {
-                0 => {
-                    // Integer 32 bit
-                    let mut int_bytes = [0u8; 4];
-                    reader.read_exact(&mut int_bytes)?;
-                    let value = i32::from_le_bytes(int_bytes);
-                    chunk.constants.push(Value::I32(value));
-                }
-                1 => {
-                    // Integer 64 bit
-                    let mut int_bytes = [0u8; 8];
-                    reader.read_exact(&mut int_bytes)?;
-                    let value = i64::from_le_bytes(int_bytes);
-                    chunk.constants.push(Value::I64(value));
-                }
-                2 => {
-                    // Unsigned Integer 64 bit
-                    let mut int_bytes = [0u8; 8];
-                    reader.read_exact(&mut int_bytes)?;
-                    let value = u64::from_le_bytes(int_bytes);
-                    chunk.constants.push(Value::U64(value));
-                }
-                3 => {
-                    // Unsigned Integer 32 bit
-                    let mut int_bytes = [0u8; 4];
-                    reader.read_exact(&mut int_bytes)?;
-                    let value = u32::from_le_bytes(int_bytes);
-                    chunk.constants.push(Value::U32(value));
-                }
-                4 => {
-                    // String
-                    let mut len_bytes = [0u8; 4];
-                    reader.read_exact(&mut len_bytes)?;
-                    let len = u32::from_le_bytes(len_bytes) as usize;
-
-                    let mut string_bytes = vec![0u8; len];
-                    reader.read_exact(&mut string_bytes)?;
-                    let string = String::from_utf8(string_bytes).map_err(|_| {
-                        std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UTF-8")
-                    })?;
-
-                    chunk.constants.push(Value::String(string));
-                }
-                _ => {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        "Invalid value type",
-                    ));
-                }
-            }
+            let value = Value::deserialize_from_type_tag(type_tag[0], reader)?;
+            chunk.constants.push(value);
         }
 
-        // Read identifiers count
         let mut identifiers_len_bytes = [0u8; 4];
         reader.read_exact(&mut identifiers_len_bytes)?;
         let identifiers_len = u32::from_le_bytes(identifiers_len_bytes) as usize;
 
-        // Read each identifier
         for _ in 0..identifiers_len {
             let mut len_bytes = [0u8; 4];
             reader.read_exact(&mut len_bytes)?;

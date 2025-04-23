@@ -25,10 +25,11 @@ use std::path::Path;
 use zip::{ZipArchive, ZipWriter, write::FileOptions};
 
 // The extension for compiled Slang binaries
-const SLANG_BYTECODE_EXTENSION: &str = "slbc";
+const SLANG_BYTECODE_EXTENSION: &str = "sip";
 
 #[derive(ClapParser)]
-#[command(version, about = "Slang programming language", long_about = None)]
+#[command(version, about = "Slang programming language", long_about = r#"
+Slang is a simple programming language designed for educational purposes. It features a REPL, compilation to bytecode, and execution of both source files and compiled bytecode."#)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
@@ -44,7 +45,7 @@ enum Commands {
         /// Input source file
         input: String,
         
-        /// Output bytecode file (default: same as input with .slbc extension)
+        /// Output bytecode file (default: same as input with .sip extension)
         #[arg(short, long)]
         output: Option<String>,
     },
@@ -151,7 +152,7 @@ fn repl() {
     let mut vm = VM::new();
     loop {
         let mut input = String::new();
-        print!("> ");
+        print!(">>> ");
         std::io::stdout().flush().unwrap();
         std::io::stdin().read_line(&mut input).unwrap();
 

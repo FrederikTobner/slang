@@ -60,7 +60,6 @@ impl Visitor<Result<(), String>> for Compiler {
     }
 
     fn visit_expression_statement(&mut self, expr: &Expression) -> Result<(), String> {
-        // Compile the expression
         self.visit_expression(expr)?;
 
         self.emit_op(OpCode::Print);
@@ -101,13 +100,19 @@ impl Visitor<Result<(), String>> for Compiler {
             self.emit_constant(Value::I32(*i));
         }
         crate::ast::Value::I64(i) => {
-            self.emit_constant(Value::I64(*i)); // Keep as Integer for backward compatibility
+            self.emit_constant(Value::I64(*i));
         }
         crate::ast::Value::U32(i) => {
             self.emit_constant(Value::U32(*i));
         }
         crate::ast::Value::U64(i) => {
             self.emit_constant(Value::U64(*i));
+        }
+        crate::ast::Value::UnspecifiedInteger(i) => {
+            self.emit_constant(Value::I64(*i));
+        }
+        crate::ast::Value::F64(f) => {
+            self.emit_constant(Value::F64(*f));
         }
         crate::ast::Value::String(s) => {
             self.emit_constant(Value::String(s.clone()));

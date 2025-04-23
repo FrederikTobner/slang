@@ -2,6 +2,7 @@
 pub enum Tokentype {
     Identifier,     // x, y, myVar
     IntegerLiteral, // 123
+    FloatLiteral,    // 123.45
     StringLiteral,  // "string"
     Let,            // let
     Plus,           // +

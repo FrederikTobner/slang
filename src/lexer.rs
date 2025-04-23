@@ -28,19 +28,38 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
             }
 
-            c if c.is_digit(10) => {
+            c if c.is_ascii_digit() => {
                 let mut number = String::new();
-
+                let mut is_float = false;
                 while let Some(&c) = chars.peek() {
-                    if c.is_digit(10) {
+                    if c.is_ascii_digit() {
                         number.push(c);
                         chars.next();
+                    } else if c == '.' {
+                        if is_float {
+                            break; // already seen a dot, break
+                        }
+                        is_float = true;
+                        number.push(c);
+                        chars.next();
+                    } else if c == 'e' || c == 'E' {
+                        number.push(c);
+                        chars.next();
+                        if let Some(&next_c) = chars.peek() {
+                            if next_c == '+' || next_c == '-' {
+                                number.push(next_c);
+                                chars.next();
+                            }
+                        }
                     } else {
                         break;
-                    }
+                    } 
                 }
-
-                tokens.push(Token::new(Tokentype::IntegerLiteral, number));
+                if is_float {
+                    tokens.push(Token::new(Tokentype::FloatLiteral, number));
+                } else {
+                    tokens.push(Token::new(Tokentype::IntegerLiteral, number));
+                }
             }
 
             '"' => {

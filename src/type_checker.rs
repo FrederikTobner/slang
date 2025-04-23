@@ -27,22 +27,11 @@ impl TypeChecker {
 
     fn can_coerce_numeric(&self, value: &Value, target_type: &Type) -> bool {
         match (value, target_type) {
-            (Value::I32(_), Type::I64) => true,
-
-            (Value::U32(_), Type::U64) => true,
-            (Value::U32(_), Type::I64) => true,
-
-            (Value::I32(n), Type::U32) => *n >= 0 && *n <= i32::MAX,
-            (Value::I32(n), Type::U64) => *n >= 0,
-
-            (Value::I64(n), Type::I32) => *n >= i32::MIN as i64 && *n <= i32::MAX as i64,
-
-            (Value::I64(n), Type::U32) => *n >= 0 && *n <= u32::MAX as i64,
-            (Value::I64(n), Type::U64) => *n >= 0,
-
-            (Value::U64(n), Type::U32) => *n <= u32::MAX as u64,
-            (Value::U64(n), Type::I32) => *n <= i32::MAX as u64,
-            (Value::U64(n), Type::I64) => *n <= i64::MAX as u64,
+            (Value::UnspecifiedInteger(n), Type::I32) => *n >= i32::MIN as i64 && *n <= i32::MAX as i64,
+            (Value::UnspecifiedInteger(_), Type::I64) => true, // Any integer fits in i64
+            (Value::UnspecifiedInteger(n), Type::U32) => *n >= 0 && *n <= u32::MAX as i64,
+            (Value::UnspecifiedInteger(n), Type::U64) => *n >= 0,
+            (Value::UnspecifiedInteger(_), Type::UnspecifiedInteger) => true,
 
             (Value::I32(_), Type::I32) => true,
             (Value::I64(_), Type::I64) => true,
@@ -91,7 +80,6 @@ impl TypeChecker {
             (Type::U64, Type::I64) => Ok(Type::I64),
 
             (Type::String, Type::String) => Ok(Type::String),
-
             _ => Err(format!(
                 "Cannot perform operation {:?} on types {:?} and {:?}",
                 op, left, right
@@ -167,6 +155,8 @@ impl Visitor<Result<Type, String>> for TypeChecker {
             Value::I64(_) => Type::I64,
             Value::U32(_) => Type::U32,
             Value::U64(_) => Type::U64,
+            Value::F64(_) => Type::F64,
+            Value::UnspecifiedInteger(_) => Type::UnspecifiedInteger,
             Value::String(_) => Type::String,
         };
         Ok(inferred)
@@ -209,6 +199,8 @@ impl Visitor<Result<Type, String>> for TypeChecker {
             (Tokentype::Minus, Type::I64) => Ok(Type::I64),
             (Tokentype::Minus, Type::U32) => Err("Cannot negate unsigned type U32".to_string()),
             (Tokentype::Minus, Type::U64) => Err("Cannot negate unsigned type U64".to_string()),
+            (Tokentype::Minus, Type::UnspecifiedInteger) => Ok(Type::UnspecifiedInteger),
+            (Tokentype::Minus, Type::F64) => Ok(Type::F64),
             (Tokentype::Minus, Type::String) => Err("Cannot negate string type".to_string()),
             _ => Err(format!(
                 "Invalid unary operation: {:?} {:?}",
