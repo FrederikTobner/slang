@@ -378,6 +378,7 @@ impl Chunk {
         Ok(chunk)
     }
 
+    #[cfg(feature = "print-byte_code")]
     // Add methods for disassembling and printing bytecode
     pub fn disassemble(&self, name: &str) {
         println!("== {} ==", name);
@@ -388,6 +389,7 @@ impl Chunk {
         }
     }
     
+    #[cfg(feature = "print-byte_code")]
     pub fn disassemble_instruction(&self, offset: usize) -> usize {
         print!("{:04} ", offset);
         
@@ -458,17 +460,20 @@ impl Chunk {
         }
     }
     
+    #[cfg(feature = "print-byte_code")]
     fn simple_instruction(&self, name: &str, offset: usize) -> usize {
         println!("{}", name);
         offset + 1
     }
     
+    #[cfg(feature = "print-byte_code")]
     fn simple_instruction_with_operand(&self, name: &str, offset: usize) -> usize {
         let constant_index = self.code[offset + 1];
         println!("{:<16} {:4} '{}'", name, constant_index, self.constants[constant_index as usize]);
         offset + 2 // Instruction plus 1-byte operand
     }
     
+    #[cfg(feature = "print-byte_code")]
     fn variable_instruction(&self, name: &str, offset: usize) -> usize {
         let var_index = self.code[offset + 1];
         println!("{:<16} {:4} '{}'", name, var_index, self.identifiers[var_index as usize]);

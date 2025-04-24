@@ -60,19 +60,6 @@ impl VM {
         // Return nil or some default value
         Ok(Value::I32(0))
     }
-
-    // Add methods to access and manipulate the VM's state
-    pub fn get_variable(&self, name: &str) -> Option<&Value> {
-        // First check current frame's locals if we're in a function
-        if let Some(frame_idx) = self.current_frame {
-            if let Some(value) = self.frames[frame_idx].locals.get(name) {
-                return Some(value);
-            }
-        }
-        
-        // Then check global variables
-        self.variables.get(name)
-    }
     
     pub fn get_variables(&self) -> &HashMap<String, Value> {
         &self.variables

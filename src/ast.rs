@@ -26,6 +26,7 @@ pub enum Statement {
 pub struct FunctionCallExpr {
     pub name: String,
     pub arguments: Vec<Expression>,
+    #[allow(dead_code)]
     pub expr_type: TypeId,
 }
 
