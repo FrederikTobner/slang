@@ -94,10 +94,13 @@ impl VM {
         }
 
         // Print all values left on the stack when the program ends for debugging
-        if !self.stack.is_empty() {
-            println!("\n=== Values on stack at end of execution ===");
-            for value in &self.stack {
-                println!("{}", value);
+        #[cfg(feature = "trace-execution")]
+        {
+            if !self.stack.is_empty() {
+                println!("\n=== Values on stack at end of execution ===");
+                for value in &self.stack {
+                    println!("{}", value);
+                }
             }
         }
 
@@ -339,7 +342,7 @@ impl VM {
                 }
                 
                 // Save the function object
-                let function_pos = self.stack.len() - arg_count - 1;
+                let function_pos = self.stack.len() - 1;
                 let function_value = self.stack[function_pos].clone();
                 
                 // Handle the call based on the function type
@@ -397,7 +400,7 @@ impl VM {
                         // Collect arguments from stack
                         let mut args = Vec::with_capacity(arg_count);
                         for i in 0..arg_count {
-                            args.push(self.stack[function_pos + 1 + i].clone());
+                            args.push(self.stack[function_pos - 1 - i].clone());
                         }
                         
                         // Call the native function

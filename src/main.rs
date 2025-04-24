@@ -202,10 +202,12 @@ fn repl() {
                         let mut compiler = Compiler::new();
                         match compiler.compile(&ast) {
                             Ok(chunk) => {
-                                // Always print bytecode, removed environment variable check
-                                println!("\n=== Bytecode ===");
-                                chunk.disassemble("REPL");
 
+                                #[cfg(feature = "print-byte_code")]
+                                {
+                                    println!("\n=== Bytecode ===");
+                                    chunk.disassemble("REPL");
+                                }
                                 // Execute the bytecode
                                 if let Err(e) = vm.interpret(&chunk) {
                                     println!("Runtime error: {}", e);
