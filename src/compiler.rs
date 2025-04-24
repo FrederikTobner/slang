@@ -1,5 +1,5 @@
-use crate::ast::{BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr};
-use crate::bytecode::{Chunk, OpCode, Value};
+use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr};
+use crate::bytecode::{Chunk, Function, OpCode, Value};
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
 
@@ -7,6 +7,8 @@ pub struct Compiler {
     pub chunk: Chunk,
     line: usize,
     variables: Vec<String>,
+    functions: Vec<String>, // Track function declarations
+    local_scopes: Vec<Vec<String>>, // Track local variable scopes
 }
 
 impl Compiler {
@@ -15,6 +17,8 @@ impl Compiler {
             chunk: Chunk::new(),
             line: 1, 
             variables: Vec::new(),
+            functions: Vec::new(),
+            local_scopes: Vec::new(),
         }
     }
 
@@ -49,31 +53,150 @@ impl Compiler {
         self.emit_op(OpCode::Constant);
         self.emit_byte(constant_index as u8);
     }
+    
+    fn emit_jump(&mut self, op: OpCode) -> usize {
+        self.emit_op(op);
+        // Emit placeholder jump offset (to be patched later)
+        self.emit_byte(0xFF);
+        self.emit_byte(0xFF);
+        self.chunk.code.len() - 2 // Return location to patch
+    }
+    
+    fn patch_jump(&mut self, offset: usize) {
+        // Calculate jump distance
+        let jump = self.chunk.code.len() - offset - 2;
+        if jump > 0xFFFF {
+            panic!("Jump too far");
+        }
+        
+        // Patch the bytecode with the actual jump distance
+        self.chunk.code[offset] = ((jump >> 8) & 0xFF) as u8;
+        self.chunk.code[offset + 1] = (jump & 0xFF) as u8;
+    }
+    
+    fn begin_scope(&mut self) {
+        self.local_scopes.push(Vec::new());
+    }
+    
+    fn end_scope(&mut self) {
+        if let Some(scope) = self.local_scopes.pop() {
+            // Pop all locals from the scope
+            for _ in 0..scope.len() {
+                self.emit_op(OpCode::Pop);
+            }
+        }
+    }
 }
 
 impl Visitor<Result<(), String>> for Compiler {
     fn visit_statement(&mut self, stmt: &Statement) -> Result<(), String> {
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
-        Statement::TypeDefinition(type_stmt) => self.visit_type_definition_statement(type_stmt),
+            Statement::TypeDefinition(type_stmt) => self.visit_type_definition_statement(type_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
+            Statement::FunctionDeclaration(fn_decl) => self.visit_function_declaration_statement(fn_decl),
+            Statement::Block(stmts) => self.visit_block_statement(stmts),
+            Statement::Return(expr) => self.visit_return_statement(expr),
         }
+    }
+    
+    fn visit_block_statement(&mut self, stmts: &Vec<Statement>) -> Result<(), String> {
+        self.begin_scope();
+        
+        for stmt in stmts {
+            stmt.accept(self)?;
+        }
+        
+        self.end_scope();
+        Ok(())
+    }
+    
+    fn visit_function_declaration_statement(&mut self, fn_decl: &FunctionDeclarationStmt) -> Result<(), String> {
+        // Register function name
+        self.functions.push(fn_decl.name.clone());
+        let function_name_idx = self.chunk.add_identifier(fn_decl.name.clone());
+        
+        // Store the current position where we'll jump over the function body
+        let jump_over = self.emit_jump(OpCode::Jump);
+        
+        // Store function metadata
+        let code_offset = self.chunk.code.len();
+        let mut locals = Vec::new();
+        
+        // Push parameters as local variables
+        self.begin_scope();
+        for param in &fn_decl.parameters {
+            locals.push(param.name.clone());
+            if let Some(current_scope) = self.local_scopes.last_mut() {
+                current_scope.push(param.name.clone());
+            }
+        }
+        
+        // Compile function body
+        for stmt in &fn_decl.body {
+            stmt.accept(self)?;
+        }
+        
+        // Ensure there's a return at the end
+        self.emit_op(OpCode::Return);
+        
+        // End function scope
+        self.end_scope();
+        
+        // Now patch the jump over for the main flow
+        self.patch_jump(jump_over);
+        
+        // Create function object and add it to constants
+        let function = Value::Function(Function {
+            name: fn_decl.name.clone(),
+            arity: fn_decl.parameters.len() as u8,
+            code_offset,
+            locals,
+        });
+        let fn_constant = self.chunk.add_constant(function);
+        
+        // Define the function in the global scope
+        self.emit_op(OpCode::DefineFunction);
+        self.emit_byte(function_name_idx as u8);
+        self.emit_byte(fn_constant as u8);
+        
+        Ok(())
+    }
+    
+    fn visit_return_statement(&mut self, expr: &Option<Expression>) -> Result<(), String> {
+        if let Some(expr) = expr {
+            // Compile the return value
+            self.visit_expression(expr)?;
+        } else {
+            // If no return value provided, implicitly return a default value like 0
+            self.emit_constant(Value::I32(0));
+        }
+        
+        // Emit return instruction
+        self.emit_op(OpCode::Return);
+        Ok(())
     }
 
     fn visit_expression_statement(&mut self, expr: &Expression) -> Result<(), String> {
         self.visit_expression(expr)?;
-
-        self.emit_op(OpCode::Print);
-
-        self.emit_op(OpCode::Pop);
-
         Ok(())
     }
 
     fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> Result<(), String> {
         self.visit_expression(&let_stmt.value)?;
 
-        self.variables.push(let_stmt.name.clone());
+        // Check if we're in a local scope
+        let is_local = !self.local_scopes.is_empty();
+        
+        if is_local {
+            // Add to current scope
+            if let Some(current_scope) = self.local_scopes.last_mut() {
+                current_scope.push(let_stmt.name.clone());
+            }
+        } else {
+            // Global variable
+            self.variables.push(let_stmt.name.clone());
+        }
 
         let var_index = self.chunk.add_identifier(let_stmt.name.clone());
         if var_index > 255 {
@@ -92,35 +215,56 @@ impl Visitor<Result<(), String>> for Compiler {
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
             Expression::Variable(name) => self.visit_variable_expression(name),
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
+            Expression::Call(call_expr) => self.visit_call_expression(call_expr),
         }
+    }
+    
+    fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> Result<(), String> {
+        // First compile arguments (in reverse order)
+        for arg in &call_expr.arguments {
+            self.visit_expression(arg)?;
+        }
+        
+        // Get function name index
+        let fn_name_idx = self.chunk.add_identifier(call_expr.name.clone());
+        
+        // Load the function
+        self.emit_op(OpCode::GetVariable);
+        self.emit_byte(fn_name_idx as u8);
+        
+        // Call with argument count
+        self.emit_op(OpCode::Call);
+        self.emit_byte(call_expr.arguments.len() as u8);
+        
+        Ok(())
     }
 
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> Result<(), String> {
         match &lit_expr.value {
-        crate::ast::Value::I32(i) => {
-            self.emit_constant(Value::I32(*i));
+            crate::ast::Value::I32(i) => {
+                self.emit_constant(Value::I32(*i));
+            }
+            crate::ast::Value::I64(i) => {
+                self.emit_constant(Value::I64(*i));
+            }
+            crate::ast::Value::U32(i) => {
+                self.emit_constant(Value::U32(*i));
+            }
+            crate::ast::Value::U64(i) => {
+                self.emit_constant(Value::U64(*i));
+            }
+            crate::ast::Value::UnspecifiedInteger(i) => {
+                self.emit_constant(Value::I64(*i));
+            }
+            crate::ast::Value::F64(f) => {
+                self.emit_constant(Value::F64(*f));
+            }
+            crate::ast::Value::String(s) => {
+                self.emit_constant(Value::String(s.clone()));
+            }
         }
-        crate::ast::Value::I64(i) => {
-            self.emit_constant(Value::I64(*i));
-        }
-        crate::ast::Value::U32(i) => {
-            self.emit_constant(Value::U32(*i));
-        }
-        crate::ast::Value::U64(i) => {
-            self.emit_constant(Value::U64(*i));
-        }
-        crate::ast::Value::UnspecifiedInteger(i) => {
-            self.emit_constant(Value::I64(*i));
-        }
-        crate::ast::Value::F64(f) => {
-            self.emit_constant(Value::F64(*f));
-        }
-        crate::ast::Value::String(s) => {
-            self.emit_constant(Value::String(s.clone()));
-        }
-    }
 
-    Ok(())
+        Ok(())
     }
 
     fn visit_binary_expression(&mut self, bin_expr: &BinaryExpr) -> Result<(), String> {
@@ -154,6 +298,7 @@ impl Visitor<Result<(), String>> for Compiler {
         
         Ok(())
     }
+    
     fn visit_variable_expression(&mut self, name: &str) -> Result<(), String> {
         let var_index = self.chunk.add_identifier(name.to_string());
         if var_index > 255 {

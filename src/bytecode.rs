@@ -14,6 +14,12 @@ pub enum OpCode {
     GetVariable = 8, // Get variable value
     SetVariable = 9, // Set variable value
     Pop = 10,        // Pop top value from stack
+    
+    // New function-related opcodes
+    DefineFunction = 11, // Define a function
+    Call = 12,          // Call a function
+    JumpIfFalse = 13,   // Conditional jump
+    Jump = 14,          // Unconditional jump
 }
 
 impl OpCode {
@@ -30,8 +36,38 @@ impl OpCode {
             8 => Some(OpCode::GetVariable),
             9 => Some(OpCode::SetVariable),
             10 => Some(OpCode::Pop),
+            11 => Some(OpCode::DefineFunction),
+            12 => Some(OpCode::Call),
+            13 => Some(OpCode::JumpIfFalse),
+            14 => Some(OpCode::Jump),
             _ => None,
         }
+    }
+}
+
+// Function representation in bytecode
+#[derive(Debug, Clone)]
+pub struct Function {
+    pub name: String,
+    pub arity: u8,         // Number of parameters
+    pub code_offset: usize, // Offset in the chunk where this function's code begins
+    pub locals: Vec<String>, // Local variable names
+}
+
+// Native function type
+pub type NativeFn = fn(&[Value]) -> Result<Value, String>;
+
+// Native function representation
+#[derive(Clone)]
+pub struct NativeFunction {
+    pub name: String,
+    pub arity: u8,
+    pub function: NativeFn,
+}
+
+impl std::fmt::Debug for NativeFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<native fn {}>", self.name)
     }
 }
 
@@ -43,6 +79,8 @@ pub enum Value {
     U64(u64),
     F64(f64),
     String(String),
+    Function(Function), // Add function value type
+    NativeFunction(NativeFunction), // Add native function value type
 }
 
 impl Value {
@@ -54,6 +92,8 @@ impl Value {
             Value::U64(_) => 3,
             Value::String(_) => 4,
             Value::F64(_) => 5,
+            Value::Function(_) => 6,
+            Value::NativeFunction(_) => 7,
         }
     }
 
@@ -103,6 +143,51 @@ impl Value {
                 reader.read_exact(&mut bytes)?;
                 Ok(Value::F64(f64::from_le_bytes(bytes)))
             }
+            // Function
+            6 => {
+                let mut name_len_bytes = [0u8; 4];
+                reader.read_exact(&mut name_len_bytes)?;
+                let name_len = u32::from_le_bytes(name_len_bytes) as usize;
+
+                let mut name_bytes = vec![0u8; name_len];
+                reader.read_exact(&mut name_bytes)?;
+                let name = String::from_utf8(name_bytes).map_err(|_| {
+                    std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UTF-8")
+                })?;
+
+                let mut arity_bytes = [0u8; 1];
+                reader.read_exact(&mut arity_bytes)?;
+                let arity = arity_bytes[0];
+
+                let mut code_offset_bytes = [0u8; 4];
+                reader.read_exact(&mut code_offset_bytes)?;
+                let code_offset = u32::from_le_bytes(code_offset_bytes) as usize;
+
+                let mut locals_len_bytes = [0u8; 4];
+                reader.read_exact(&mut locals_len_bytes)?;
+                let locals_len = u32::from_le_bytes(locals_len_bytes) as usize;
+
+                let mut locals = Vec::new();
+                for _ in 0..locals_len {
+                    let mut local_len_bytes = [0u8; 4];
+                    reader.read_exact(&mut local_len_bytes)?;
+                    let local_len = u32::from_le_bytes(local_len_bytes) as usize;
+
+                    let mut local_bytes = vec![0u8; local_len];
+                    reader.read_exact(&mut local_bytes)?;
+                    let local = String::from_utf8(local_bytes).map_err(|_| {
+                        std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UTF-8")
+                    })?;
+                    locals.push(local);
+                }
+
+                Ok(Value::Function(Function {
+                    name,
+                    arity,
+                    code_offset,
+                    locals,
+                }))
+            }
             _ => Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 "Invalid value type tag",
@@ -120,6 +205,8 @@ impl fmt::Display for Value {
             Value::U64(i) => write!(f, "{}", i),
             Value::F64(flo) => write!(f, "{}", flo),
             Value::String(s) => write!(f, "\"{}\"", s),
+            Value::Function(func) => write!(f, "<fn {}>", func.name),
+            Value::NativeFunction(func) => write!(f, "<native fn {}>", func.name),
         }
     }
 }
@@ -200,6 +287,32 @@ impl Chunk {
                 }
                 Value::F64(f) => {
                     writer.write_all(&f.to_le_bytes())?;
+                }
+                Value::Function(func) => {
+                    let name_bytes = func.name.as_bytes();
+                    let name_len = name_bytes.len() as u32;
+                    writer.write_all(&name_len.to_le_bytes())?;
+                    writer.write_all(name_bytes)?;
+
+                    writer.write_all(&[func.arity])?;
+                    writer.write_all(&(func.code_offset as u32).to_le_bytes())?;
+
+                    let locals_len = func.locals.len() as u32;
+                    writer.write_all(&locals_len.to_le_bytes())?;
+                    for local in &func.locals {
+                        let local_bytes = local.as_bytes();
+                        let local_len = local_bytes.len() as u32;
+                        writer.write_all(&local_len.to_le_bytes())?;
+                        writer.write_all(local_bytes)?;
+                    }
+                }
+                Value::NativeFunction(func) => {
+                    let name_bytes = func.name.as_bytes();
+                    let name_len = name_bytes.len() as u32;
+                    writer.write_all(&name_len.to_le_bytes())?;
+                    writer.write_all(name_bytes)?;
+
+                    writer.write_all(&[func.arity])?;
                 }
             }
         }
@@ -319,6 +432,24 @@ impl Chunk {
             },
             Some(OpCode::Pop) => {
                 self.simple_instruction("POP", offset)
+            },
+            Some(OpCode::DefineFunction) => {
+                self.variable_instruction("DEFINE_FUNCTION", offset)
+            },
+            Some(OpCode::Call) => {
+                let arg_count = self.code[offset + 1];
+                println!("{:<16} {:4} args", "CALL", arg_count);
+                offset + 2 // Instruction plus 1-byte operand
+            },
+            Some(OpCode::JumpIfFalse) => {
+                let jump_offset = ((self.code[offset + 1] as usize) << 8) | (self.code[offset + 2] as usize);
+                println!("{:<16} {:4} -> {}", "JUMP_IF_FALSE", offset, offset + 3 + jump_offset);
+                offset + 3 // Instruction plus 2-byte operand
+            },
+            Some(OpCode::Jump) => {
+                let jump_offset = ((self.code[offset + 1] as usize) << 8) | (self.code[offset + 2] as usize);
+                println!("{:<16} {:4} -> {}", "JUMP", offset, offset + 3 + jump_offset);
+                offset + 3 // Instruction plus 2-byte operand
             },
             None => {
                 println!("Unknown opcode: {}", instruction);

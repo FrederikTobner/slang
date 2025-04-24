@@ -25,6 +25,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 match identifier.as_str() {
                     "let" => tokens.push(Token::new(Tokentype::Let, identifier)),
                     "struct" => tokens.push(Token::new(Tokentype::Struct, identifier)),
+                    "fn" => tokens.push(Token::new(Tokentype::Fn, identifier)),
+                    "return" => tokens.push(Token::new(Tokentype::Return, identifier)),
                     _ => tokens.push(Token::new(Tokentype::Identifier, identifier)),
                 }
             }
@@ -89,7 +91,13 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }
             '-' => {
                 chars.next();
-                tokens.push(Token::new(Tokentype::Minus, "-".to_string()));
+                // Check for arrow token '->'
+                if chars.peek() == Some(&'>') {
+                    chars.next(); // consume '>'
+                    tokens.push(Token::new(Tokentype::Arrow, "->".to_string()));
+                } else {
+                    tokens.push(Token::new(Tokentype::Minus, "-".to_string()));
+                }
             }
             '*' => {
                 chars.next();
@@ -119,7 +127,14 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 chars.next();
                 tokens.push(Token::new(Tokentype::Comma, ",".to_string()));
             }
-
+            '(' => {
+                chars.next();
+                tokens.push(Token::new(Tokentype::LeftParen, "(".to_string()));
+            }
+            ')' => {
+                chars.next();
+                tokens.push(Token::new(Tokentype::RightParen, ")".to_string()));
+            }
             _ => {
                 let invalid_char = chars.next().unwrap();
                 tokens.push(Token::new(Tokentype::Invalid, invalid_char.to_string()));

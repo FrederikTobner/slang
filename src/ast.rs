@@ -8,6 +8,7 @@ pub enum Expression {
     Binary(BinaryExpr),
     Variable(String),
     Unary(UnaryExpr),
+    Call(FunctionCallExpr),  // New: Function call expression
 }
 
 #[derive(Debug)]
@@ -15,6 +16,33 @@ pub enum Statement {
     Let(LetStatement),
     Expression(Expression),
     TypeDefinition(TypeDefinitionStmt),
+    FunctionDeclaration(FunctionDeclarationStmt),  // New: Function declaration
+    Block(Vec<Statement>),  // New: Block of statements
+    Return(Option<Expression>),  // New: Return statement
+}
+
+// Function call expression
+#[derive(Debug)]
+pub struct FunctionCallExpr {
+    pub name: String,
+    pub arguments: Vec<Expression>,
+    pub expr_type: TypeId,
+}
+
+// Function parameter
+#[derive(Debug)]
+pub struct Parameter {
+    pub name: String,
+    pub param_type: TypeId,
+}
+
+// Function declaration statement
+#[derive(Debug)]
+pub struct FunctionDeclarationStmt {
+    pub name: String,
+    pub parameters: Vec<Parameter>,
+    pub return_type: TypeId,
+    pub body: Vec<Statement>,
 }
 
 // Add support for defining new types
@@ -72,6 +100,9 @@ impl Statement {
             Statement::Let(let_stmt) => visitor.visit_let_statement(let_stmt),
             Statement::Expression(expr) => visitor.visit_expression_statement(expr),
             Statement::TypeDefinition(type_def) => visitor.visit_type_definition_statement(type_def),
+            Statement::FunctionDeclaration(fn_decl) => visitor.visit_function_declaration_statement(fn_decl),
+            Statement::Block(stmts) => visitor.visit_block_statement(stmts),
+            Statement::Return(expr) => visitor.visit_return_statement(expr),
         }
     }
 }
@@ -83,6 +114,7 @@ impl Expression {
             Expression::Binary(bin) => visitor.visit_binary_expression(bin),
             Expression::Variable(name) => visitor.visit_variable_expression(name),
             Expression::Unary(unary) => visitor.visit_unary_expression(unary),
+            Expression::Call(call) => visitor.visit_call_expression(call),
         }
     }
 }

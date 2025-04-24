@@ -1,4 +1,4 @@
-use crate::ast::{BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, Value};
+use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, Value};
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
 
@@ -32,6 +32,51 @@ impl Visitor<()> for ASTPrinter {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
             Statement::TypeDefinition(type_stmt) => self.visit_type_definition_statement(type_stmt),
+            Statement::FunctionDeclaration(fn_decl) => self.visit_function_declaration_statement(fn_decl),
+            Statement::Block(stmts) => self.visit_block_statement(stmts),
+            Statement::Return(expr) => self.visit_return_statement(expr),
+        }
+    }
+
+    fn visit_function_declaration_statement(&mut self, fn_decl: &FunctionDeclarationStmt) {
+        println!("{}Function: {} -> {:?}", self.indent(), fn_decl.name, fn_decl.return_type);
+        
+        self.indent_level += 1;
+        
+        // Print parameters
+        if !fn_decl.parameters.is_empty() {
+            println!("{}Parameters:", self.indent());
+            self.indent_level += 1;
+            for param in &fn_decl.parameters {
+                println!("{}{}: {:?}", self.indent(), param.name, param.param_type);
+            }
+            self.indent_level -= 1;
+        }
+        
+        // Print body
+        println!("{}Body:", self.indent());
+        self.indent_level += 1;
+        for stmt in &fn_decl.body {
+            self.visit_statement(stmt);
+        }
+        self.indent_level -= 2;
+    }
+    
+    fn visit_block_statement(&mut self, stmts: &Vec<Statement>) {
+        println!("{}Block:", self.indent());
+        self.indent_level += 1;
+        for stmt in stmts {
+            self.visit_statement(stmt);
+        }
+        self.indent_level -= 1;
+    }
+    
+    fn visit_return_statement(&mut self, expr: &Option<Expression>) {
+        println!("{}Return:", self.indent());
+        if let Some(expr) = expr {
+            self.indent_level += 1;
+            self.visit_expression(expr);
+            self.indent_level -= 1;
         }
     }
 
@@ -64,6 +109,21 @@ impl Visitor<()> for ASTPrinter {
             Expression::Binary(bin) => self.visit_binary_expression(bin),
             Expression::Variable(name) => self.visit_variable_expression(name),
             Expression::Unary(unary) => self.visit_unary_expression(unary),
+            Expression::Call(call) => self.visit_call_expression(call),
+        }
+    }
+    
+    fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) {
+        println!("{}Call: {}", self.indent(), call_expr.name);
+        
+        if !call_expr.arguments.is_empty() {
+            self.indent_level += 1;
+            println!("{}Arguments:", self.indent());
+            self.indent_level += 1;
+            for arg in &call_expr.arguments {
+                self.visit_expression(arg);
+            }
+            self.indent_level -= 2;
         }
     }
 

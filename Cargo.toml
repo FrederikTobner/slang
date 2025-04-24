@@ -3,6 +3,12 @@ name = "slang"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+print-byte_code = []
+print-ast = []
+trace-execution = []
+
 [dependencies]
 clap = { version = "4.5.36", features = ["derive"] }
 zip = "2.6.1"

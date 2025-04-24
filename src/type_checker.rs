@@ -1,5 +1,6 @@
 use crate::ast::{
-    BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, Value,
+    BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, 
+    Statement, TypeDefinitionStmt, UnaryExpr, Value,
 };
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
@@ -41,13 +42,33 @@ fn unknown_type() -> TypeId {
 
 pub struct TypeChecker {
     variables: HashMap<String, TypeId>,
+    functions: HashMap<String, (Vec<TypeId>, TypeId)>, // Function name -> (parameter types, return type)
+    current_return_type: Option<TypeId>, // Return type of current function being checked
+    // Add a set of special native functions that accept any type
+    native_variadic_functions: std::collections::HashSet<String>,
 }
 
 impl TypeChecker {
     pub fn new() -> Self {
-        TypeChecker {
+        let mut tc = TypeChecker {
             variables: HashMap::new(),
-        }
+            functions: HashMap::new(),
+            current_return_type: None,
+            native_variadic_functions: std::collections::HashSet::new(),
+        };
+        
+        // Register built-in native functions
+        tc.register_native_functions();
+        
+        tc
+    }
+    
+    // Register the signatures of built-in native functions
+    fn register_native_functions(&mut self) {
+        // Register print_value function that takes any type and returns i32
+        self.functions.insert("print_value".to_string(), (vec![unknown_type()], i32_type()));
+        // Also mark it as a special function that accepts any type
+        self.native_variadic_functions.insert("print_value".to_string());
     }
 
     pub fn check(&mut self, statements: &[Statement]) -> Result<(), String> {
@@ -77,6 +98,199 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
             Statement::TypeDefinition(type_def) => self.visit_type_definition_statement(type_def),
+            Statement::FunctionDeclaration(fn_decl) => self.visit_function_declaration_statement(fn_decl),
+            Statement::Block(stmts) => self.visit_block_statement(stmts),
+            Statement::Return(expr) => self.visit_return_statement(expr),
+        }
+    }
+    
+    fn visit_function_declaration_statement(&mut self, fn_decl: &FunctionDeclarationStmt) -> Result<TypeId, String> {
+        // Check parameter types
+        let mut param_types = Vec::new();
+        for param in &fn_decl.parameters {
+            param_types.push(param.param_type.clone());
+        }
+        
+        // Store function signature
+        self.functions.insert(fn_decl.name.clone(), (param_types, fn_decl.return_type.clone()));
+        
+        // Set current return type for checking return statements
+        let previous_return_type = self.current_return_type.clone();
+        self.current_return_type = Some(fn_decl.return_type.clone());
+        
+        // Add parameters to local scope
+        let mut saved_variables = HashMap::new();
+        for param in &fn_decl.parameters {
+            if self.variables.contains_key(&param.name) {
+                saved_variables.insert(param.name.clone(), self.variables[&param.name].clone());
+            }
+            self.variables.insert(param.name.clone(), param.param_type.clone());
+        }
+        
+        // Check function body
+        let result = self.visit_block_statement(&fn_decl.body);
+        
+        // Restore previous scope and return type
+        for (name, type_id) in saved_variables {
+            self.variables.insert(name, type_id);
+        }
+        self.current_return_type = previous_return_type;
+        
+        result.and(Ok(fn_decl.return_type.clone()))
+    }
+    
+    fn visit_block_statement(&mut self, stmts: &Vec<Statement>) -> Result<TypeId, String> {
+        // Save current variables to restore scope later
+        let saved_variables = self.variables.clone();
+        
+        // Type-check each statement
+        for stmt in stmts {
+            stmt.accept(self)?;
+        }
+        
+        // Restore previous scope, removing all locally defined variables
+        self.variables = saved_variables;
+        
+        Ok(unknown_type())
+    }
+    
+    fn visit_return_statement(&mut self, expr: &Option<Expression>) -> Result<TypeId, String> {
+        // Check if we're inside a function
+        if let Some(expected_type) = &self.current_return_type {
+            let expected_type = expected_type.clone();
+            // Check return value
+            if let Some(expr) = expr {
+                let actual_type = self.visit_expression(expr)?;
+                
+                // Check if types match
+                if actual_type == expected_type {
+                    return Ok(actual_type);
+                }
+                
+                // Handle special case for unspecified integers
+                if actual_type == unspecified_int_type() {
+                    if let Expression::Literal(lit) = expr {
+                        if let Value::UnspecifiedInteger(n) = &lit.value {
+                            let value_in_range = TYPE_REGISTRY.with(|registry| {
+                                registry.borrow().check_value_in_range(n, &expected_type)
+                            });
+                            
+                            if value_in_range {
+                                return Ok(expected_type.clone());
+                            }
+                        }
+                    }
+                }
+                
+                // Type mismatch
+                let actual_type_name = TYPE_REGISTRY.with(|registry| {
+                    registry.borrow()
+                        .get_type_info(&actual_type)
+                        .map(|t| t.name.clone())
+                        .unwrap_or_else(|| format!("{:?}", actual_type))
+                });
+                
+                let expected_type_name = TYPE_REGISTRY.with(|registry| {
+                    registry.borrow()
+                        .get_type_info(&expected_type)
+                        .map(|t| t.name.clone())
+                        .unwrap_or_else(|| format!("{:?}", expected_type))
+                });
+                
+                return Err(format!(
+                    "Type mismatch: function returns {} but got {}",
+                    expected_type_name, actual_type_name
+                ));
+            } else if expected_type != unknown_type() {
+                // Missing return value when one is expected
+                let expected_type_name = TYPE_REGISTRY.with(|registry| {
+                    registry.borrow()
+                        .get_type_info(&expected_type)
+                        .map(|t| t.name.clone())
+                        .unwrap_or_else(|| format!("{:?}", expected_type))
+                });
+                
+                return Err(format!(
+                    "Type mismatch: function returns {} but no return value provided",
+                    expected_type_name
+                ));
+            }
+            
+            Ok(expected_type)
+        } else {
+            Err("Return statement outside of function".to_string())
+        }
+    }
+    
+    fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> Result<TypeId, String> {
+        // Check if function exists
+        if let Some((param_types, return_type)) = self.functions.get(&call_expr.name).cloned() {
+            // Check argument count
+            if param_types.len() != call_expr.arguments.len() {
+                return Err(format!(
+                    "Function '{}' expects {} arguments, but got {}",
+                    call_expr.name,
+                    param_types.len(),
+                    call_expr.arguments.len()
+                ));
+            }
+            
+            // Special handling for native functions that accept any type
+            let is_special_native = self.native_variadic_functions.contains(&call_expr.name);
+            
+            // Check each argument
+            for (i, arg) in call_expr.arguments.iter().enumerate() {
+                let arg_type = self.visit_expression(arg)?;
+                let param_type = &param_types[i];
+                
+                // Skip type checking for special native functions
+                if is_special_native {
+                    continue;
+                }
+                
+                // Check if types match
+                if arg_type != *param_type {
+                    // Handle special case for unspecified integers
+                    if arg_type == unspecified_int_type() {
+                        if let Expression::Literal(lit) = arg {
+                            if let Value::UnspecifiedInteger(n) = &lit.value {
+                                let value_in_range = TYPE_REGISTRY.with(|registry| {
+                                    registry.borrow().check_value_in_range(n, param_type)
+                                });
+                                
+                                if value_in_range {
+                                    continue; // This argument is valid
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Type mismatch
+                    let arg_type_name = TYPE_REGISTRY.with(|registry| {
+                        registry.borrow()
+                            .get_type_info(&arg_type)
+                            .map(|t| t.name.clone())
+                            .unwrap_or_else(|| format!("{:?}", arg_type))
+                    });
+                    
+                    let param_type_name = TYPE_REGISTRY.with(|registry| {
+                        registry.borrow()
+                            .get_type_info(param_type)
+                            .map(|t| t.name.clone())
+                            .unwrap_or_else(|| format!("{:?}", param_type))
+                    });
+                    
+                    return Err(format!(
+                        "Type mismatch: function '{}' expects argument {} to be {}, but got {}",
+                        call_expr.name, i + 1, param_type_name, arg_type_name
+                    ));
+                }
+            }
+            
+            // All arguments match, return the function's return type
+            Ok(return_type)
+        } else {
+            Err(format!("Undefined function: {}", call_expr.name))
         }
     }
     
@@ -211,6 +425,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
             Expression::Variable(name) => self.visit_variable_expression(name),
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
+            Expression::Call(call_expr) => self.visit_call_expression(call_expr),
         }
     }
 

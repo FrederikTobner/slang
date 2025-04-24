@@ -18,6 +18,14 @@ pub enum Tokentype {
     LeftBrace,
     RightBrace,
     Comma,
+    
+    // New tokens for functions
+    Fn,             // fn
+    LeftParen,      // (
+    RightParen,     // )
+    Arrow,          // ->
+    Return,         // return
+    
     Eof,
 }
 
