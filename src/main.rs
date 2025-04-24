@@ -25,7 +25,7 @@ use std::path::Path;
 use zip::{ZipArchive, ZipWriter, write::FileOptions};
 use crate::types::TYPE_REGISTRY;
 
-// The extension for compiled Slang binaries
+/// The extension for compiled Slang binaries
 const SLANG_BYTECODE_EXTENSION: &str = "sip";
 
 #[derive(ClapParser)]
@@ -65,7 +65,6 @@ enum Commands {
 }
 
 fn init_type_system() {
-    // Simply access the TYPE_REGISTRY to initialize it
     let _ = crate::types::unknown_type();
     TYPE_REGISTRY.with(|_| ());
 }
@@ -104,11 +103,9 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> Result<(), String> {
         .compression_method(zip::CompressionMethod::Deflated)
         .unix_permissions(0o755);
     
-    // Add bytecode file to the archive
     zip.start_file("bytecode.bin", options)
         .map_err(|e| format!("Failed to create zip entry: {}", e))?;
     
-    // Serialize the chunk into the zip file
     {
         let mut cursor = std::io::Cursor::new(Vec::new());
         chunk.serialize(&mut cursor)
@@ -118,7 +115,6 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> Result<(), String> {
             .map_err(|e| format!("Failed to write bytecode: {}", e))?;
     }
     
-    // Finalize the zip
     zip.finish()
         .map_err(|e| format!("Failed to finalize zip file: {}", e))?;
     
@@ -170,25 +166,17 @@ fn repl() {
                 break;
             }
         } else {
-            // Handle read error
             println!("Error reading input. Try again.");
             continue;
         }
 
         let trimmed = input.trim();
         
+        
         if trimmed.is_empty() {
             continue;
         }
         
-        // Special REPL commands
-        if trimmed == "vars" {
-            println!("=== Defined Variables ===");
-            for (name, value) in vm.get_variables() {
-                println!("{}: {}", name, value);
-            }
-            continue;
-        }
 
         let tokens = tokenize(&input);
         if tokens.len() <= 1 {  // Just EOF token
@@ -197,6 +185,12 @@ fn repl() {
 
         match parse(&tokens) {
             Ok(ast) => {
+                #[cfg(feature = "print-ast")]
+                {
+                    println!("\n=== AST ===");
+                    let mut printer = ast_printer::ASTPrinter::new();
+                    printer.print(&ast);
+                }
                 match type_checker.check(&ast) {
                     Ok(_) => {
                         let mut compiler = Compiler::new();

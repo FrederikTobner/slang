@@ -16,12 +16,12 @@ pub enum Statement {
     Let(LetStatement),
     Expression(Expression),
     TypeDefinition(TypeDefinitionStmt),
-    FunctionDeclaration(FunctionDeclarationStmt),  // New: Function declaration
-    Block(Vec<Statement>),  // New: Block of statements
-    Return(Option<Expression>),  // New: Return statement
+    FunctionDeclaration(FunctionDeclarationStmt), 
+    Block(Vec<Statement>),
+    Return(Option<Expression>), 
 }
 
-// Function call expression
+/// Function call expression
 #[derive(Debug)]
 pub struct FunctionCallExpr {
     pub name: String,
@@ -30,14 +30,14 @@ pub struct FunctionCallExpr {
     pub expr_type: TypeId,
 }
 
-// Function parameter
+/// Function parameter
 #[derive(Debug)]
 pub struct Parameter {
     pub name: String,
     pub param_type: TypeId,
 }
 
-// Function declaration statement
+/// Function declaration statement
 #[derive(Debug)]
 pub struct FunctionDeclarationStmt {
     pub name: String,
@@ -46,13 +46,14 @@ pub struct FunctionDeclarationStmt {
     pub body: Vec<Statement>,
 }
 
-// Add support for defining new types
+/// Type definition statement
 #[derive(Debug)]
 pub struct TypeDefinitionStmt {
     pub name: String,
     pub fields: Vec<(String, TypeId)>,
 }
 
+/// Literal expression
 #[derive(Debug)]
 pub struct LiteralExpr {
     pub value: Value,
@@ -60,6 +61,7 @@ pub struct LiteralExpr {
     pub expr_type: TypeId,
 }
 
+/// Unary expression
 #[derive(Debug)]
 pub struct UnaryExpr {
     pub operator: Tokentype,
@@ -68,6 +70,7 @@ pub struct UnaryExpr {
     pub expr_type: TypeId,
 }
 
+/// Value of a literal expression
 #[derive(Debug)]
 pub enum Value {
     I32(i32),
@@ -79,6 +82,7 @@ pub enum Value {
     String(String),
 }
 
+/// Binary expression
 #[derive(Debug)]
 pub struct BinaryExpr {
     pub left: Box<Expression>,
@@ -88,6 +92,7 @@ pub struct BinaryExpr {
     pub expr_type: TypeId,
 }
 
+/// Let statement
 #[derive(Debug)]
 pub struct LetStatement {
     pub name: String,

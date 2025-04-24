@@ -61,6 +61,7 @@ impl VM {
         Ok(Value::I32(0))
     }
     
+    #[cfg(feature = "trace-execution")]
     pub fn get_variables(&self) -> &HashMap<String, Value> {
         &self.variables
     }
@@ -353,7 +354,7 @@ impl VM {
                                 let param_name = &func.locals[i];
                                 
                                 // Get argument value from stack
-                                let arg_value = self.stack[function_pos + 1 + i].clone();
+                                let arg_value = self.stack[function_pos - 1 - i].clone();
                                 
                                 // Store as a local variable
                                 locals.insert(param_name.clone(), arg_value);
