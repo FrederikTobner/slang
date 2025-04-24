@@ -1,4 +1,4 @@
-use crate::ast::{BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, UnaryExpr};
+use crate::ast::{BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr};
 use crate::bytecode::{Chunk, OpCode, Value};
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
@@ -55,6 +55,7 @@ impl Visitor<Result<(), String>> for Compiler {
     fn visit_statement(&mut self, stmt: &Statement) -> Result<(), String> {
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
+        Statement::TypeDefinition(type_stmt) => self.visit_type_definition_statement(type_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
         }
     }
@@ -162,6 +163,12 @@ impl Visitor<Result<(), String>> for Compiler {
         self.emit_op(OpCode::GetVariable);
         self.emit_byte(var_index as u8);
 
+        Ok(())
+    }
+
+    fn visit_type_definition_statement(&mut self, _stmt: &TypeDefinitionStmt) -> Result<(), String> {
+        // Type definitions don't generate code at runtime
+        // They're just for the type checker
         Ok(())
     }
 }

@@ -1,5 +1,6 @@
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
+use crate::types::TypeId;
 
 #[derive(Debug)]
 pub enum Expression {
@@ -13,14 +14,21 @@ pub enum Expression {
 pub enum Statement {
     Let(LetStatement),
     Expression(Expression),
+    TypeDefinition(TypeDefinitionStmt),
 }
 
+// Add support for defining new types
+#[derive(Debug)]
+pub struct TypeDefinitionStmt {
+    pub name: String,
+    pub fields: Vec<(String, TypeId)>,
+}
 
 #[derive(Debug)]
 pub struct LiteralExpr {
     pub value: Value,
     #[allow(dead_code)]
-    pub expr_type: Type, 
+    pub expr_type: TypeId,
 }
 
 #[derive(Debug)]
@@ -28,19 +36,7 @@ pub struct UnaryExpr {
     pub operator: Tokentype,
     pub right: Box<Expression>,
     #[allow(dead_code)]
-    pub expr_type: Type, 
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Type {
-    I32,
-    I64,
-    U32,
-    U64,
-    UnspecifiedInteger,
-    F64,
-    String,
-    Unknown, 
+    pub expr_type: TypeId,
 }
 
 #[derive(Debug)]
@@ -54,21 +50,20 @@ pub enum Value {
     String(String),
 }
 
-
 #[derive(Debug)]
 pub struct BinaryExpr {
     pub left: Box<Expression>,
     pub operator: Tokentype,
     pub right: Box<Expression>,
-    #[allow(dead_code)] 
-    pub expr_type: Type, 
+    #[allow(dead_code)]
+    pub expr_type: TypeId,
 }
 
 #[derive(Debug)]
 pub struct LetStatement {
     pub name: String,
     pub value: Expression,
-    pub expr_type: Type, 
+    pub expr_type: TypeId,
 }
 
 impl Statement {
@@ -76,9 +71,11 @@ impl Statement {
         match self {
             Statement::Let(let_stmt) => visitor.visit_let_statement(let_stmt),
             Statement::Expression(expr) => visitor.visit_expression_statement(expr),
+            Statement::TypeDefinition(type_def) => visitor.visit_type_definition_statement(type_def),
         }
     }
 }
+
 impl Expression {
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
         match self {

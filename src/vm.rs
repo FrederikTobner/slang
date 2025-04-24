@@ -16,6 +16,23 @@ impl VM {
         }
     }
 
+    // Add methods to access and manipulate the VM's state
+    #[allow(dead_code)]
+    pub fn get_variable(&self, name: &str) -> Option<&Value> {
+        self.variables.get(name)
+    }
+    
+    pub fn get_variables(&self) -> &HashMap<String, Value> {
+        &self.variables
+    }
+    
+    #[allow(dead_code)]
+    pub fn reset(&mut self) {
+        self.ip = 0;
+        self.stack.clear();
+        self.variables.clear();
+    }
+
     pub fn interpret(&mut self, chunk: &Chunk) -> Result<(), String> {
         self.ip = 0;
         while self.ip < chunk.code.len() {

@@ -1,4 +1,4 @@
-use crate::ast::{BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, UnaryExpr, Value};
+use crate::ast::{BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, Value};
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
 
@@ -7,10 +7,12 @@ pub struct ASTPrinter {
 }
 
 impl ASTPrinter {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         ASTPrinter { indent_level: 0 }
     }
 
+    #[allow(dead_code)]
     pub fn print(&mut self, statements: &[Statement]) {
         println!("AST Root");
         for stmt in statements {
@@ -29,6 +31,7 @@ impl Visitor<()> for ASTPrinter {
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
+            Statement::TypeDefinition(type_stmt) => self.visit_type_definition_statement(type_stmt),
         }
     }
 
@@ -43,6 +46,15 @@ impl Visitor<()> for ASTPrinter {
         println!("{}Expression:", self.indent());
         self.indent_level += 1;
         self.visit_expression(expr);
+        self.indent_level -= 1;
+    }
+
+    fn visit_type_definition_statement(&mut self, stmt: &TypeDefinitionStmt) -> () {
+        println!("{}Type Definition: {}", self.indent(), stmt.name);
+        self.indent_level += 1;
+        for field in &stmt.fields {
+            println!("{}Field: {}", self.indent(), field.0);
+        }
         self.indent_level -= 1;
     }
 

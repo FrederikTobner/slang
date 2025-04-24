@@ -1,29 +1,41 @@
 use crate::ast::{
-    BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, Type, UnaryExpr, Value,
+    BinaryExpr, Expression, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, Value,
 };
 use crate::token::{Token, Tokentype};
-use std::collections::HashMap;
+use crate::types::{TypeId, TYPE_REGISTRY};
+use crate::types::{i32_type, i64_type, u32_type, u64_type, f64_type, string_type, unspecified_int_type, unknown_type};
+
+#[derive(Debug)]
+pub struct ParseError {
+    message: String,
+}
+
+impl ParseError {
+    pub fn new(message: &str) -> Self {
+        ParseError {
+            message: message.to_string(),
+        }
+    }
+}
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for ParseError {}
 
 pub struct Parser<'a> {
     tokens: &'a [Token],
     current: usize,
-    type_map: HashMap<String, Type>,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(tokens: &'a [Token]) -> Self {
-        let mut type_map = HashMap::new();
-        type_map.insert("String".to_string(), Type::String);
-        type_map.insert("i32".to_string(), Type::I32);
-        type_map.insert("i64".to_string(), Type::I64);
-        type_map.insert("u32".to_string(), Type::U32);
-        type_map.insert("u64".to_string(), Type::U64);
-        type_map.insert("f64".to_string(), Type::F64);
-
         Parser {
             tokens,
             current: 0,
-            type_map,
         }
     }
 
@@ -41,17 +53,67 @@ impl<'a> Parser<'a> {
     }
 
     fn statement(&mut self) -> Result<Statement, String> {
-        let stmt = if self.match_token(Tokentype::Let) {
-            self.let_statement()?
+        if self.match_token(Tokentype::Let) {
+            return self.let_statement();
+        } else if self.match_token(Tokentype::Struct) {
+            return self.type_definition_statement();
         } else {
-            self.expression_statement()?
-        };
-
-        if !self.match_token(Tokentype::Semicolon) {
-            return Err("Expected semicolon at end of statement".to_string());
+            return self.expression_statement();
         }
+    }
 
-        Ok(stmt)
+    fn type_definition_statement(&mut self) -> Result<Statement, String> {
+        // Expect struct name
+        if !self.check(Tokentype::Identifier) {
+            return Err("Expected struct name after 'struct' keyword".to_string());
+        }
+        
+        let name = self.advance().lexeme.clone();
+        
+        // Expect opening brace
+        if !self.match_token(Tokentype::LeftBrace) {
+            return Err("Expected '{' after struct name".to_string());
+        }
+        
+        let mut fields = Vec::new();
+        
+        // Parse fields until closing brace
+        while !self.check(Tokentype::RightBrace) && !self.is_at_end() {
+            // Field name
+            if !self.check(Tokentype::Identifier) {
+                return Err("Expected field name".to_string());
+            }
+            let field_name = self.advance().lexeme.clone();
+            
+            // Field type
+            if !self.match_token(Tokentype::Colon) {
+                return Err("Expected ':' after field name".to_string());
+            }
+            
+            let field_type = match self.parse_type() {
+                Ok(t) => t,
+                Err(e) => return Err(e.to_string()),
+            };
+            
+            fields.push((field_name, field_type));
+            
+            // Expect comma or closing brace
+            if !self.match_token(Tokentype::Comma) && !self.check(Tokentype::RightBrace) {
+                return Err("Expected ',' after field or '}'".to_string());
+            }
+        }
+        
+        // Expect closing brace
+        if !self.match_token(Tokentype::RightBrace) {
+            return Err("Expected '}' after struct fields".to_string());
+        }
+        
+        // Expect semicolon
+        if !self.match_token(Tokentype::Semicolon) {
+            return Err("Expected ';' after struct definition".to_string());
+        }
+        
+        Ok(Statement::TypeDefinition(TypeDefinitionStmt { name, fields }))
     }
 
     fn let_statement(&mut self) -> Result<Statement, String> {
@@ -60,20 +122,25 @@ impl<'a> Parser<'a> {
         }
 
         let token = self.advance();
-        let name = token.value.to_string();
-        let mut var_type = Type::Unknown;
+        let name = token.lexeme.clone();
+        let mut var_type = unknown_type();
 
         if self.match_token(Tokentype::Colon) {
             if !self.check(Tokentype::Identifier) {
                 return Err("Expected type name after colon".to_string());
             }
 
-            let type_token = self.advance();
-            let type_name = type_token.value.to_string();
-
-            if let Some(type_value) = self.type_map.get(&type_name) {
-                var_type = type_value.clone();
-            } else {
+            let type_name = self.advance().lexeme.clone();
+            
+            // Look up the type in the registry
+            var_type = TYPE_REGISTRY.with(|registry| {
+                let registry = registry.borrow();
+                registry.get_type_by_name(&type_name)
+                    .cloned()
+                    .unwrap_or_else(|| unknown_type())
+            });
+            
+            if var_type == unknown_type() {
                 return Err(format!("Unknown type: {}", type_name));
             }
         }
@@ -84,6 +151,11 @@ impl<'a> Parser<'a> {
 
         let expr = self.expression()?;
 
+        // Expect semicolon
+        if !self.match_token(Tokentype::Semicolon) {
+            return Err("Expected ';' after let statement".to_string());
+        }
+
         Ok(Statement::Let(LetStatement {
             name,
             value: expr,
@@ -93,25 +165,17 @@ impl<'a> Parser<'a> {
 
     fn expression_statement(&mut self) -> Result<Statement, String> {
         let expr = self.expression()?;
+        
+        // Expect semicolon
+        if !self.match_token(Tokentype::Semicolon) {
+            return Err("Expected ';' after expression".to_string());
+        }
+        
         Ok(Statement::Expression(expr))
     }
 
     fn expression(&mut self) -> Result<Expression, String> {
         self.term()
-    }
-
-    fn unary(&mut self) -> Result<Expression, String> {
-        if self.match_token(Tokentype::Minus) {
-            let operator = self.previous().token_type.clone();
-            let right = self.primary()?;
-            return Ok(Expression::Unary(UnaryExpr {
-                operator,
-                right: Box::new(right),
-                expr_type: Type::Unknown,
-            }));
-        }
-
-        self.primary()
     }
 
     fn term(&mut self) -> Result<Expression, String> {
@@ -124,7 +188,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: Type::Unknown,
+                expr_type: unknown_type(),
             });
         }
 
@@ -136,16 +200,30 @@ impl<'a> Parser<'a> {
 
         while self.match_any(&[Tokentype::Multiply, Tokentype::Divide]) {
             let operator = self.previous().token_type;
-            let right = self.primary()?;
+            let right = self.unary()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: Type::Unknown,
+                expr_type: unknown_type(),
             });
         }
 
         Ok(expr)
+    }
+
+    fn unary(&mut self) -> Result<Expression, String> {
+        if self.match_token(Tokentype::Minus) {
+            let operator = self.previous().token_type.clone();
+            let right = self.primary()?;
+            return Ok(Expression::Unary(UnaryExpr {
+                operator,
+                right: Box::new(right),
+                expr_type: unknown_type(),
+            }));
+        }
+
+        self.primary()
     }
 
     fn primary(&mut self) -> Result<Expression, String> {
@@ -154,39 +232,39 @@ impl<'a> Parser<'a> {
         }
 
         if self.match_token(Tokentype::FloatLiteral) {
-            let value_str = self.previous().value.clone();
+            let value_str = self.previous().lexeme.clone();
             let value = value_str
                 .parse::<f64>()
                 .map_err(|_| format!("Invalid float: {}", value_str))?;
             return Ok(Expression::Literal(LiteralExpr {
                 value: Value::F64(value),
-                expr_type: Type::F64,
+                expr_type: f64_type(),
             }));
         }
 
         if self.match_token(Tokentype::StringLiteral) {
-            let value = self.previous().value.clone();
+            let value = self.previous().lexeme.clone();
             return Ok(Expression::Literal(LiteralExpr {
                 value: Value::String(value),
-                expr_type: Type::String,
+                expr_type: string_type(),
             }));
         }
 
         if self.match_token(Tokentype::Identifier) {
-            return Ok(Expression::Variable(self.previous().value.clone()));
+            return Ok(Expression::Variable(self.previous().lexeme.clone()));
         }
 
         Err(format!("Expected expression, found {:?}", self.peek()))
     }
 
     fn parse_integer(&mut self) -> Result<Expression, String> {
-        let value_str = self.previous().value.clone();
+        let value_str = self.previous().lexeme.clone();
         let base_value = value_str
             .parse::<i64>()
             .map_err(|_| format!("Invalid integer: {}", value_str))?;
 
         if self.check(Tokentype::Identifier) {
-            let type_name = self.peek().value.clone();
+            let type_name = self.peek().lexeme.clone();
 
             match type_name.as_str() {
                 "i32" => {
@@ -196,14 +274,14 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: Value::I32(base_value as i32),
-                        expr_type: Type::I32,
+                        expr_type: i32_type(),
                     }));
                 }
                 "i64" => {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: Value::I64(base_value),
-                        expr_type: Type::I64,
+                        expr_type: i64_type(),
                     }));
                 }
                 "u32" => {
@@ -213,7 +291,7 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: Value::U32(base_value as u32),
-                        expr_type: Type::U32,
+                        expr_type: u32_type(),
                     }));
                 }
                 "u64" => {
@@ -223,16 +301,35 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: Value::U64(base_value as u64),
-                        expr_type: Type::U64,
+                        expr_type: u64_type(),
                     }));
                 }
                 _ => {}
             }
         }
+        
+        // Unspecified integer
         Ok(Expression::Literal(LiteralExpr {
             value: Value::UnspecifiedInteger(base_value),
-            expr_type: Type::UnspecifiedInteger,
+            expr_type: unspecified_int_type(),
         }))
+    }
+
+    fn parse_type(&mut self) -> Result<TypeId, ParseError> {
+        if !self.check(Tokentype::Identifier) {
+            return Err(ParseError::new("Expected type identifier"));
+        }
+        
+        let type_name = self.advance().lexeme.clone();
+        
+        TYPE_REGISTRY.with(|registry| {
+            let registry = registry.borrow();
+            if let Some(type_id) = registry.get_type_by_name(&type_name) {
+                Ok(type_id.clone())
+            } else {
+                Err(ParseError::new(&format!("Unknown type: {}", type_name)))
+            }
+        })
     }
 
     fn match_token(&mut self, token_type: Tokentype) -> bool {
@@ -269,7 +366,7 @@ impl<'a> Parser<'a> {
     }
 
     fn is_at_end(&self) -> bool {
-        self.current >= self.tokens.len()
+        self.peek().token_type == Tokentype::Eof
     }
 
     fn peek(&self) -> &Token {

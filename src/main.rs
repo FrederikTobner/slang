@@ -8,9 +8,9 @@ mod token;
 mod type_checker;
 mod visitor;
 mod vm;
+mod types;
 
 use ast::Statement;
-use ast_printer::ASTPrinter;
 use bytecode::Chunk;
 use compiler::Compiler;
 use clap::{Parser as ClapParser, Subcommand};
@@ -23,13 +23,14 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
 use zip::{ZipArchive, ZipWriter, write::FileOptions};
+use crate::types::TYPE_REGISTRY;
 
 // The extension for compiled Slang binaries
 const SLANG_BYTECODE_EXTENSION: &str = "sip";
 
 #[derive(ClapParser)]
-#[command(version, about = "Slang programming language", long_about = r#"
-Slang is a simple programming language designed for educational purposes. It features a REPL, compilation to bytecode, and execution of both source files and compiled bytecode."#)]
+#[command(version, about = "Slang programming language", long_about = r#"Slang is a simple programming language designed for educational purposes.
+It features a REPL, compilation to bytecode, and execution of both source files and compiled bytecode."#)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
@@ -63,6 +64,11 @@ enum Commands {
     },
 }
 
+fn init_type_system() {
+    // Simply access the TYPE_REGISTRY to initialize it
+    let _ = crate::types::unknown_type();
+    TYPE_REGISTRY.with(|_| ());
+}
 
 fn parse(tokens: &[Token]) -> Result<Vec<Statement>, String> {
     let mut parser = Parser::new(tokens);
@@ -150,45 +156,58 @@ fn run_bytecode(chunk: &Chunk) -> Result<(), String> {
 fn repl() {
     let mut type_checker = TypeChecker::new();
     let mut vm = VM::new();
+    
+    println!("Slang REPL - Type 'exit' to exit");
+    println!("Type 'vars' to display currently defined variables");
+    
     loop {
         let mut input = String::new();
         print!(">>> ");
         std::io::stdout().flush().unwrap();
-        std::io::stdin().read_line(&mut input).unwrap();
+        
+        if std::io::stdin().read_line(&mut input).is_ok() {
+            if input.trim() == "exit" {
+                break;
+            }
+        } else {
+            // Handle read error
+            println!("Error reading input. Try again.");
+            continue;
+        }
 
-        if input.trim() == "exit" || input.trim() == "" {
-            break;
+        let trimmed = input.trim();
+        
+        if trimmed.is_empty() {
+            continue;
+        }
+        
+        // Special REPL commands
+        if trimmed == "vars" {
+            println!("=== Defined Variables ===");
+            for (name, value) in vm.get_variables() {
+                println!("{}: {}", name, value);
+            }
+            continue;
         }
 
         let tokens = tokenize(&input);
-        for token in &tokens {
-            println!("{:?}", token);
+        if tokens.len() <= 1 {  // Just EOF token
+            continue;
         }
 
         match parse(&tokens) {
             Ok(ast) => {
                 match type_checker.check(&ast) {
                     Ok(_) => {
-                        println!("Type checking passed!");
-                        let mut printer = ASTPrinter::new();
-                        printer.print(&ast); 
                         let mut compiler = Compiler::new();
                         match compiler.compile(&ast) {
                             Ok(chunk) => {
+                                // Always print bytecode, removed environment variable check
                                 println!("\n=== Bytecode ===");
-                                // Print bytecode for debugging
-                                for (i, byte) in chunk.code.iter().enumerate() {
-                                    print!("{:04} ", i);
-                                    if let Some(op) = bytecode::OpCode::from_u8(*byte) {
-                                        println!("{:?}", op);
-                                    } else {
-                                        println!("  {}", byte);
-                                    }
-                                }
+                                chunk.disassemble("REPL");
 
                                 // Execute the bytecode
-                                println!("\n=== Execution ===");
-                                if let Err(e) = vm.interpret(chunk) {
+                                if let Err(e) = vm.interpret(&chunk) {
                                     println!("Runtime error: {}", e);
                                 }
                             }
@@ -208,13 +227,15 @@ fn repl() {
 fn main() {
      let cli = Cli::parse();
 
+    // Initialize the type registry
+    init_type_system();
+
     match &cli.command {
         Some(Commands::Repl{}) => {
             repl();
         },
         
         Some(Commands::Compile { input, output }) => {
-            // Determine output filename if not specified
             let output_path = match output {
                 Some(path) => path.clone(),
                 None => {

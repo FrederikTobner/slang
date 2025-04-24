@@ -24,6 +24,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 
                 match identifier.as_str() {
                     "let" => tokens.push(Token::new(Tokentype::Let, identifier)),
+                    "struct" => tokens.push(Token::new(Tokentype::Struct, identifier)),
                     _ => tokens.push(Token::new(Tokentype::Identifier, identifier)),
                 }
             }
@@ -106,6 +107,18 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 chars.next();
                 tokens.push(Token::new(Tokentype::Semicolon, ";".to_string()));
             }
+            '{' => {
+                chars.next();
+                tokens.push(Token::new(Tokentype::LeftBrace, "{".to_string()));
+            }
+            '}' => {
+                chars.next();
+                tokens.push(Token::new(Tokentype::RightBrace, "}".to_string()));
+            }
+            ',' => {
+                chars.next();
+                tokens.push(Token::new(Tokentype::Comma, ",".to_string()));
+            }
 
             _ => {
                 let invalid_char = chars.next().unwrap();
@@ -113,5 +126,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }
         }
     }
+    
+    // Add EOF token at the end
+    tokens.push(Token::new(Tokentype::Eof, "".to_string()));
+    
     tokens
 }

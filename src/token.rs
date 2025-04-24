@@ -13,16 +13,22 @@ pub enum Tokentype {
     Equal,          // =
     Colon,          // :     
     Semicolon,      // ;
+
+    Struct,
+    LeftBrace,
+    RightBrace,
+    Comma,
+    Eof,
 }
 
 #[derive(Debug)]
 pub struct Token {
     pub token_type: Tokentype,
-    pub value: String,
+    pub lexeme: String,
 }
 
 impl Token {
-    pub fn new(token_type: Tokentype, value: String) -> Token {
-        Token { token_type, value }
+    pub fn new(token_type: Tokentype, lexeme: String) -> Token {
+        Token { token_type, lexeme }
     }
 }
