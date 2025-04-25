@@ -1,3 +1,3 @@
 # Slang
 
-Toy scripting language.
+Toy scripting language

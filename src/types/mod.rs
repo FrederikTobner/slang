@@ -59,8 +59,7 @@ pub struct TypeRegistry {
 
 thread_local! {
     pub static TYPE_REGISTRY: RefCell<TypeRegistry> = RefCell::new(TypeRegistry::new());
-    
-    // Replace lazy_static with more thread_local statics
+
     pub static I32_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("i32").unwrap().clone()));
     pub static I64_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("i64").unwrap().clone()));
     pub static U32_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("u32").unwrap().clone()));
@@ -117,24 +116,19 @@ impl TypeRegistry {
     }
 
     fn register_built_in_types(&mut self) {
-        // Register integer types
         self.register_type("i32", TypeKind::Integer(IntegerType { signed: true, bits: 32, is_unspecified: false }));
         self.register_type("i64", TypeKind::Integer(IntegerType { signed: true, bits: 64, is_unspecified: false }));
         self.register_type("u32", TypeKind::Integer(IntegerType { signed: false, bits: 32, is_unspecified: false }));
         self.register_type("u64", TypeKind::Integer(IntegerType { signed: false, bits: 64, is_unspecified: false }));
         self.register_type("int", TypeKind::Integer(IntegerType { signed: true, bits: 0, is_unspecified: true }));
         
-        // Register float type
         self.register_type("f64", TypeKind::Float(FloatType { bits: 64 }));
         
-        // Register string type
         self.register_type("string", TypeKind::String);
         
-        // Register unknown type
         self.register_type("unknown", TypeKind::Unknown);
     }
 
-    // Register a new type and return its ID
     pub fn register_type(&mut self, name: &str, kind: TypeKind) -> TypeId {
         let id = TypeId::new();
         let type_info = TypeInfo {
@@ -149,17 +143,14 @@ impl TypeRegistry {
         id
     }
 
-    // Look up a type by name
     pub fn get_type_by_name(&self, name: &str) -> Option<&TypeId> {
         self.type_names.get(name)
     }
-
-    // Look up type information 
+ 
     pub fn get_type_info(&self, id: &TypeId) -> Option<&TypeInfo> {
         self.types.get(id)
     }
 
-    // Check if an integer value is in the valid range for a given type
     pub fn check_value_in_range(&self, value: &i64, type_id: &TypeId) -> bool {
         let type_info = match self.get_type_info(type_id) {
             Some(info) => info,

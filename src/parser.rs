@@ -141,11 +141,9 @@ impl<'a> Parser<'a> {
                     .unwrap_or_else(|| unknown_type())
             })
         } else {
-            // Default to unknown/void type if no return type specified
             unknown_type()
         };
         
-        // Parse function body
         if !self.match_token(Tokentype::LeftBrace) {
             return Err("Expected '{' before function body".to_string());
         }
@@ -212,15 +210,12 @@ impl<'a> Parser<'a> {
         
         let mut fields = Vec::new();
         
-        // Parse fields until closing brace
         while !self.check(Tokentype::RightBrace) && !self.is_at_end() {
-            // Field name
             if !self.check(Tokentype::Identifier) {
                 return Err("Expected field name".to_string());
             }
             let field_name = self.advance().lexeme.clone();
             
-            // Field type
             if !self.match_token(Tokentype::Colon) {
                 return Err("Expected ':' after field name".to_string());
             }
@@ -232,18 +227,15 @@ impl<'a> Parser<'a> {
             
             fields.push((field_name, field_type));
             
-            // Expect comma or closing brace
             if !self.match_token(Tokentype::Comma) && !self.check(Tokentype::RightBrace) {
                 return Err("Expected ',' after field or '}'".to_string());
             }
         }
         
-        // Expect closing brace
         if !self.match_token(Tokentype::RightBrace) {
             return Err("Expected '}' after struct fields".to_string());
         }
         
-        // Expect semicolon
         if !self.match_token(Tokentype::Semicolon) {
             return Err("Expected ';' after struct definition".to_string());
         }
@@ -267,7 +259,6 @@ impl<'a> Parser<'a> {
 
             let type_name = self.advance().lexeme.clone();
             
-            // Look up the type in the registry
             var_type = TYPE_REGISTRY.with(|registry| {
                 let registry = registry.borrow();
                 registry.get_type_by_name(&type_name)
@@ -301,7 +292,6 @@ impl<'a> Parser<'a> {
     fn expression_statement(&mut self) -> Result<Statement, String> {
         let expr = self.expression()?;
         
-        // Expect semicolon
         if !self.match_token(Tokentype::Semicolon) {
             return Err("Expected ';' after expression".to_string());
         }
@@ -388,7 +378,6 @@ impl<'a> Parser<'a> {
         if self.match_token(Tokentype::Identifier) {
             let name = self.previous().lexeme.clone();
             
-            // Check if this is a function call
             if self.match_token(Tokentype::LeftParen) {
                 return self.finish_call(name);
             }
@@ -477,7 +466,7 @@ impl<'a> Parser<'a> {
             }
         }
         
-        // Unspecified integer
+        // Unspecified integer literal
         Ok(Expression::Literal(LiteralExpr {
             value: Value::UnspecifiedInteger(base_value),
             expr_type: unspecified_int_type(),

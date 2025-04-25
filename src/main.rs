@@ -204,18 +204,18 @@ fn repl() {
                                 }
                                 // Execute the bytecode
                                 if let Err(e) = vm.interpret(&chunk) {
-                                    println!("Runtime error: {}", e);
+                                    eprintln!("Runtime error: {}", e);
                                 }
                             }
-                            Err(e) => println!("Compilation error: {}", e),
+                            Err(e) => eprintln!("Compilation error: {}", e),
                         }
                     }
                     Err(e) => {
-                        println!("Type error: {}", e);
+                        eprintln!("Type error: {}", e);
                     }
                 }
             }
-            Err(e) => println!("Parse error: {}", e),
+            Err(e) => eprintln!("Parse error: {}", e),
         }
     }
 }
@@ -250,15 +250,15 @@ fn main() {
                     match compile_source(&source) {
                         Ok(chunk) => {
                             if let Err(e) = write_bytecode(&chunk, &output_path) {
-                                println!("Failed to write bytecode: {}", e);
+                                eprintln!("Failed to write bytecode: {}", e);
                             } else {
                                 println!("Successfully compiled to {}", output_path);
                             }
                         },
-                        Err(e) => println!("Compilation failed: {}", e),
+                        Err(e) => eprintln!("Compilation failed: {}", e),
                     }
                 },
-                Err(e) => println!("{}", e),
+                Err(e) => eprintln!("{}", e),
             }
         },
         
@@ -267,10 +267,10 @@ fn main() {
             match read_bytecode(input) {
                 Ok(chunk) => {
                     if let Err(e) = run_bytecode(&chunk) {
-                        println!("Runtime error: {}", e);
+                        eprintln!("Runtime error: {}", e);
                     }
                 },
-                Err(e) => println!("Failed to load bytecode: {}", e),
+                Err(e) => eprintln!("Failed to load bytecode: {}", e),
             }
         },
         
@@ -281,13 +281,13 @@ fn main() {
                     match compile_source(&source) {
                         Ok(chunk) => {
                             if let Err(e) = run_bytecode(&chunk) {
-                                println!("Runtime error: {}", e);
+                                eprintln!("Runtime error: {}", e);
                             }
                         },
-                        Err(e) => println!("Compilation failed: {}", e),
+                        Err(e) => eprintln!("Compilation failed: {}", e),
                     }
                 },
-                Err(e) => println!("{}", e),
+                Err(e) => eprintln!("{}", e),
             }
         },
         

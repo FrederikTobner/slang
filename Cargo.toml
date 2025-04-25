@@ -12,7 +12,6 @@ trace-execution = []
 [dependencies]
 clap = { version = "4.5.36", features = ["derive"] }
 zip = "2.6.1"
-lazy_static = "1.4.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.12"

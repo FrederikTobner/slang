@@ -40,7 +40,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                         chars.next();
                     } else if c == '.' {
                         if is_float {
-                            break; // already seen a dot, break
+                            break; 
                         }
                         is_float = true;
                         number.push(c);
@@ -91,9 +91,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }
             '-' => {
                 chars.next();
-                // Check for arrow token '->'
                 if chars.peek() == Some(&'>') {
-                    chars.next(); // consume '>'
+                    chars.next();
                     tokens.push(Token::new(Tokentype::Arrow, "->".to_string()));
                 } else {
                     tokens.push(Token::new(Tokentype::Minus, "-".to_string()));
@@ -142,7 +141,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         }
     }
     
-    // Add EOF token at the end
     tokens.push(Token::new(Tokentype::Eof, "".to_string()));
     
     tokens

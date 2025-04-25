@@ -3,7 +3,7 @@ pub enum Tokentype {
     Identifier,     // x, y, myVar
     IntegerLiteral, // 123
     FloatLiteral,    // 123.45
-    StringLiteral,  // "string"
+    StringLiteral,  // "hello world"
     Let,            // let
     Plus,           // +
     Minus,          // -
@@ -13,13 +13,10 @@ pub enum Tokentype {
     Equal,          // =
     Colon,          // :     
     Semicolon,      // ;
-
-    Struct,
-    LeftBrace,
-    RightBrace,
-    Comma,
-    
-    // New tokens for functions
+    Struct,         // struct
+    LeftBrace,      // {
+    RightBrace,     // }
+    Comma,          // ,
     Fn,             // fn
     LeftParen,      // (
     RightParen,     // )

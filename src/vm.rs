@@ -1,20 +1,22 @@
 use crate::bytecode::{Chunk, Function, NativeFunction, OpCode, Value};
 use std::collections::HashMap;
 
-// Call frame to track function calls
+/// Call frame to track function calls
 struct CallFrame {
     function: Function,
     return_address: usize,
     stack_offset: usize,
-    locals: HashMap<String, Value>, // Track local variables for this frame
+    /// Local variables for the function
+    locals: HashMap<String, Value>,
 }
 
 pub struct VM {
-    ip: usize,  // Instruction pointer
+    /// Instruction pointer
+    ip: usize, 
     stack: Vec<Value>,
     variables: HashMap<String, Value>,
-    frames: Vec<CallFrame>, // Call stack
-    current_frame: Option<usize>, // Index of current call frame
+    frames: Vec<CallFrame>, 
+    current_frame: Option<usize>, 
 }
 
 impl VM {
@@ -26,19 +28,16 @@ impl VM {
             frames: Vec::new(),
             current_frame: None,
         };
-        
-        // Register native functions
+
         vm.register_native_functions();
         
         vm
     }
     
-    // Register built-in native functions
     fn register_native_functions(&mut self) {
         self.define_native("print_value", 1, VM::native_print_value);
     }
     
-    // Define a native function
     fn define_native(&mut self, name: &str, arity: u8, function: fn(&[Value]) -> Result<Value, String>) {
         let native_fn = Value::NativeFunction(NativeFunction {
             name: name.to_string(),
@@ -49,7 +48,6 @@ impl VM {
         self.variables.insert(name.to_string(), native_fn);
     }
     
-    // Native function implementation: print_value
     fn native_print_value(args: &[Value]) -> Result<Value, String> {
         if args.len() != 1 {
             return Err("print_value expects exactly 1 argument".to_string());
@@ -57,7 +55,7 @@ impl VM {
         
         println!("{}", args[0]);
         
-        // Return nil or some default value
+        // Return 0 to indicate success
         Ok(Value::I32(0))
     }
     
@@ -81,7 +79,6 @@ impl VM {
             self.execute_instruction(chunk)?;
         }
 
-        // Print all values left on the stack when the program ends for debugging
         #[cfg(feature = "trace-execution")]
         {
             if !self.stack.is_empty() {
@@ -225,18 +222,14 @@ impl VM {
                     let return_address = frame.return_address;
                     let stack_offset = frame.stack_offset;
                     
-                    // Clear stack to the previous position, keeping only items below the stack offset
                     while self.stack.len() > stack_offset {
                         self.pop()?;
                     }
                     
-                    // Push return value
                     self.stack.push(return_value);
                     
-                    // Return to caller
                     self.ip = return_address;
                     
-                    // Pop the frame
                     self.frames.pop();
                     self.current_frame = if self.frames.is_empty() {
                         None
@@ -244,7 +237,7 @@ impl VM {
                         Some(self.frames.len() - 1)
                     };
                 } else {
-                    // If we're not in a function, end the program
+                    // If we're not in a function, stop execution
                     self.ip = chunk.code.len();
                 }
             }
@@ -259,7 +252,6 @@ impl VM {
                 }
                 let var_name = &chunk.identifiers[var_index];
                 
-                // First check if this is a local variable in the current function
                 let value = if let Some(frame_idx) = self.current_frame {
                     if let Some(value) = self.frames[frame_idx].locals.get(var_name) {
                         value.clone()
@@ -269,7 +261,6 @@ impl VM {
                         return Err(format!("Undefined variable '{}'", var_name));
                     }
                 } else {
-                    // Global scope
                     if let Some(value) = self.variables.get(var_name) {
                         value.clone()
                     } else {
@@ -290,13 +281,11 @@ impl VM {
                 let var_name = chunk.identifiers[var_index].clone();
                 let value = self.stack.last().unwrap().clone();
                 
-                // If we're in a function, first check if this is a local variable
                 if let Some(frame_idx) = self.current_frame {
                     if self.frames[frame_idx].function.locals.contains(&var_name) {
-                        // It's a local variable, update it in the current frame
+                        // Local variable
                         self.frames[frame_idx].locals.insert(var_name, value);
                     } else {
-                        // Not a local, update global
                         self.variables.insert(var_name, value);
                     }
                 } else {
@@ -317,23 +306,19 @@ impl VM {
                 
                 let var_name = chunk.identifiers[var_index].clone();
                 let value = chunk.constants[constant_index].clone();
-                
-                // Store function in variables
+
                 self.variables.insert(var_name, value);
             }
             OpCode::Call => {
                 let arg_count = self.read_byte(chunk) as usize;
-                
-                // Calculate the function position correctly
+
                 if self.stack.len() < arg_count + 1 {
                     return Err("Stack underflow during function call".to_string());
                 }
                 
-                // Save the function object
                 let function_pos = self.stack.len() - 1;
                 let function_value = self.stack[function_pos].clone();
                 
-                // Handle the call based on the function type
                 match function_value {
                     Value::Function(func) => {
                         // Check argument count
@@ -344,24 +329,16 @@ impl VM {
                             ));
                         }
                         
-                        // Create local variables map for the function parameters
                         let mut locals = HashMap::new();
-                        
-                        // Set up parameter values from arguments
+
                         for i in 0..arg_count {
                             if i < func.locals.len() {
-                                // Get parameter name from function locals
-                                let param_name = &func.locals[i];
-                                
-                                // Get argument value from stack
+                                let param_name = &func.locals[arg_count - 1 - i];
                                 let arg_value = self.stack[function_pos - 1 - i].clone();
-                                
-                                // Store as a local variable
                                 locals.insert(param_name.clone(), arg_value);
                             }
                         }
                         
-                        // Create a new call frame
                         let frame = CallFrame {
                             function: func.clone(),
                             return_address: self.ip,
@@ -369,15 +346,12 @@ impl VM {
                             locals,
                         };
                         
-                        // Store the frame and update current frame
                         self.frames.push(frame);
                         self.current_frame = Some(self.frames.len() - 1);
                         
-                        // Jump to function code
                         self.ip = func.code_offset;
                     },
                     Value::NativeFunction(native_fn) => {
-                        // Check argument count
                         if arg_count != native_fn.arity as usize {
                             return Err(format!(
                                 "Expected {} arguments but got {}",
@@ -385,21 +359,16 @@ impl VM {
                             ));
                         }
                         
-                        // Collect arguments from stack
                         let mut args = Vec::with_capacity(arg_count);
                         for i in 0..arg_count {
                             args.push(self.stack[function_pos - 1 - i].clone());
                         }
                         
-                        // Call the native function
                         let result = (native_fn.function)(&args)?;
-                        
-                        // Remove function and arguments from stack
                         for _ in 0..=arg_count {
                             self.pop()?;
                         }
                         
-                        // Push result onto the stack
                         self.stack.push(result);
                     },
                     _ => return Err("Can only call functions".to_string()),
@@ -413,7 +382,6 @@ impl VM {
                 let offset = ((self.read_byte(chunk) as usize) << 8) | self.read_byte(chunk) as usize;
                 let condition = self.peek(0)?;
                 
-                // Determine truthiness of the condition
                 let is_truthy = match condition {
                     Value::I32(i) => *i != 0,
                     Value::I64(i) => *i != 0,

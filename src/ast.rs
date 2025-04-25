@@ -2,15 +2,17 @@ use crate::token::Tokentype;
 use crate::visitor::Visitor;
 use crate::types::TypeId;
 
+/// Expression
 #[derive(Debug)]
 pub enum Expression {
     Literal(LiteralExpr),
     Binary(BinaryExpr),
     Variable(String),
     Unary(UnaryExpr),
-    Call(FunctionCallExpr),  // New: Function call expression
+    Call(FunctionCallExpr),
 }
 
+/// Statement
 #[derive(Debug)]
 pub enum Statement {
     Let(LetStatement),

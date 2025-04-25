@@ -3,23 +3,21 @@ pub use std::io::{Read, Write};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OpCode {
-    Constant = 0,    // Push constant from constant pool
-    Add = 1,         // Add top two values on stack
-    Subtract = 2,    // Subtract top two values on stack
-    Multiply = 3,    // Multiply top two values on stack
-    Divide = 4,      // Divide top two values on stack
-    Negate = 5,      // Negate top value on stack
-    Return = 6,      // Return from current function
-    Print = 7,       // Print top value on stack
-    GetVariable = 8, // Get variable value
-    SetVariable = 9, // Set variable value
-    Pop = 10,        // Pop top value from stack
-    
-    // New function-related opcodes
-    DefineFunction = 11, // Define a function
-    Call = 12,          // Call a function
-    JumpIfFalse = 13,   // Conditional jump
-    Jump = 14,          // Unconditional jump
+    Constant = 0,
+    Add = 1,
+    Subtract = 2,
+    Multiply = 3,
+    Divide = 4,
+    Negate = 5,
+    Return = 6,
+    Print = 7,
+    GetVariable = 8,
+    SetVariable = 9,
+    Pop = 10,
+    DefineFunction = 11,
+    Call = 12,
+    JumpIfFalse = 13,
+    Jump = 14,
 }
 
 impl OpCode {
@@ -244,14 +242,12 @@ impl Chunk {
     }
 
     pub fn add_identifier(&mut self, name: String) -> usize {
-        // Check if identifier already exists
         for (i, id) in self.identifiers.iter().enumerate() {
             if id == &name {
                 return i;
             }
         }
 
-        // If not, add it
         self.identifiers.push(name);
         self.identifiers.len() - 1
     }
@@ -342,7 +338,6 @@ impl Chunk {
         reader.read_exact(&mut code)?;
         chunk.code = code;
 
-        // Initialize lines (will be filled with dummy values)
         chunk.lines = vec![0; code_len];
 
         let mut constants_len_bytes = [0u8; 4];
@@ -379,7 +374,6 @@ impl Chunk {
     }
 
     #[cfg(feature = "print-byte_code")]
-    // Add methods for disassembling and printing bytecode
     pub fn disassemble(&self, name: &str) {
         println!("== {} ==", name);
         
@@ -441,17 +435,17 @@ impl Chunk {
             Some(OpCode::Call) => {
                 let arg_count = self.code[offset + 1];
                 println!("{:<16} {:4} args", "CALL", arg_count);
-                offset + 2 // Instruction plus 1-byte operand
+                offset + 2
             },
             Some(OpCode::JumpIfFalse) => {
                 let jump_offset = ((self.code[offset + 1] as usize) << 8) | (self.code[offset + 2] as usize);
                 println!("{:<16} {:4} -> {}", "JUMP_IF_FALSE", offset, offset + 3 + jump_offset);
-                offset + 3 // Instruction plus 2-byte operand
+                offset + 3
             },
             Some(OpCode::Jump) => {
                 let jump_offset = ((self.code[offset + 1] as usize) << 8) | (self.code[offset + 2] as usize);
                 println!("{:<16} {:4} -> {}", "JUMP", offset, offset + 3 + jump_offset);
-                offset + 3 // Instruction plus 2-byte operand
+                offset + 3
             },
             None => {
                 println!("Unknown opcode: {}", instruction);
@@ -470,13 +464,13 @@ impl Chunk {
     fn simple_instruction_with_operand(&self, name: &str, offset: usize) -> usize {
         let constant_index = self.code[offset + 1];
         println!("{:<16} {:4} '{}'", name, constant_index, self.constants[constant_index as usize]);
-        offset + 2 // Instruction plus 1-byte operand
+        offset + 2
     }
     
     #[cfg(feature = "print-byte_code")]
     fn variable_instruction(&self, name: &str, offset: usize) -> usize {
         let var_index = self.code[offset + 1];
         println!("{:<16} {:4} '{}'", name, var_index, self.identifiers[var_index as usize]);
-        offset + 2 // Instruction plus 1-byte operand
+        offset + 2
     }
 }

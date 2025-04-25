@@ -146,7 +146,6 @@ impl Visitor<Result<(), String>> for Compiler {
         // Now patch the jump over for the main flow
         self.patch_jump(jump_over);
         
-        // Create function object and add it to constants
         let function = Value::Function(Function {
             name: fn_decl.name.clone(),
             arity: fn_decl.parameters.len() as u8,
@@ -155,7 +154,6 @@ impl Visitor<Result<(), String>> for Compiler {
         });
         let fn_constant = self.chunk.add_constant(function);
         
-        // Define the function in the global scope
         self.emit_op(OpCode::DefineFunction);
         self.emit_byte(function_name_idx as u8);
         self.emit_byte(fn_constant as u8);
@@ -171,8 +169,6 @@ impl Visitor<Result<(), String>> for Compiler {
             // If no return value provided, implicitly return a default value like 0
             self.emit_constant(Value::I32(0));
         }
-        
-        // Emit return instruction
         self.emit_op(OpCode::Return);
         Ok(())
     }
@@ -225,14 +221,10 @@ impl Visitor<Result<(), String>> for Compiler {
             self.visit_expression(arg)?;
         }
         
-        // Get function name index
         let fn_name_idx = self.chunk.add_identifier(call_expr.name.clone());
-        
-        // Load the function
         self.emit_op(OpCode::GetVariable);
         self.emit_byte(fn_name_idx as u8);
         
-        // Call with argument count
         self.emit_op(OpCode::Call);
         self.emit_byte(call_expr.arguments.len() as u8);
         

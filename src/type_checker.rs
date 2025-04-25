@@ -7,7 +7,6 @@ use crate::visitor::Visitor;
 use crate::types::{TypeId, TypeKind, TYPE_REGISTRY};
 use std::collections::HashMap;
 
-// Use the accessor functions instead of static references
 fn i32_type() -> TypeId {
     crate::types::i32_type()
 }
@@ -42,9 +41,9 @@ fn unknown_type() -> TypeId {
 
 pub struct TypeChecker {
     variables: HashMap<String, TypeId>,
-    functions: HashMap<String, (Vec<TypeId>, TypeId)>, // Function name -> (parameter types, return type)
-    current_return_type: Option<TypeId>, // Return type of current function being checked
-    // Add a set of special native functions that accept any type
+    functions: HashMap<String, (Vec<TypeId>, TypeId)>,
+    current_return_type: Option<TypeId>,
+    // Native functions that accept any type
     native_variadic_functions: std::collections::HashSet<String>,
 }
 
@@ -57,17 +56,15 @@ impl TypeChecker {
             native_variadic_functions: std::collections::HashSet::new(),
         };
         
-        // Register built-in native functions
         tc.register_native_functions();
         
         tc
     }
     
-    // Register the signatures of built-in native functions
+    /// Register built-in native functions
     fn register_native_functions(&mut self) {
-        // Register print_value function that takes any type and returns i32
         self.functions.insert("print_value".to_string(), (vec![unknown_type()], i32_type()));
-        // Also mark it as a special function that accepts any type
+        // mark it as a special function that accepts any type
         self.native_variadic_functions.insert("print_value".to_string());
     }
 
@@ -111,14 +108,11 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             param_types.push(param.param_type.clone());
         }
         
-        // Store function signature
         self.functions.insert(fn_decl.name.clone(), (param_types, fn_decl.return_type.clone()));
         
-        // Set current return type for checking return statements
         let previous_return_type = self.current_return_type.clone();
         self.current_return_type = Some(fn_decl.return_type.clone());
         
-        // Add parameters to local scope
         let mut saved_variables = HashMap::new();
         for param in &fn_decl.parameters {
             if self.variables.contains_key(&param.name) {
@@ -127,10 +121,8 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             self.variables.insert(param.name.clone(), param.param_type.clone());
         }
         
-        // Check function body
         let result = self.visit_block_statement(&fn_decl.body);
         
-        // Restore previous scope and return type
         for (name, type_id) in saved_variables {
             self.variables.insert(name, type_id);
         }
