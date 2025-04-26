@@ -1,0 +1,65 @@
+use crate::test_utils::execute_program_and_assert;
+
+#[test]
+fn test_simple_function_definition_and_call() {
+    let program = r#"
+        fn add(a: i32, b: i32) -> i32 {
+            return a + b;
+        }
+        
+        print_value(add(20, 22));
+    "#;
+    execute_program_and_assert(program, "42");
+}
+
+#[test]
+fn test_function_with_no_params() {
+    let program = r#"
+        fn get_magic_number() -> i32 {
+            return 42;
+        }
+        
+        print_value(get_magic_number());
+    "#;
+    execute_program_and_assert(program, "42");
+}
+
+#[test]
+fn test_function_with_different_return_types() {
+    let program = r#"
+        fn get_string() -> string {
+            return "Hello world";
+        }
+        
+        fn get_int() -> i32 {
+            return 42;
+        }
+        
+        fn get_float() -> f64 {
+            return 42.5;
+        }
+        
+        print_value(get_string());
+        print_value(get_int());
+        print_value(get_float());
+    "#;
+    execute_program_and_assert(program, "Hello world");
+    execute_program_and_assert(program, "42");
+    execute_program_and_assert(program, "42.5");
+}
+
+#[test]
+fn test_nested_function_calls() {
+    let program = r#"
+        fn add(a: i32, b: i32)-> i32 {
+            return a + b;
+        }
+        
+        fn multiply(a: i32, b: i32) -> i32 {
+            return a * b;
+        }
+        
+        print_value(add(multiply(3, 10), 12));
+    "#;
+    execute_program_and_assert(program, "42");
+}
