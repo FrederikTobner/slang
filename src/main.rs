@@ -28,6 +28,7 @@ use crate::types::TYPE_REGISTRY;
 /// The extension for compiled Slang binaries
 const SLANG_BYTECODE_EXTENSION: &str = "sip";
 
+/// Command line interface for the Slang language
 #[derive(ClapParser)]
 #[command(version, about = "Slang programming language", long_about = r#"Slang is a simple programming language designed for educational purposes.
 It features a REPL, compilation to bytecode, and execution of both source files and compiled bytecode."#)]
@@ -36,6 +37,7 @@ struct Cli {
     command: Option<Commands>,
 }
 
+/// Available commands for the Slang CLI
 #[derive(Subcommand)]
 enum Commands {
     /// Run the interactive REPL
@@ -64,20 +66,48 @@ enum Commands {
     },
 }
 
+/// Initialize the type system with built-in types
 fn init_type_system() {
     let _ = crate::types::unknown_type();
     TYPE_REGISTRY.with(|_| ());
 }
 
+/// Parse source code into an AST
+/// 
+/// # Arguments
+/// 
+/// * `tokens` - The tokens to parse
+/// 
+/// # Returns
+/// 
+/// The parsed AST statements or an error message
 fn parse(tokens: &[Token]) -> Result<Vec<Statement>, String> {
     let mut parser = Parser::new(tokens);
     parser.parse()
 }
 
+/// Read a source file into a string
+/// 
+/// # Arguments
+/// 
+/// * `path` - The path to the source file
+/// 
+/// # Returns
+/// 
+/// The file contents or an error message
 fn read_source_file(path: &str) -> Result<String, String> {
     fs::read_to_string(path).map_err(|e| format!("Error reading file '{}': {}", path, e))
 }
 
+/// Compile source code to bytecode
+/// 
+/// # Arguments
+/// 
+/// * `source` - The source code to compile
+/// 
+/// # Returns
+/// 
+/// The compiled bytecode chunk or an error message
 fn compile_source(source: &str) -> Result<Chunk, String> {
     let tokens = tokenize(source);
     let ast = parse(&tokens)?;
@@ -91,6 +121,16 @@ fn compile_source(source: &str) -> Result<Chunk, String> {
     Ok(chunk.clone())
 }
 
+/// Write a bytecode chunk to a file
+/// 
+/// # Arguments
+/// 
+/// * `chunk` - The bytecode chunk to write
+/// * `output_path` - The path to write to
+/// 
+/// # Returns
+/// 
+/// Ok(()) if successful, or an error message
 fn write_bytecode(chunk: &Chunk, output_path: &str) -> Result<(), String> {
     let path = Path::new(output_path);
     
@@ -121,6 +161,15 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Read a bytecode chunk from a file
+/// 
+/// # Arguments
+/// 
+/// * `input_path` - The path to read from
+/// 
+/// # Returns
+/// 
+/// The bytecode chunk or an error message
 fn read_bytecode(input_path: &str) -> Result<Chunk, String> {
     let file = File::open(input_path)
         .map_err(|e| format!("Failed to open bytecode file '{}': {}", input_path, e))?;
@@ -144,11 +193,21 @@ fn read_bytecode(input_path: &str) -> Result<Chunk, String> {
     }
 }
 
+/// Execute a bytecode chunk in the VM
+/// 
+/// # Arguments
+/// 
+/// * `chunk` - The bytecode chunk to run
+/// 
+/// # Returns
+/// 
+/// Ok(()) if successful, or an error message
 fn run_bytecode(chunk: &Chunk) -> Result<(), String> {
     let mut vm = VM::new();
     vm.interpret(chunk)
 }
 
+/// Run the interactive REPL
 fn repl() {
     let mut type_checker = TypeChecker::new();
     let mut vm = VM::new();
@@ -220,6 +279,7 @@ fn repl() {
     }
 }
 
+/// Application entry point
 fn main() {
      let cli = Cli::parse();
 

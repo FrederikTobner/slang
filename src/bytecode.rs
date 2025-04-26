@@ -1,26 +1,51 @@
 pub use std::fmt;
 pub use std::io::{Read, Write};
 
+/// Operation codes for the bytecode interpreter
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OpCode {
+    /// Push a constant onto the stack
     Constant = 0,
+    /// Add the top two stack values
     Add = 1,
+    /// Subtract the top stack value from the second stack value
     Subtract = 2,
+    /// Multiply the top two stack values
     Multiply = 3,
+    /// Divide the second stack value by the top stack value
     Divide = 4,
+    /// Negate the top stack value
     Negate = 5,
+    /// Return from the current function
     Return = 6,
+    /// Print the top stack value
     Print = 7,
+    /// Push the value of a variable onto the stack
     GetVariable = 8,
+    /// Set a variable to the top stack value
     SetVariable = 9,
+    /// Remove the top stack value
     Pop = 10,
+    /// Define a function
     DefineFunction = 11,
+    /// Call a function
     Call = 12,
+    /// Jump if the top stack value is false
     JumpIfFalse = 13,
+    /// Jump unconditionally
     Jump = 14,
 }
 
 impl OpCode {
+    /// Convert a byte to an OpCode
+    /// 
+    /// # Arguments
+    /// 
+    /// * `value` - The byte to convert
+    /// 
+    /// # Returns
+    /// 
+    /// Some(OpCode) if the byte represents a valid OpCode, None otherwise
     pub fn from_u8(value: u8) -> Option<OpCode> {
         match value {
             0 => Some(OpCode::Constant),
@@ -43,23 +68,30 @@ impl OpCode {
     }
 }
 
-// Function representation in bytecode
+/// Function representation in bytecode
 #[derive(Debug, Clone)]
 pub struct Function {
+    /// Name of the function
     pub name: String,
-    pub arity: u8,         // Number of parameters
-    pub code_offset: usize, // Offset in the chunk where this function's code begins
-    pub locals: Vec<String>, // Local variable names
+    /// Number of parameters
+    pub arity: u8,
+    /// Offset in the chunk where this function's code begins
+    pub code_offset: usize,
+    /// Local variable names used by this function
+    pub locals: Vec<String>,
 }
 
-// Native function type
+/// Type for native function implementations
 pub type NativeFn = fn(&[Value]) -> Result<Value, String>;
 
-// Native function representation
+/// Native (built-in) function representation
 #[derive(Clone)]
 pub struct NativeFunction {
+    /// Name of the native function
     pub name: String,
+    /// Number of parameters
     pub arity: u8,
+    /// The Rust function that implements this native function
     pub function: NativeFn,
 }
 
@@ -69,19 +101,29 @@ impl std::fmt::Debug for NativeFunction {
     }
 }
 
+/// Values that can be stored in the bytecode and manipulated by the VM
 #[derive(Debug, Clone)]
 pub enum Value {
+    /// 32-bit signed integer
     I32(i32),
+    /// 64-bit signed integer
     I64(i64),
+    /// 32-bit unsigned integer
     U32(u32),
+    /// 64-bit unsigned integer
     U64(u64),
+    /// 64-bit floating point
     F64(f64),
+    /// String value
     String(String),
-    Function(Function), // Add function value type
-    NativeFunction(NativeFunction), // Add native function value type
+    /// Function value
+    Function(Function),
+    /// Native function value
+    NativeFunction(NativeFunction),
 }
 
 impl Value {
+    /// Returns a tag byte identifying this value's type
     pub fn type_tag(&self) -> u8 {
         match self {
             Value::I32(_) => 0,
@@ -95,6 +137,16 @@ impl Value {
         }
     }
 
+    /// Deserialize a value from a reader based on its type tag
+    /// 
+    /// # Arguments
+    /// 
+    /// * `type_tag` - The type tag of the value
+    /// * `reader` - The reader to read the value data from
+    /// 
+    /// # Returns
+    /// 
+    /// The deserialized value or an IO error
     pub fn deserialize_from_type_tag(type_tag: u8, reader: &mut dyn Read) -> std::io::Result<Self> {
         match type_tag {
             // I32 
@@ -209,15 +261,21 @@ impl fmt::Display for Value {
     }
 }
 
+/// A chunk of bytecode representing a compiled program
 #[derive(Debug, Clone)]
 pub struct Chunk {
+    /// The actual bytecode instructions
     pub code: Vec<u8>,
+    /// Constant values used by the program
     pub constants: Vec<Value>,
+    /// Source code line numbers for debugging
     pub lines: Vec<usize>,
+    /// Variable and function names used in the program
     pub identifiers: Vec<String>,
 }
 
 impl Chunk {
+    /// Creates a new, empty bytecode chunk
     pub fn new() -> Self {
         Chunk {
             code: Vec::new(),
@@ -227,20 +285,50 @@ impl Chunk {
         }
     }
 
+    /// Writes a byte to the chunk
+    /// 
+    /// # Arguments
+    /// 
+    /// * `byte` - The byte to write
+    /// * `line` - The source code line number
     pub fn write_byte(&mut self, byte: u8, line: usize) {
         self.code.push(byte);
         self.lines.push(line);
     }
 
+    /// Writes an opcode to the chunk
+    /// 
+    /// # Arguments
+    /// 
+    /// * `op` - The opcode to write
+    /// * `line` - The source code line number
     pub fn write_op(&mut self, op: OpCode, line: usize) {
         self.write_byte(op as u8, line);
     }
 
+    /// Adds a constant to the chunk's constant pool
+    /// 
+    /// # Arguments
+    /// 
+    /// * `value` - The constant value to add
+    /// 
+    /// # Returns
+    /// 
+    /// The index of the constant in the constant pool
     pub fn add_constant(&mut self, value: Value) -> usize {
         self.constants.push(value);
         self.constants.len() - 1
     }
 
+    /// Adds an identifier to the chunk's identifier pool
+    /// 
+    /// # Arguments
+    /// 
+    /// * `name` - The identifier name to add
+    /// 
+    /// # Returns
+    /// 
+    /// The index of the identifier in the identifier pool
     pub fn add_identifier(&mut self, name: String) -> usize {
         for (i, id) in self.identifiers.iter().enumerate() {
             if id == &name {
@@ -252,6 +340,15 @@ impl Chunk {
         self.identifiers.len() - 1
     }
 
+    /// Serializes the chunk to binary data
+    /// 
+    /// # Arguments
+    /// 
+    /// * `writer` - The writer to write the binary data to
+    /// 
+    /// # Returns
+    /// 
+    /// IO result indicating success or failure
     pub fn serialize(&self, writer: &mut dyn Write) -> std::io::Result<()> {
         let code_len = self.code.len() as u32;
         writer.write_all(&code_len.to_le_bytes())?;
@@ -326,6 +423,15 @@ impl Chunk {
         Ok(())
     }
 
+    /// Deserializes a chunk from binary data
+    /// 
+    /// # Arguments
+    /// 
+    /// * `reader` - The reader to read the binary data from
+    /// 
+    /// # Returns
+    /// 
+    /// The deserialized chunk or an IO error
     #[allow(dead_code)]
     pub fn deserialize(reader: &mut dyn Read) -> std::io::Result<Self> {
         let mut chunk = Chunk::new();
@@ -373,6 +479,7 @@ impl Chunk {
         Ok(chunk)
     }
 
+    /// Debugging function to print the chunk's bytecode
     #[cfg(feature = "print-byte_code")]
     pub fn disassemble(&self, name: &str) {
         println!("== {} ==", name);
@@ -383,6 +490,7 @@ impl Chunk {
         }
     }
     
+    /// Disassembles a single instruction for debugging
     #[cfg(feature = "print-byte_code")]
     pub fn disassemble_instruction(&self, offset: usize) -> usize {
         print!("{:04} ", offset);
@@ -454,12 +562,14 @@ impl Chunk {
         }
     }
     
+    /// Helper for disassembling simple instructions
     #[cfg(feature = "print-byte_code")]
     fn simple_instruction(&self, name: &str, offset: usize) -> usize {
         println!("{}", name);
         offset + 1
     }
     
+    /// Helper for disassembling instructions with constant operands
     #[cfg(feature = "print-byte_code")]
     fn simple_instruction_with_operand(&self, name: &str, offset: usize) -> usize {
         let constant_index = self.code[offset + 1];
@@ -467,6 +577,7 @@ impl Chunk {
         offset + 2
     }
     
+    /// Helper for disassembling instructions with variable operands
     #[cfg(feature = "print-byte_code")]
     fn variable_instruction(&self, name: &str, offset: usize) -> usize {
         let var_index = self.code[offset + 1];

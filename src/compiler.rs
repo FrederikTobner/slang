@@ -3,15 +3,22 @@ use crate::bytecode::{Chunk, Function, OpCode, Value};
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
 
+/// Compiles AST nodes into bytecode instructions
 pub struct Compiler {
+    /// The bytecode chunk being constructed
     pub chunk: Chunk,
+    /// Current line number for debugging information
     line: usize,
+    /// Global variable names
     variables: Vec<String>,
-    functions: Vec<String>, // Track function declarations
-    local_scopes: Vec<Vec<String>>, // Track local variable scopes
+    /// Function names for tracking declarations
+    functions: Vec<String>,
+    /// Stack of scopes for tracking local variables
+    local_scopes: Vec<Vec<String>>,
 }
 
 impl Compiler {
+    /// Creates a new compiler with an empty chunk
     pub fn new() -> Self {
         Compiler {
             chunk: Chunk::new(),
@@ -22,6 +29,15 @@ impl Compiler {
         }
     }
 
+    /// Compiles a list of statements into bytecode
+    /// 
+    /// # Arguments
+    /// 
+    /// * `statements` - The statements to compile
+    /// 
+    /// # Returns
+    /// 
+    /// A reference to the compiled bytecode chunk, or an error message
     pub fn compile(&mut self, statements: &[Statement]) -> Result<&Chunk, String> {
         for stmt in statements {
             match stmt.accept(self) {
@@ -36,14 +52,29 @@ impl Compiler {
         Ok(&self.chunk)
     }
 
+    /// Emits a single byte to the bytecode chunk
+    /// 
+    /// # Arguments
+    /// 
+    /// * `byte` - The byte to emit
     fn emit_byte(&mut self, byte: u8) {
         self.chunk.write_byte(byte, self.line);
     }
 
+    /// Emits an opcode to the bytecode chunk
+    /// 
+    /// # Arguments
+    /// 
+    /// * `op` - The opcode to emit
     fn emit_op(&mut self, op: OpCode) {
         self.chunk.write_op(op, self.line);
     }
 
+    /// Adds a constant value to the chunk and emits code to load it
+    /// 
+    /// # Arguments
+    /// 
+    /// * `value` - The constant value to add
     fn emit_constant(&mut self, value: Value) {
         let constant_index = self.chunk.add_constant(value);
         if constant_index > 255 {
@@ -54,6 +85,15 @@ impl Compiler {
         self.emit_byte(constant_index as u8);
     }
     
+    /// Emits a jump instruction with placeholder offset
+    /// 
+    /// # Arguments
+    /// 
+    /// * `op` - The jump opcode (Jump or JumpIfFalse)
+    /// 
+    /// # Returns
+    /// 
+    /// The position where the jump offset needs to be patched later
     fn emit_jump(&mut self, op: OpCode) -> usize {
         self.emit_op(op);
         // Emit placeholder jump offset (to be patched later)
@@ -62,6 +102,11 @@ impl Compiler {
         self.chunk.code.len() - 2 // Return location to patch
     }
     
+    /// Patches a previously emitted jump instruction with the actual offset
+    /// 
+    /// # Arguments
+    /// 
+    /// * `offset` - The position of the jump offset to patch
     fn patch_jump(&mut self, offset: usize) {
         // Calculate jump distance
         let jump = self.chunk.code.len() - offset - 2;
@@ -74,10 +119,12 @@ impl Compiler {
         self.chunk.code[offset + 1] = (jump & 0xFF) as u8;
     }
     
+    /// Begins a new scope for local variables
     fn begin_scope(&mut self) {
         self.local_scopes.push(Vec::new());
     }
     
+    /// Ends the current scope and removes local variables
     fn end_scope(&mut self) {
         if let Some(scope) = self.local_scopes.pop() {
             // Pop all locals from the scope

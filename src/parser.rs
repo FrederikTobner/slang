@@ -6,12 +6,15 @@ use crate::token::{Token, Tokentype};
 use crate::types::{TypeId, TYPE_REGISTRY};
 use crate::types::{i32_type, i64_type, u32_type, u64_type, f64_type, string_type, unspecified_int_type, unknown_type};
 
+/// Error that occurs during parsing
 #[derive(Debug)]
 pub struct ParseError {
+    /// Error message describing the problem
     message: String,
 }
 
 impl ParseError {
+    /// Creates a new parse error with the given message
     pub fn new(message: &str) -> Self {
         ParseError {
             message: message.to_string(),
@@ -27,12 +30,20 @@ impl std::fmt::Display for ParseError {
 
 impl std::error::Error for ParseError {}
 
+/// Parser that converts tokens into an abstract syntax tree
 pub struct Parser<'a> {
+    /// The tokens being parsed
     tokens: &'a [Token],
+    /// Current position in the token list
     current: usize,
 }
 
 impl<'a> Parser<'a> {
+    /// Creates a new parser for the given tokens
+    /// 
+    /// # Arguments
+    /// 
+    /// * `tokens` - The tokens to parse
     pub fn new(tokens: &'a [Token]) -> Self {
         Parser {
             tokens,
@@ -40,6 +51,11 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parses the tokens into a list of statements
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed statements or an error message
     pub fn parse(&mut self) -> Result<Vec<Statement>, String> {
         let mut statements = Vec::new();
 
@@ -53,6 +69,11 @@ impl<'a> Parser<'a> {
         Ok(statements)
     }
 
+    /// Parses a single statement
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed statement or an error message
     fn statement(&mut self) -> Result<Statement, String> {
         if self.match_token(Tokentype::Let) {
             return self.let_statement();
@@ -69,6 +90,11 @@ impl<'a> Parser<'a> {
         }
     }
     
+    /// Parses a block statement (a group of statements in braces)
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed block statement or an error message
     fn block_statement(&mut self) -> Result<Statement, String> {
         let mut statements = Vec::new();
         
@@ -83,6 +109,11 @@ impl<'a> Parser<'a> {
         Ok(Statement::Block(statements))
     }
     
+    /// Parses a return statement
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed return statement or an error message
     fn return_statement(&mut self) -> Result<Statement, String> {
         let value = if !self.check(Tokentype::Semicolon) {
             Some(self.expression()?)
@@ -97,6 +128,11 @@ impl<'a> Parser<'a> {
         Ok(Statement::Return(value))
     }
     
+    /// Parses a function declaration
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed function declaration or an error message
     fn function_declaration_statement(&mut self) -> Result<Statement, String> {
         // Parse function name
         if !self.check(Tokentype::Identifier) {
@@ -165,6 +201,11 @@ impl<'a> Parser<'a> {
         }))
     }
     
+    /// Parses a function parameter
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed parameter or an error message
     fn parameter(&mut self) -> Result<Parameter, String> {
         if !self.check(Tokentype::Identifier) {
             return Err("Expected parameter name".to_string());
@@ -195,6 +236,11 @@ impl<'a> Parser<'a> {
         Ok(Parameter { name, param_type })
     }
 
+    /// Parses a type definition (struct declaration)
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed type definition or an error message
     fn type_definition_statement(&mut self) -> Result<Statement, String> {
         // Expect struct name
         if !self.check(Tokentype::Identifier) {
@@ -243,6 +289,11 @@ impl<'a> Parser<'a> {
         Ok(Statement::TypeDefinition(TypeDefinitionStmt { name, fields }))
     }
 
+    /// Parses a variable declaration
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed variable declaration or an error message
     fn let_statement(&mut self) -> Result<Statement, String> {
         if !self.check(Tokentype::Identifier) {
             return Err("Expected identifier after 'let'".to_string());
@@ -289,6 +340,11 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    /// Parses an expression statement
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed expression statement or an error message
     fn expression_statement(&mut self) -> Result<Statement, String> {
         let expr = self.expression()?;
         
@@ -299,10 +355,20 @@ impl<'a> Parser<'a> {
         Ok(Statement::Expression(expr))
     }
 
+    /// Parses an expression
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed expression or an error message
     fn expression(&mut self) -> Result<Expression, String> {
         self.term()
     }
 
+    /// Parses a term (addition/subtraction)
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed term or an error message
     fn term(&mut self) -> Result<Expression, String> {
         let mut expr = self.factor()?;
 
@@ -320,6 +386,11 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
+    /// Parses a factor (multiplication/division)
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed factor or an error message
     fn factor(&mut self) -> Result<Expression, String> {
         let mut expr = self.unary()?;
 
@@ -337,6 +408,11 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
+    /// Parses a unary expression
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed unary expression or an error message
     fn unary(&mut self) -> Result<Expression, String> {
         if self.match_token(Tokentype::Minus) {
             let operator = self.previous().token_type.clone();
@@ -351,6 +427,11 @@ impl<'a> Parser<'a> {
         self.primary()
     }
 
+    /// Parses a primary expression (literal, variable, or grouped expression)
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed primary expression or an error message
     fn primary(&mut self) -> Result<Expression, String> {
         if self.match_token(Tokentype::IntegerLiteral) {
             return self.parse_integer();
@@ -388,6 +469,15 @@ impl<'a> Parser<'a> {
         Err(format!("Expected expression, found {:?}", self.peek()))
     }
     
+    /// Finishes parsing a function call after the name and '('
+    /// 
+    /// # Arguments
+    /// 
+    /// * `name` - The name of the function being called
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed function call expression or an error message
     fn finish_call(&mut self, name: String) -> Result<Expression, String> {
         let mut arguments = Vec::new();
         
@@ -415,6 +505,11 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    /// Parses an integer literal with optional type suffix
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed integer literal expression or an error message
     fn parse_integer(&mut self) -> Result<Expression, String> {
         let value_str = self.previous().lexeme.clone();
         let base_value = value_str
@@ -473,6 +568,11 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    /// Parses a type name
+    /// 
+    /// # Returns
+    /// 
+    /// The type ID for the parsed type or an error
     fn parse_type(&mut self) -> Result<TypeId, ParseError> {
         if !self.check(Tokentype::Identifier) {
             return Err(ParseError::new("Expected type identifier"));
@@ -490,6 +590,15 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Consumes the current token if it matches the expected type
+    /// 
+    /// # Arguments
+    /// 
+    /// * `token_type` - The token type to match
+    /// 
+    /// # Returns
+    /// 
+    /// true if the token was consumed, false otherwise
     fn match_token(&mut self, token_type: Tokentype) -> bool {
         if self.check(token_type) {
             self.advance();
@@ -499,6 +608,15 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Consumes the current token if it matches any of the expected types
+    /// 
+    /// # Arguments
+    /// 
+    /// * `types` - The token types to match
+    /// 
+    /// # Returns
+    /// 
+    /// true if a token was consumed, false otherwise
     fn match_any(&mut self, types: &[Tokentype]) -> bool {
         for &token_type in types {
             if self.check(token_type) {
@@ -509,6 +627,15 @@ impl<'a> Parser<'a> {
         false
     }
 
+    /// Checks if the current token is of the expected type
+    /// 
+    /// # Arguments
+    /// 
+    /// * `token_type` - The token type to check for
+    /// 
+    /// # Returns
+    /// 
+    /// true if the current token matches, false otherwise
     fn check(&self, token_type: Tokentype) -> bool {
         if self.is_at_end() {
             return false;
@@ -516,6 +643,11 @@ impl<'a> Parser<'a> {
         self.peek().token_type == token_type
     }
 
+    /// Advances to the next token and returns the previous token
+    /// 
+    /// # Returns
+    /// 
+    /// The token that was current before advancing
     fn advance(&mut self) -> &Token {
         if !self.is_at_end() {
             self.current += 1;
@@ -523,14 +655,29 @@ impl<'a> Parser<'a> {
         self.previous()
     }
 
+    /// Checks if we've reached the end of the token stream
+    /// 
+    /// # Returns
+    /// 
+    /// true if we're at the end, false otherwise
     fn is_at_end(&self) -> bool {
         self.peek().token_type == Tokentype::Eof
     }
 
+    /// Returns the current token without consuming it
+    /// 
+    /// # Returns
+    /// 
+    /// The current token
     fn peek(&self) -> &Token {
         &self.tokens[self.current]
     }
 
+    /// Returns the most recently consumed token
+    /// 
+    /// # Returns
+    /// 
+    /// The previous token
     fn previous(&self) -> &Token {
         &self.tokens[self.current - 1]
     }

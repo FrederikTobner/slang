@@ -3,23 +3,32 @@ use std::collections::HashMap;
 
 /// Call frame to track function calls
 struct CallFrame {
+    /// The function being called
     function: Function,
+    /// Address to return to after function completes
     return_address: usize,
+    /// Stack position before function call
     stack_offset: usize,
     /// Local variables for the function
     locals: HashMap<String, Value>,
 }
 
+/// Virtual Machine that executes bytecode
 pub struct VM {
     /// Instruction pointer
     ip: usize, 
+    /// Stack for values
     stack: Vec<Value>,
+    /// Global variables
     variables: HashMap<String, Value>,
+    /// Call frames for function calls
     frames: Vec<CallFrame>, 
+    /// Index of the current call frame
     current_frame: Option<usize>, 
 }
 
 impl VM {
+    /// Creates a new virtual machine
     pub fn new() -> Self {
         let mut vm = VM {
             ip: 0,
@@ -34,10 +43,18 @@ impl VM {
         vm
     }
     
+    /// Registers built-in functions
     fn register_native_functions(&mut self) {
         self.define_native("print_value", 1, VM::native_print_value);
     }
     
+    /// Defines a native (built-in) function
+    /// 
+    /// # Arguments
+    /// 
+    /// * `name` - Name of the native function
+    /// * `arity` - Number of parameters
+    /// * `function` - The Rust function implementing this native function
     fn define_native(&mut self, name: &str, arity: u8, function: fn(&[Value]) -> Result<Value, String>) {
         let native_fn = Value::NativeFunction(NativeFunction {
             name: name.to_string(),
@@ -48,6 +65,15 @@ impl VM {
         self.variables.insert(name.to_string(), native_fn);
     }
     
+    /// Built-in function to print a value
+    /// 
+    /// # Arguments
+    /// 
+    /// * `args` - Arguments to the function (should be exactly 1)
+    /// 
+    /// # Returns
+    /// 
+    /// Success with i32(0) if successful, or an error message
     fn native_print_value(args: &[Value]) -> Result<Value, String> {
         if args.len() != 1 {
             return Err("print_value expects exactly 1 argument".to_string());
@@ -59,11 +85,13 @@ impl VM {
         Ok(Value::I32(0))
     }
     
+    /// Gets the current variables map (for debugging/testing)
     #[cfg(feature = "trace-execution")]
     pub fn get_variables(&self) -> &HashMap<String, Value> {
         &self.variables
     }
     
+    /// Resets the VM to its initial state
     #[allow(dead_code)]
     pub fn reset(&mut self) {
         self.ip = 0;
@@ -73,6 +101,15 @@ impl VM {
         self.current_frame = None;
     }
 
+    /// Interprets and executes a bytecode chunk
+    /// 
+    /// # Arguments
+    /// 
+    /// * `chunk` - The bytecode chunk to execute
+    /// 
+    /// # Returns
+    /// 
+    /// Ok(()) on success, or an error message on failure
     pub fn interpret(&mut self, chunk: &Chunk) -> Result<(), String> {
         self.ip = 0;
         while self.ip < chunk.code.len() {
@@ -92,6 +129,15 @@ impl VM {
         Ok(())
     }
 
+    /// Executes a single instruction
+    /// 
+    /// # Arguments
+    /// 
+    /// * `chunk` - The bytecode chunk containing the instruction
+    /// 
+    /// # Returns
+    /// 
+    /// Ok(()) on success, or an error message on failure
     fn execute_instruction(&mut self, chunk: &Chunk) -> Result<(), String> {
         let instruction = self.read_byte(chunk);
         let op = OpCode::from_u8(instruction)
@@ -402,18 +448,41 @@ impl VM {
         Ok(())
     }
 
+    /// Reads the next byte from the chunk and advances the instruction pointer
+    /// 
+    /// # Arguments
+    /// 
+    /// * `chunk` - The bytecode chunk to read from
+    /// 
+    /// # Returns
+    /// 
+    /// The byte read from the chunk
     fn read_byte(&mut self, chunk: &Chunk) -> u8 {
         let byte = chunk.code[self.ip];
         self.ip += 1;
         byte
     }
 
+    /// Pops a value off the stack
+    /// 
+    /// # Returns
+    /// 
+    /// The popped value, or an error if the stack is empty
     fn pop(&mut self) -> Result<Value, String> {
         self.stack
             .pop()
             .ok_or_else(|| "Stack underflow".to_string())
     }
     
+    /// Looks at a value on the stack without removing it
+    /// 
+    /// # Arguments
+    /// 
+    /// * `distance` - How far from the top of the stack to look
+    /// 
+    /// # Returns
+    /// 
+    /// Reference to the value, or an error if the stack isn't deep enough
     fn peek(&self, distance: usize) -> Result<&Value, String> {
         if distance >= self.stack.len() {
             return Err("Stack underflow".to_string());
@@ -422,6 +491,15 @@ impl VM {
         Ok(&self.stack[self.stack.len() - 1 - distance])
     }
 
+    /// Performs a binary operation on the top two values of the stack
+    /// 
+    /// # Arguments
+    /// 
+    /// * `op` - Function that implements the binary operation
+    /// 
+    /// # Returns
+    /// 
+    /// Ok(()) if successful, or an error message
     fn binary_op<F>(&mut self, op: F) -> Result<(), String>
     where
         F: FnOnce(&Value, &Value) -> Result<Value, String>,

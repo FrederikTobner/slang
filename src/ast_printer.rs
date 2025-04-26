@@ -2,16 +2,24 @@ use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationSt
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
 
+/// A visitor implementation that prints the AST in a human-readable format
 pub struct ASTPrinter {
+    /// Current indentation level for tree-like output
     indent_level: usize,
 }
 
 impl ASTPrinter {
+    /// Creates a new AST printer with no indentation
     #[allow(dead_code)]
     pub fn new() -> Self {
         ASTPrinter { indent_level: 0 }
     }
 
+    /// Prints the AST for a list of statements
+    /// 
+    /// # Arguments
+    /// 
+    /// * `statements` - The statements to print
     #[allow(dead_code)]
     pub fn print(&mut self, statements: &[Statement]) {
         println!("AST Root");
@@ -21,6 +29,7 @@ impl ASTPrinter {
         }
     }
 
+    /// Helper function to get the current indentation string
     fn indent(&self) -> String {
         " ".repeat(self.indent_level * 4)
     }

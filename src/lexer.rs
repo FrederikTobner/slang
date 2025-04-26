@@ -1,5 +1,14 @@
 use crate::token::{Token, Tokentype};
 
+/// Converts source code text into a sequence of tokens
+/// 
+/// # Arguments
+/// 
+/// * `input` - The source code to tokenize
+/// 
+/// # Returns
+/// 
+/// A vector of tokens representing the source code
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut chars = input.chars().peekable();

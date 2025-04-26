@@ -1,3 +1,4 @@
+/// Types of tokens in the language lexer
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Tokentype {
     Identifier,     // x, y, myVar
@@ -23,16 +24,20 @@ pub enum Tokentype {
     Arrow,          // ->
     Return,         // return
     
-    Eof,
+    Eof,            // End of file
 }
 
+/// Represents a token in the source code
 #[derive(Debug)]
 pub struct Token {
+    /// The type of the token
     pub token_type: Tokentype,
+    /// The actual text of the token
     pub lexeme: String,
 }
 
 impl Token {
+    /// Creates a new token with the given type and lexeme
     pub fn new(token_type: Tokentype, lexeme: String) -> Token {
         Token { token_type, lexeme }
     }

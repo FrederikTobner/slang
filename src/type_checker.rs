@@ -7,47 +7,60 @@ use crate::visitor::Visitor;
 use crate::types::{TypeId, TypeKind, TYPE_REGISTRY};
 use std::collections::HashMap;
 
+/// Helper function to get the i32 type ID
 fn i32_type() -> TypeId {
     crate::types::i32_type()
 }
 
+/// Helper function to get the i64 type ID
 fn i64_type() -> TypeId {
     crate::types::i64_type()
 }
 
+/// Helper function to get the u32 type ID
 fn u32_type() -> TypeId {
     crate::types::u32_type()
 }
 
+/// Helper function to get the u64 type ID
 fn u64_type() -> TypeId {
     crate::types::u64_type()
 }
 
+/// Helper function to get the f64 type ID
 fn f64_type() -> TypeId {
     crate::types::f64_type()
 }
 
+/// Helper function to get the string type ID
 fn string_type() -> TypeId {
     crate::types::string_type()
 }
 
+/// Helper function to get the unspecified integer type ID
 fn unspecified_int_type() -> TypeId {
     crate::types::unspecified_int_type()
 }
 
+/// Helper function to get the unknown type ID
 fn unknown_type() -> TypeId {
     crate::types::unknown_type()
 }
 
+/// Performs static type checking on the AST
 pub struct TypeChecker {
+    /// Map of variable names to their types
     variables: HashMap<String, TypeId>,
+    /// Map of function names to their parameter and return types
     functions: HashMap<String, (Vec<TypeId>, TypeId)>,
+    /// Current function's return type for validating return statements
     current_return_type: Option<TypeId>,
-    // Native functions that accept any type
+    /// Set of native functions that can accept any type of arguments
     native_variadic_functions: std::collections::HashSet<String>,
 }
 
 impl TypeChecker {
+    /// Creates a new type checker with built-in functions registered
     pub fn new() -> Self {
         let mut tc = TypeChecker {
             variables: HashMap::new(),
@@ -61,13 +74,22 @@ impl TypeChecker {
         tc
     }
     
-    /// Register built-in native functions
+    /// Registers the built-in native functions
     fn register_native_functions(&mut self) {
         self.functions.insert("print_value".to_string(), (vec![unknown_type()], i32_type()));
         // mark it as a special function that accepts any type
         self.native_variadic_functions.insert("print_value".to_string());
     }
 
+    /// Checks the type safety of a list of statements
+    /// 
+    /// # Arguments
+    /// 
+    /// * `statements` - The statements to check
+    /// 
+    /// # Returns
+    /// 
+    /// Ok(()) if type-safe, or an error message
     pub fn check(&mut self, statements: &[Statement]) -> Result<(), String> {
         for stmt in statements {
             match stmt.accept(self) {
@@ -78,11 +100,18 @@ impl TypeChecker {
         Ok(())
     }
 
+    /// Gets the map of variables and their types
     #[allow(dead_code)]
     pub fn get_variables(&self) -> &HashMap<String, TypeId> {
         &self.variables
     }
     
+    /// Sets the type for a variable
+    /// 
+    /// # Arguments
+    /// 
+    /// * `name` - The variable name
+    /// * `type_id` - The type to assign
     #[allow(dead_code)]
     pub fn set_variable(&mut self, name: String, type_id: TypeId) {
         self.variables.insert(name, type_id);
