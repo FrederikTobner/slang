@@ -456,6 +456,14 @@ impl<'a> Parser<'a> {
             }));
         }
 
+        if self.match_token(Tokentype::LeftParen) {
+            let expr = self.expression()?;
+            if !self.match_token(Tokentype::RightParen) {
+                return Err("Expected ')' after expression".to_string());
+            }
+            return Ok(expr);
+        }
+
         if self.match_token(Tokentype::Identifier) {
             let name = self.previous().lexeme.clone();
             
