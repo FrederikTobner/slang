@@ -4,7 +4,7 @@ use crate::ast::{
 };
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
-use crate::types::{TypeId, TypeKind, TYPE_REGISTRY};
+use crate::types::{TypeId, TypeKind, TYPE_REGISTRY, StructType};
 use std::collections::HashMap;
 
 /// Helper function to get the i32 type ID
@@ -72,6 +72,25 @@ impl TypeChecker {
         tc.register_native_functions();
         
         tc
+    }
+
+    /// Checks if a type is an integer type
+    /// 
+    /// ## Arguments
+    /// type_id - The type ID to check
+    /// 
+    /// ## Returns
+    /// True if the type is an integer type, false otherwise
+    ///
+    fn is_integer_type(&self, type_id: &TypeId) -> bool {
+        TYPE_REGISTRY.with(|registry| {
+            let registry = registry.borrow();
+            if let Some(type_info) = registry.get_type_info(type_id) {
+                matches!(type_info.kind, TypeKind::Integer(_))
+            } else {
+                false
+            }
+        })
     }
     
     /// Registers the built-in native functions
@@ -321,7 +340,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             let mut registry = registry.borrow_mut();
             
             // Create a new struct type
-            let type_kind = crate::types::TypeKind::Struct(crate::types::StructType {
+            let type_kind = crate::types::TypeKind::Struct(StructType {
                 name: type_def.name.clone(),
                 fields: type_def.fields.clone(),
             });
@@ -336,6 +355,17 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
     }
 
     fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> Result<TypeId, String> {
+        // Register the variable with a placeholder type first
+        let placeholder_type = if let_stmt.expr_type == unknown_type() {
+            unspecified_int_type()
+        } else {
+            let_stmt.expr_type.clone()
+        };
+        
+        // Add to symbol table with the placeholder type
+        self.variables.insert(let_stmt.name.clone(), placeholder_type);
+        
+        // Now process the initialization expression
         let expr_type = self.visit_expression(&let_stmt.value)?;
         
         // If type wasn't specified, infer it
@@ -345,17 +375,40 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             // Only allow UnspecifiedInteger to be assigned to specific integer types
             // with value range check
             if expr_type == unspecified_int_type() {
-                if let Expression::Literal(lit) = &let_stmt.value {
-                    if let Value::UnspecifiedInteger(n) = &lit.value {
-                        // Check if the value is in range for the target type
-                        let value_in_range = TYPE_REGISTRY.with(|registry| {
-                            registry.borrow().check_value_in_range(n, &let_stmt.expr_type)
-                        });
-                        
-                        if value_in_range {
-                            let_stmt.expr_type.clone()
+                // Check for both direct literals and literals inside unary expressions
+                match &let_stmt.value {
+                    Expression::Literal(lit) => {
+                        if let Value::UnspecifiedInteger(n) = &lit.value {
+                            // Check if the value is in range for the target type
+                            let value_in_range = TYPE_REGISTRY.with(|registry| {
+                                registry.borrow().check_value_in_range(n, &let_stmt.expr_type)
+                            });
+                            
+                            if value_in_range {
+                                let_stmt.expr_type.clone()
+                            } else {
+                                // Get type name for error message
+                                let target_type_name = TYPE_REGISTRY.with(|registry| {
+                                    registry.borrow()
+                                        .get_type_info(&let_stmt.expr_type)
+                                        .map(|t| t.name.clone())
+                                        .unwrap_or_else(|| format!("{:?}", let_stmt.expr_type))
+                                });
+                                
+                                return Err(format!(
+                                    "Integer literal {} is out of range for type {}",
+                                    n, target_type_name
+                                ));
+                            }
                         } else {
-                            // Get type name for error message
+                            // Non-integer literals can't be assigned to integer types
+                            let expr_type_name = TYPE_REGISTRY.with(|registry| {
+                                registry.borrow()
+                                    .get_type_info(&expr_type)
+                                    .map(|t| t.name.clone())
+                                    .unwrap_or_else(|| format!("{:?}", expr_type))
+                            });
+                            
                             let target_type_name = TYPE_REGISTRY.with(|registry| {
                                 registry.borrow()
                                     .get_type_info(&let_stmt.expr_type)
@@ -364,12 +417,64 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                             });
                             
                             return Err(format!(
-                                "Integer literal {} is out of range for type {}",
-                                n, target_type_name
+                                "Type mismatch: variable {} is {} but expression is {}",
+                                let_stmt.name, target_type_name, expr_type_name
                             ));
                         }
-                    } else {
-                        // Non-integer literals can't be assigned to integer types
+                    },
+                    Expression::Unary(unary_expr) => {
+                        if unary_expr.operator == Tokentype::Minus {
+                            // Handle negated integer literals
+                            if let Expression::Literal(lit) = &*unary_expr.right {
+                                if let Value::UnspecifiedInteger(n) = &lit.value {
+                                    // For negation, we need to check the negative value
+                                    let negated_value = -*n;
+                                    let value_in_range = TYPE_REGISTRY.with(|registry| {
+                                        registry.borrow().check_value_in_range(&negated_value, &let_stmt.expr_type)
+                                    });
+                                    
+                                    if value_in_range {
+                                        return Ok(let_stmt.expr_type.clone());
+                                    } else {
+                                        // Get type name for error message
+                                        let target_type_name = TYPE_REGISTRY.with(|registry| {
+                                            registry.borrow()
+                                                .get_type_info(&let_stmt.expr_type)
+                                                .map(|t| t.name.clone())
+                                                .unwrap_or_else(|| format!("{:?}", let_stmt.expr_type))
+                                        });
+                                        
+                                        return Err(format!(
+                                            "Integer literal {} is out of range for type {}",
+                                            negated_value, target_type_name
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Non-literal expressions can't be assigned if types don't match exactly
+                        let expr_type_name = TYPE_REGISTRY.with(|registry| {
+                            registry.borrow()
+                                .get_type_info(&expr_type)
+                                .map(|t| t.name.clone())
+                                .unwrap_or_else(|| format!("{:?}", expr_type))
+                        });
+                        
+                        let target_type_name = TYPE_REGISTRY.with(|registry| {
+                            registry.borrow()
+                                .get_type_info(&let_stmt.expr_type)
+                                .map(|t| t.name.clone())
+                                .unwrap_or_else(|| format!("{:?}", let_stmt.expr_type))
+                        });
+                        
+                        return Err(format!(
+                            "Type mismatch: variable {} is {} but expression is {}",
+                            let_stmt.name, target_type_name, expr_type_name
+                        ));
+                    },
+                    _ => {
+                        // Non-literal expressions can't be assigned if types don't match exactly
                         let expr_type_name = TYPE_REGISTRY.with(|registry| {
                             registry.borrow()
                                 .get_type_info(&expr_type)
@@ -389,26 +494,6 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                             let_stmt.name, target_type_name, expr_type_name
                         ));
                     }
-                } else {
-                    // Non-literal expressions can't be assigned if types don't match exactly
-                    let expr_type_name = TYPE_REGISTRY.with(|registry| {
-                        registry.borrow()
-                            .get_type_info(&expr_type)
-                            .map(|t| t.name.clone())
-                            .unwrap_or_else(|| format!("{:?}", expr_type))
-                    });
-                    
-                    let target_type_name = TYPE_REGISTRY.with(|registry| {
-                        registry.borrow()
-                            .get_type_info(&let_stmt.expr_type)
-                            .map(|t| t.name.clone())
-                            .unwrap_or_else(|| format!("{:?}", let_stmt.expr_type))
-                    });
-                    
-                    return Err(format!(
-                        "Type mismatch: variable {} is {} but expression is {}",
-                        let_stmt.name, target_type_name, expr_type_name
-                    ));
                 }
             } else {
                 // Types don't match and no coercion is allowed
@@ -435,15 +520,15 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             let_stmt.expr_type.clone()
         };
 
-        // Add to symbol table
+        // Update symbol table with the final type
         self.variables.insert(let_stmt.name.clone(), final_type.clone());
         Ok(final_type)
     }
 
     fn visit_expression(&mut self, expr: &Expression) -> Result<TypeId, String> {
         match expr {
-            Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
+            Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
             Expression::Variable(name) => self.visit_variable_expression(name),
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
@@ -477,9 +562,8 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 return Ok(left_type);
             }
             
-            // Special case for unspecified integers - allow them to be used with specific types
-            // but adopt the specific type rather than promoting/converting
-            if left_type == unspecified_int_type() {
+            // Special case for unspecified integers
+            if left_type == unspecified_int_type() && self.is_integer_type(&right_type) {
                 // Check if the unspecified integer literal value is in range
                 if let Expression::Literal(lit) = &*bin_expr.left {
                     if let Value::UnspecifiedInteger(n) = &lit.value {
@@ -508,7 +592,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 return Ok(right_type);
             }
             
-            if right_type == unspecified_int_type() {
+            if right_type == unspecified_int_type() && self.is_integer_type(&left_type)  {
                 // Similar check for right side
                 if let Expression::Literal(lit) = &*bin_expr.right {
                     if let Value::UnspecifiedInteger(n) = &lit.value {
@@ -570,6 +654,14 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
         
         match unary_expr.operator {
             Tokentype::Minus => {
+                // Special case for unspecified integers - preserve unspecified_int_type
+                // This allows them to be later coerced to specific types like i32
+                if operand_type == unspecified_int_type() {
+                    if let Expression::Literal(_) = &*unary_expr.right {
+                        return Ok(unspecified_int_type());
+                    }
+                }
+                
                 // Check if the type is numeric using the registry
                 let is_numeric = TYPE_REGISTRY.with(|registry| {
                     let registry = registry.borrow();

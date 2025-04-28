@@ -1,7 +1,7 @@
-use std::cell::RefCell;
 use std::fmt::Debug;
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::collections::HashMap;
+use std::cell::RefCell;
 
 /// A unique identifier for a type in the type system
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -9,10 +9,50 @@ pub struct TypeId(usize);
 
 impl TypeId {
     /// Creates a new unique type identifier
-    fn new() -> Self {
+    pub fn new() -> Self {
         static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
         TypeId(NEXT_ID.fetch_add(1, Ordering::Relaxed))
     }
+}
+
+/// Returns the TypeId for i32 integers
+pub fn i32_type() -> TypeId {
+    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("i32").unwrap().clone())
+}
+
+/// Returns the TypeId for i64 integers
+pub fn i64_type() -> TypeId {
+    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("i64").unwrap().clone())
+}
+
+/// Returns the TypeId for u32 integers
+pub fn u32_type() -> TypeId {
+    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("u32").unwrap().clone())
+}
+
+/// Returns the TypeId for u64 integers
+pub fn u64_type() -> TypeId {
+    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("u64").unwrap().clone())
+}
+
+/// Returns the TypeId for f64 floating points
+pub fn f64_type() -> TypeId {
+    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("f64").unwrap().clone())
+}
+
+/// Returns the TypeId for strings
+pub fn string_type() -> TypeId {
+    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("string").unwrap().clone())
+}
+
+/// Returns the TypeId for unspecified integers (used for integer literals)
+pub fn unspecified_int_type() -> TypeId {
+    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("int").unwrap().clone())
+}
+
+/// Returns the TypeId for unknown types
+pub fn unknown_type() -> TypeId {
+    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("unknown").unwrap().clone())
 }
 
 /// Represents the different kinds of types in the language
@@ -73,13 +113,6 @@ pub struct TypeInfo {
     pub kind: TypeKind,
 }
 
-/// Registry that stores all available types in the language
-pub struct TypeRegistry {
-    /// Map from TypeId to TypeInfo
-    types: HashMap<TypeId, TypeInfo>,
-    /// Map from type names to TypeId for quick lookup
-    type_names: HashMap<String, TypeId>,
-}
 
 // Thread-local storage for the type registry and commonly used types
 thread_local! {
@@ -104,45 +137,14 @@ thread_local! {
     pub static UNKNOWN_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("unknown").unwrap().clone()));
 }
 
-/// Returns the TypeId for i32 integers
-pub fn i32_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("i32").unwrap().clone())
+/// Registry that stores all available types in the language
+pub struct TypeRegistry {
+    /// Map from TypeId to TypeInfo
+    types: HashMap<TypeId, TypeInfo>,
+    /// Map from type names to TypeId for quick lookup
+    type_names: HashMap<String, TypeId>,
 }
 
-/// Returns the TypeId for i64 integers
-pub fn i64_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("i64").unwrap().clone())
-}
-
-/// Returns the TypeId for u32 integers
-pub fn u32_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("u32").unwrap().clone())
-}
-
-/// Returns the TypeId for u64 integers
-pub fn u64_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("u64").unwrap().clone())
-}
-
-/// Returns the TypeId for f64 floating points
-pub fn f64_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("f64").unwrap().clone())
-}
-
-/// Returns the TypeId for strings
-pub fn string_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("string").unwrap().clone())
-}
-
-/// Returns the TypeId for unspecified integers (used for integer literals)
-pub fn unspecified_int_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("int").unwrap().clone())
-}
-
-/// Returns the TypeId for unknown types
-pub fn unknown_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("unknown").unwrap().clone())
-}
 
 impl TypeRegistry {
     /// Creates a new TypeRegistry with built-in types registered

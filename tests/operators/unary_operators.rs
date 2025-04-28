@@ -10,10 +10,28 @@ fn test_negation_operator() {
 }
 
 #[test]
+fn test_negation_operator_with_int_literal() {
+    let program = r#"
+        let a: i32 = -42;
+        print_value(a);
+    "#;
+    execute_program_and_assert(program, "-42");
+}
+
+#[test]
 fn test_negation_with_float() {
     let program = r#"
         let a: f64 = 42.5;
         print_value(-a);
+    "#;
+    execute_program_and_assert(program, "-42.5");
+}
+
+#[test]
+fn test_negation_with_float_literal() {
+    let program = r#"
+        let a: f64 = -42.5;
+        print_value(a);
     "#;
     execute_program_and_assert(program, "-42.5");
 }
@@ -28,14 +46,11 @@ fn test_unary_on_string_error() {
 }
 
 #[test]
-fn test_unary_negation() {
+fn test_double_negation() {
     let program = r#"
         let a: i32 = 42;
-        print_value(-a);
-        
-        let b: f64 = 3.14;
-        print_value(-b);
+        print_value(-(-a));
     "#;
-    execute_program_and_assert(program, "-42");
-    execute_program_and_assert(program, "-3.14");
+    execute_program_and_assert(program, "42");
 }
+

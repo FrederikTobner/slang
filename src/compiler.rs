@@ -31,11 +31,11 @@ impl Compiler {
 
     /// Compiles a list of statements into bytecode
     /// 
-    /// # Arguments
+    /// ## Arguments
     /// 
     /// * `statements` - The statements to compile
     /// 
-    /// # Returns
+    /// ## Returns
     /// 
     /// A reference to the compiled bytecode chunk, or an error message
     pub fn compile(&mut self, statements: &[Statement]) -> Result<&Chunk, String> {
@@ -226,8 +226,7 @@ impl Visitor<Result<(), String>> for Compiler {
     }
 
     fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> Result<(), String> {
-        self.visit_expression(&let_stmt.value)?;
-
+        // First register the variable so that even complex initializers can reference it
         // Check if we're in a local scope
         let is_local = !self.local_scopes.is_empty();
         
@@ -240,6 +239,9 @@ impl Visitor<Result<(), String>> for Compiler {
             // Global variable
             self.variables.push(let_stmt.name.clone());
         }
+
+        // Now compile the initialization expression
+        self.visit_expression(&let_stmt.value)?;
 
         let var_index = self.chunk.add_identifier(let_stmt.name.clone());
         if var_index > 255 {
