@@ -112,6 +112,8 @@ pub enum Value {
     U32(u32),
     /// 64-bit unsigned integer
     U64(u64),
+    /// 32-bit floating point
+    F32(f32),
     /// 64-bit floating point
     F64(f64),
     /// String value
@@ -134,6 +136,7 @@ impl Value {
             Value::F64(_) => 5,
             Value::Function(_) => 6,
             Value::NativeFunction(_) => 7,
+            Value::F32(_) => 8,
         }
     }
 
@@ -238,6 +241,12 @@ impl Value {
                     locals,
                 }))
             }
+            // F32
+            8 => {
+                let mut bytes = [0u8; 4];
+                reader.read_exact(&mut bytes)?;
+                Ok(Value::F32(f32::from_le_bytes(bytes)))
+            }
             _ => Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 "Invalid value type tag",
@@ -253,6 +262,7 @@ impl fmt::Display for Value {
             Value::I64(i) => write!(f, "{}", i),
             Value::U32(i) => write!(f, "{}", i),
             Value::U64(i) => write!(f, "{}", i),
+            Value::F32(flo) => write!(f, "{}", flo),
             Value::F64(flo) => write!(f, "{}", flo),
             Value::String(s) => write!(f, "\"{}\"", s),
             Value::Function(func) => write!(f, "<fn {}>", func.name),
@@ -377,6 +387,9 @@ impl Chunk {
                     let len = bytes.len() as u32;
                     writer.write_all(&len.to_le_bytes())?;
                     writer.write_all(bytes)?;
+                }
+                Value::F32(f) => {
+                    writer.write_all(&f.to_le_bytes())?;
                 }
                 Value::F64(f) => {
                     writer.write_all(&f.to_le_bytes())?;

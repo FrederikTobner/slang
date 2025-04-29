@@ -53,7 +53,7 @@ fn test_invalid_operation_for_type() {
 }
 
 #[test]
-fn test_value_out_of_range() {
+fn test_i32_value_out_of_range() {
     let program = r#"
         let a: i32 = 2147483648; 
     "#;
@@ -66,4 +66,20 @@ fn test_unsigned_negative_value_error() {
         let a: u32 = -1;
     "#;
     execute_program_expect_error(program, "Integer literal -1 is out of range for type u32");
+}
+
+#[test]
+fn test_int_type() {
+    let program = r#"
+        let a: int = 0; 
+    "#;
+    execute_program_expect_error(program, "Compilation failed: \'int\' is not a valid type specifier. Use \'i32\', \'i64\', \'u32\', or \'u64\' instead\n");
+}
+
+#[test]
+fn test_float_type() {
+    let program = r#"
+        let a: float = 0.0; 
+    "#;
+    execute_program_expect_error(program, "Compilation failed: \'float\' is not a valid type specifier. Use \'f32\' or \'f64\' instead\n");
 }

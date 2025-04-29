@@ -27,9 +27,19 @@ fn u64_type() -> TypeId {
     crate::types::u64_type()
 }
 
+/// Helper function to get the f32 type ID
+fn f32_type() -> TypeId {
+    crate::types::f32_type()
+}
+
 /// Helper function to get the f64 type ID
 fn f64_type() -> TypeId {
     crate::types::f64_type()
+}
+
+/// Helper function to get the unspecified float type ID
+fn unspecified_float_type() -> TypeId {
+    crate::types::unspecified_float_type()
 }
 
 /// Helper function to get the string type ID
@@ -87,6 +97,25 @@ impl TypeChecker {
             let registry = registry.borrow();
             if let Some(type_info) = registry.get_type_info(type_id) {
                 matches!(type_info.kind, TypeKind::Integer(_))
+            } else {
+                false
+            }
+        })
+    }
+    
+    /// Checks if a type is a float type
+    /// 
+    /// ## Arguments
+    /// type_id - The type ID to check
+    /// 
+    /// ## Returns
+    /// True if the type is a float type, false otherwise
+    ///
+    fn is_float_type(&self, type_id: &TypeId) -> bool {
+        TYPE_REGISTRY.with(|registry| {
+            let registry = registry.borrow();
+            if let Some(type_info) = registry.get_type_info(type_id) {
+                matches!(type_info.kind, TypeKind::Float(_))
             } else {
                 false
             }
@@ -213,6 +242,21 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                         if let Value::UnspecifiedInteger(n) = &lit.value {
                             let value_in_range = TYPE_REGISTRY.with(|registry| {
                                 registry.borrow().check_value_in_range(n, &expected_type)
+                            });
+                            
+                            if value_in_range {
+                                return Ok(expected_type.clone());
+                            }
+                        }
+                    }
+                }
+
+                // Handle special case for unspecified floats
+                if actual_type == unspecified_float_type() {
+                    if let Expression::Literal(lit) = expr {
+                        if let Value::UnspecifiedFloat(f) = &lit.value {
+                            let value_in_range = TYPE_REGISTRY.with(|registry| {
+                                registry.borrow().check_float_value_in_range(f, &expected_type)
                             });
                             
                             if value_in_range {
@@ -495,6 +539,151 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                         ));
                     }
                 }
+            } else if expr_type == unspecified_float_type() {
+                // Handle unspecified float literals
+                match &let_stmt.value {
+                    Expression::Literal(lit) => {
+                        if let Value::UnspecifiedFloat(f) = &lit.value {
+                            if self.is_float_type(&let_stmt.expr_type) {
+                                // Check if the float is in range for the target type
+                                let value_in_range = TYPE_REGISTRY.with(|registry| {
+                                    registry.borrow().check_float_value_in_range(f, &let_stmt.expr_type)
+                                });
+                                
+                                if value_in_range {
+                                    let_stmt.expr_type.clone()
+                                } else {
+                                    // Get type name for error message
+                                    let target_type_name = TYPE_REGISTRY.with(|registry| {
+                                        registry.borrow()
+                                            .get_type_info(&let_stmt.expr_type)
+                                            .map(|t| t.name.clone())
+                                            .unwrap_or_else(|| format!("{:?}", let_stmt.expr_type))
+                                    });
+                                    
+                                    return Err(format!(
+                                        "Float literal {} is out of range for type {}",
+                                        f, target_type_name
+                                    ));
+                                }
+                            } else {
+                                // Non-float types can't be assigned float literals
+                                let expr_type_name = TYPE_REGISTRY.with(|registry| {
+                                    registry.borrow()
+                                        .get_type_info(&expr_type)
+                                        .map(|t| t.name.clone())
+                                        .unwrap_or_else(|| format!("{:?}", expr_type))
+                                });
+                                
+                                let target_type_name = TYPE_REGISTRY.with(|registry| {
+                                    registry.borrow()
+                                        .get_type_info(&let_stmt.expr_type)
+                                        .map(|t| t.name.clone())
+                                        .unwrap_or_else(|| format!("{:?}", let_stmt.expr_type))
+                                });
+                                
+                                return Err(format!(
+                                    "Type mismatch: variable {} is {} but expression is {}",
+                                    let_stmt.name, target_type_name, expr_type_name
+                                ));
+                            }
+                        } else {
+                            // This branch should never be reached, but just in case
+                            let expr_type_name = TYPE_REGISTRY.with(|registry| {
+                                registry.borrow()
+                                    .get_type_info(&expr_type)
+                                    .map(|t| t.name.clone())
+                                    .unwrap_or_else(|| format!("{:?}", expr_type))
+                            });
+                            
+                            let target_type_name = TYPE_REGISTRY.with(|registry| {
+                                registry.borrow()
+                                    .get_type_info(&let_stmt.expr_type)
+                                    .map(|t| t.name.clone())
+                                    .unwrap_or_else(|| format!("{:?}", let_stmt.expr_type))
+                            });
+                            
+                            return Err(format!(
+                                "Type mismatch: variable {} is {} but expression is {}",
+                                let_stmt.name, target_type_name, expr_type_name
+                            ));
+                        }
+                    },
+                    Expression::Unary(unary_expr) => {
+                        if unary_expr.operator == Tokentype::Minus {
+                            // Handle negated float literals
+                            if let Expression::Literal(lit) = &*unary_expr.right {
+                                if let Value::UnspecifiedFloat(f) = &lit.value {
+                                    if self.is_float_type(&let_stmt.expr_type) {
+                                        // For negation, we need to check the negative value
+                                        let negated_value = -*f;
+                                        let value_in_range = TYPE_REGISTRY.with(|registry| {
+                                            registry.borrow().check_float_value_in_range(&negated_value, &let_stmt.expr_type)
+                                        });
+                                        
+                                        if value_in_range {
+                                            return Ok(let_stmt.expr_type.clone());
+                                        } else {
+                                            // Get type name for error message
+                                            let target_type_name = TYPE_REGISTRY.with(|registry| {
+                                                registry.borrow()
+                                                    .get_type_info(&let_stmt.expr_type)
+                                                    .map(|t| t.name.clone())
+                                                    .unwrap_or_else(|| format!("{:?}", let_stmt.expr_type))
+                                            });
+                                            
+                                            return Err(format!(
+                                                "Float literal {} is out of range for type {}",
+                                                negated_value, target_type_name
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Non-literal expressions can't be assigned if types don't match exactly
+                        let expr_type_name = TYPE_REGISTRY.with(|registry| {
+                            registry.borrow()
+                                .get_type_info(&expr_type)
+                                .map(|t| t.name.clone())
+                                .unwrap_or_else(|| format!("{:?}", expr_type))
+                        });
+                        
+                        let target_type_name = TYPE_REGISTRY.with(|registry| {
+                            registry.borrow()
+                                .get_type_info(&let_stmt.expr_type)
+                                .map(|t| t.name.clone())
+                                .unwrap_or_else(|| format!("{:?}", let_stmt.expr_type))
+                        });
+                        
+                        return Err(format!(
+                            "Type mismatch: variable {} is {} but expression is {}",
+                            let_stmt.name, target_type_name, expr_type_name
+                        ));
+                    },
+                    _ => {
+                        // Non-literal expressions can't be assigned if types don't match exactly
+                        let expr_type_name = TYPE_REGISTRY.with(|registry| {
+                            registry.borrow()
+                                .get_type_info(&expr_type)
+                                .map(|t| t.name.clone())
+                                .unwrap_or_else(|| format!("{:?}", expr_type))
+                        });
+                        
+                        let target_type_name = TYPE_REGISTRY.with(|registry| {
+                            registry.borrow()
+                                .get_type_info(&let_stmt.expr_type)
+                                .map(|t| t.name.clone())
+                                .unwrap_or_else(|| format!("{:?}", let_stmt.expr_type))
+                        });
+                        
+                        return Err(format!(
+                            "Type mismatch: variable {} is {} but expression is {}",
+                            let_stmt.name, target_type_name, expr_type_name
+                        ));
+                    }
+                }
             } else {
                 // Types don't match and no coercion is allowed
                 let expr_type_name = TYPE_REGISTRY.with(|registry| {
@@ -542,8 +731,10 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             Value::I64(_) => Ok(i64_type()),
             Value::U32(_) => Ok(u32_type()),
             Value::U64(_) => Ok(u64_type()),
+            Value::F32(_) => Ok(f32_type()),
             Value::F64(_) => Ok(f64_type()),
             Value::UnspecifiedInteger(_) => Ok(unspecified_int_type()),
+            Value::UnspecifiedFloat(_) => Ok(unspecified_float_type()),
             Value::String(_) => Ok(string_type()),
         }
     }
@@ -557,7 +748,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             bin_expr.operator,
             Tokentype::Plus | Tokentype::Minus | Tokentype::Multiply | Tokentype::Divide
         ) {
-            // Only allow operations between same types, with special handling for unspecified integers
+            // Only allow operations between same types, with special handling for unspecified literals
             if left_type == right_type {
                 return Ok(left_type);
             }
@@ -592,7 +783,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 return Ok(right_type);
             }
             
-            if right_type == unspecified_int_type() && self.is_integer_type(&left_type)  {
+            if right_type == unspecified_int_type() && self.is_integer_type(&left_type) {
                 // Similar check for right side
                 if let Expression::Literal(lit) = &*bin_expr.right {
                     if let Value::UnspecifiedInteger(n) = &lit.value {
@@ -613,6 +804,64 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                             return Err(format!(
                                 "Integer literal {} is out of range for type {}",
                                 n, left_type_name
+                            ));
+                        }
+                    }
+                }
+                return Ok(left_type);
+            }
+            
+            // Special case for unspecified floats
+            if left_type == unspecified_float_type() && self.is_float_type(&right_type) {
+                // Check if the unspecified float literal value is in range
+                if let Expression::Literal(lit) = &*bin_expr.left {
+                    if let Value::UnspecifiedFloat(f) = &lit.value {
+                        // Check if value is in valid range for the target type
+                        let value_in_range = TYPE_REGISTRY.with(|registry| {
+                            registry.borrow().check_float_value_in_range(f, &right_type)
+                        });
+                        
+                        if value_in_range {
+                            return Ok(right_type);
+                        } else {
+                            let right_type_name = TYPE_REGISTRY.with(|registry| {
+                                registry.borrow()
+                                    .get_type_info(&right_type)
+                                    .map(|t| t.name.clone())
+                                    .unwrap_or_else(|| format!("{:?}", right_type))
+                            });
+                            
+                            return Err(format!(
+                                "Float literal {} is out of range for type {}",
+                                f, right_type_name
+                            ));
+                        }
+                    }
+                }
+                return Ok(right_type);
+            }
+            
+            if right_type == unspecified_float_type() && self.is_float_type(&left_type) {
+                // Similar check for right side with float literals
+                if let Expression::Literal(lit) = &*bin_expr.right {
+                    if let Value::UnspecifiedFloat(f) = &lit.value {
+                        let value_in_range = TYPE_REGISTRY.with(|registry| {
+                            registry.borrow().check_float_value_in_range(f, &left_type)
+                        });
+                        
+                        if value_in_range {
+                            return Ok(left_type);
+                        } else {
+                            let left_type_name = TYPE_REGISTRY.with(|registry| {
+                                registry.borrow()
+                                    .get_type_info(&left_type)
+                                    .map(|t| t.name.clone())
+                                    .unwrap_or_else(|| format!("{:?}", left_type))
+                            });
+                            
+                            return Err(format!(
+                                "Float literal {} is out of range for type {}",
+                                f, left_type_name
                             ));
                         }
                     }

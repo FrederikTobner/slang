@@ -69,3 +69,23 @@ fn test_arithmetic_with_float_values() {
     "#;
     execute_program_and_assert(program, "42");
 }
+
+#[test]
+fn test_arithmetic_with_integer_and_float() {
+    let program = r#"
+        let a: i32 = 20;
+        let b: f64 = 22.0;
+        print_value(a + b);
+    "#;
+    execute_program_expect_error(program, "Compilation failed: Type mismatch: cannot perform Plus operation with i32 and f64\n");
+}
+
+#[test]
+fn test_arithmetic_with_different_float_types() {
+    let program = r#"
+        let a: f32 = 20.5;
+        let b: f64 = 21.5;
+        print_value(a + b);
+    "#;
+    execute_program_expect_error(program, "Compilation failed: Type mismatch: cannot perform Plus operation with f32 and f64\n");
+}

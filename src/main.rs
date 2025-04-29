@@ -213,15 +213,15 @@ fn repl() {
     let mut vm = VM::new();
     
     println!("Slang REPL - Type 'exit' to exit");
-    println!("Type 'vars' to display currently defined variables");
     
     loop {
         let mut input = String::new();
         print!(">>> ");
         std::io::stdout().flush().unwrap();
-        
+        let trimmed;
         if std::io::stdin().read_line(&mut input).is_ok() {
-            if input.trim() == "exit" {
+            trimmed = input.trim();
+            if input.trim() == "exit"{
                 break;
             }
         } else {
@@ -229,9 +229,6 @@ fn repl() {
             continue;
         }
 
-        let trimmed = input.trim();
-        
-        
         if trimmed.is_empty() {
             continue;
         }

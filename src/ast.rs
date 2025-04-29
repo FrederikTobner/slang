@@ -112,8 +112,12 @@ pub enum Value {
     U64(u64),
     /// Integer without specified type (needs inference)
     UnspecifiedInteger(i64),
+    /// 32-bit floating point
+    F32(f32),
     /// 64-bit floating point
     F64(f64),
+    /// Float without specified type (needs inference)
+    UnspecifiedFloat(f64),
     /// String value
     String(String),
 }

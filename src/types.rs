@@ -35,9 +35,19 @@ pub fn u64_type() -> TypeId {
     TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("u64").unwrap().clone())
 }
 
+/// Returns the TypeId for f32 floating points
+pub fn f32_type() -> TypeId {
+    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("f32").unwrap().clone())
+}
+
 /// Returns the TypeId for f64 floating points
 pub fn f64_type() -> TypeId {
     TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("f64").unwrap().clone())
+}
+
+/// Returns the TypeId for unspecified floats (used for float literals without suffix)
+pub fn unspecified_float_type() -> TypeId {
+    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("float").unwrap().clone())
 }
 
 /// Returns the TypeId for strings
@@ -89,6 +99,8 @@ pub struct IntegerType {
 pub struct FloatType {
     /// The number of bits (e.g., 64 for f64)
     pub bits: u8,
+    /// Whether this is an unspecified float (used for literals without explicit type)
+    pub is_unspecified: bool,
 }
 
 /// Represents a struct type with its fields
@@ -127,12 +139,16 @@ thread_local! {
     pub static U32_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("u32").unwrap().clone()));
     /// Pre-defined type for u64 integers
     pub static U64_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("u64").unwrap().clone()));
+    /// Pre-defined type for f32 floating points
+    pub static F32_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("f32").unwrap().clone()));
     /// Pre-defined type for f64 floating points
     pub static F64_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("f64").unwrap().clone()));
     /// Pre-defined type for strings
     pub static STRING_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("string").unwrap().clone()));
     /// Pre-defined type for unspecified integers (used for integer literals)
     pub static UNSPECIFIED_INT_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("int").unwrap().clone()));
+    /// Pre-defined type for unspecified floats (used for float literals without suffix)
+    pub static UNSPECIFIED_FLOAT_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("float").unwrap().clone()));
     /// Pre-defined type for unknown types
     pub static UNKNOWN_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("unknown").unwrap().clone()));
 }
@@ -167,7 +183,9 @@ impl TypeRegistry {
         self.register_type("u64", TypeKind::Integer(IntegerType { signed: false, bits: 64, is_unspecified: false }));
         self.register_type("int", TypeKind::Integer(IntegerType { signed: true, bits: 0, is_unspecified: true }));
         
-        self.register_type("f64", TypeKind::Float(FloatType { bits: 64 }));
+        self.register_type("f32", TypeKind::Float(FloatType { bits: 32, is_unspecified: false }));
+        self.register_type("f64", TypeKind::Float(FloatType { bits: 64, is_unspecified: false }));
+        self.register_type("float", TypeKind::Float(FloatType { bits: 0, is_unspecified: true }));
         
         self.register_type("string", TypeKind::String);
         
@@ -247,6 +265,34 @@ impl TypeRegistry {
                     (true, 64) => true, // all i64 fit in i64
                     (false, 32) => *value >= 0 && *value <= u32::MAX as i64,
                     (false, 64) => *value >= 0, // all positive i64 fit in u64
+                    _ => false,
+                }
+            },
+            _ => false,
+        }
+    }
+
+    /// Checks if a float value is within the valid range for a given type
+    /// 
+    /// # Arguments
+    /// 
+    /// * `value` - The value to check
+    /// * `type_id` - The type to check against
+    /// 
+    /// # Returns
+    /// 
+    /// true if the value is in range, false otherwise
+    pub fn check_float_value_in_range(&self, value: &f64, type_id: &TypeId) -> bool {
+        let type_info = match self.get_type_info(type_id) {
+            Some(info) => info,
+            None => return false,
+        };
+        
+        match &type_info.kind {
+            TypeKind::Float(float_type) => {
+                match float_type.bits {
+                    32 => *value >= f32::MIN as f64 && *value <= f32::MAX as f64,
+                    64 => true, // all f64 values fit in f64
                     _ => false,
                 }
             },

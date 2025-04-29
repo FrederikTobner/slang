@@ -67,10 +67,12 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                         break;
                     } 
                 }
-                if is_float {
-                    tokens.push(Token::new(Tokentype::FloatLiteral, number));
+                if is_float {    
+                    let token_type = Tokentype::FloatLiteral;                
+                    tokens.push(Token::new(token_type, number));
                 } else {
-                    tokens.push(Token::new(Tokentype::IntegerLiteral, number));
+                    let token_type = Tokentype::IntegerLiteral;
+                    tokens.push(Token::new(token_type, number));
                 }
             }
 

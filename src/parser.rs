@@ -4,7 +4,8 @@ use crate::ast::{
 };
 use crate::token::{Token, Tokentype};
 use crate::types::{TypeId, TYPE_REGISTRY};
-use crate::types::{i32_type, i64_type, u32_type, u64_type, f64_type, string_type, unspecified_int_type, unknown_type};
+use crate::types::{i32_type, i64_type, u32_type, u64_type, f32_type, f64_type, string_type, 
+                  unspecified_int_type, unspecified_float_type, unknown_type};
 
 /// Error that occurs during parsing
 #[derive(Debug)]
@@ -310,6 +311,13 @@ impl<'a> Parser<'a> {
 
             let type_name = self.advance().lexeme.clone();
             
+            // Explicitly reject placeholder types as type specifiers
+            if type_name == "int" {
+                return Err("'int' is not a valid type specifier. Use 'i32', 'i64', 'u32', or 'u64' instead".to_string());
+            } else if type_name == "float" {
+                return Err("'float' is not a valid type specifier. Use 'f32' or 'f64' instead".to_string());
+            }
+            
             var_type = TYPE_REGISTRY.with(|registry| {
                 let registry = registry.borrow();
                 registry.get_type_by_name(&type_name)
@@ -438,14 +446,7 @@ impl<'a> Parser<'a> {
         }
 
         if self.match_token(Tokentype::FloatLiteral) {
-            let value_str = self.previous().lexeme.clone();
-            let value = value_str
-                .parse::<f64>()
-                .map_err(|_| format!("Invalid float: {}", value_str))?;
-            return Ok(Expression::Literal(LiteralExpr {
-                value: Value::F64(value),
-                expr_type: f64_type(),
-            }));
+            return self.parse_float();
         }
 
         if self.match_token(Tokentype::StringLiteral) {
@@ -477,6 +478,41 @@ impl<'a> Parser<'a> {
         Err(format!("Expected expression, found {:?}", self.peek()))
     }
     
+fn parse_float(&mut self) -> Result<Expression, String> {
+        let value_str = self.previous().lexeme.clone();
+        let value = value_str
+            .parse::<f64>()
+            .map_err(|_| format!("Invalid float: {}", value_str))?;
+        
+        if self.check(Tokentype::Identifier) {
+            let type_name = self.peek().lexeme.clone();
+            
+            match type_name.as_str() {
+                "f32" => {
+                    self.advance();
+                    return Ok(Expression::Literal(LiteralExpr {
+                        value: Value::F32(value as f32),
+                        expr_type: f32_type(),
+                    }));
+                }
+                "f64" => {
+                    self.advance();
+                    return Ok(Expression::Literal(LiteralExpr {
+                        value: Value::F64(value),
+                        expr_type: f64_type(),
+                    }));
+                }
+                _ => {}
+            }
+        }
+        
+        // Unspecified float literal
+        Ok(Expression::Literal(LiteralExpr {
+            value: Value::UnspecifiedFloat(value),
+            expr_type: unspecified_float_type(),
+        }))
+    }
+
     /// Finishes parsing a function call after the name and '('
     /// 
     /// # Arguments
@@ -563,6 +599,20 @@ impl<'a> Parser<'a> {
                     return Ok(Expression::Literal(LiteralExpr {
                         value: Value::U64(base_value as u64),
                         expr_type: u64_type(),
+                    }));
+                }
+                "f32" => {
+                    self.advance();
+                    return Ok(Expression::Literal(LiteralExpr {
+                        value: Value::F32(base_value as f32),
+                        expr_type: f32_type(),
+                    }));
+                }
+                "f64" => {
+                    self.advance();
+                    return Ok(Expression::Literal(LiteralExpr {
+                        value: Value::F64(base_value as f64),
+                        expr_type: f64_type(),
                     }));
                 }
                 _ => {}

@@ -295,9 +295,17 @@ impl Visitor<Result<(), String>> for Compiler {
                 self.emit_constant(Value::U64(*i));
             }
             crate::ast::Value::UnspecifiedInteger(i) => {
+                // Unspecified integers default to i64 in the VM
                 self.emit_constant(Value::I64(*i));
             }
+            crate::ast::Value::F32(f) => {
+                self.emit_constant(Value::F32(*f));
+            }
             crate::ast::Value::F64(f) => {
+                self.emit_constant(Value::F64(*f));
+            }
+            crate::ast::Value::UnspecifiedFloat(f) => {
+                // Unspecified floats default to f64 in the VM
                 self.emit_constant(Value::F64(*f));
             }
             crate::ast::Value::String(s) => {
