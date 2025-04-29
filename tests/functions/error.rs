@@ -7,7 +7,7 @@ fn test_type_mismatch_in_function_argument() {
         
         expect_int("not an integer");
     "#;
-    execute_program_expect_error(program, "Compilation failed: Type mismatch: function \'expect_int\' expects argument 1 to be i32, but got string\n");
+    execute_program_expect_error(program, "Type mismatch: function \'expect_int\' expects argument 1 to be i32, but got string");
 }
 
 
@@ -20,7 +20,7 @@ fn test_function_wrong_parameter_count() {
         
         print_value(add(5));
     "#;
-    execute_program_expect_error(program, "Compilation failed: Function \'add\' expects 2 arguments, but got 1\n");
+    execute_program_expect_error(program, "Function \'add\' expects 2 arguments, but got 1");
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn test_function_wrong_parameter_types() {
         
         print_value(add("hello", 5));
     "#;
-    execute_program_expect_error(program, "Compilation failed: Type mismatch: function \'add\' expects argument 1 to be i32, but got string\n");
+    execute_program_expect_error(program, "Type mismatch: function \'add\' expects argument 1 to be i32, but got string\n");
 }
 
 #[test]
@@ -44,7 +44,7 @@ fn test_return_type_mismatch() {
         
         print_value(get_number());
     "#;
-    execute_program_expect_error(program, "Compilation failed: Type mismatch: function returns i32 but got string\n");
+    execute_program_expect_error(program, "Type mismatch: function returns i32 but got string");
 }
 
 

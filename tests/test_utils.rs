@@ -5,6 +5,7 @@ use predicates::prelude::*;
 use tempfile::tempdir;
 
 // Helper function to create test programs and assert their output
+// Runs the file directly, compiles it, and runs the compiled bytecode
 pub fn execute_program_and_assert(program: &str, expected_output: &str) {
     let temp_dir = tempdir().unwrap();
     let source_path = temp_dir.path().join("test_program.sl");

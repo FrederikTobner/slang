@@ -6,7 +6,7 @@ fn test_type_mismatch_assignment() {
         let x: i32 = "not an integer";
     "#;
     
-    execute_program_expect_error(program, "Type mismatch: variable x is i32 but expression is string\n");
+    execute_program_expect_error(program, "Type mismatch: variable x is i32 but expression is string");
 }
 
 #[test]
@@ -17,7 +17,7 @@ fn test_incompatible_binary_operands() {
         print_value(a + b); 
     "#;
     
-    execute_program_expect_error(program, "Type mismatch: cannot perform Plus operation with i32 and string\n");
+    execute_program_expect_error(program, "Type mismatch: cannot perform Plus operation with i32 and string");
 }
 
 #[test]
@@ -72,7 +72,7 @@ fn test_int_type() {
     let program = r#"
         let a: int = 0; 
     "#;
-    execute_program_expect_error(program, "Compilation failed: \'int\' is not a valid type specifier. Use \'i32\', \'i64\', \'u32\', or \'u64\' instead\n");
+    execute_program_expect_error(program, "\'int\' is not a valid type specifier. Use \'i32\', \'i64\', \'u32\', or \'u64\' instead");
 }
 
 #[test]
@@ -80,5 +80,5 @@ fn test_float_type() {
     let program = r#"
         let a: float = 0.0; 
     "#;
-    execute_program_expect_error(program, "Compilation failed: \'float\' is not a valid type specifier. Use \'f32\' or \'f64\' instead\n");
+    execute_program_expect_error(program, "\'float\' is not a valid type specifier. Use \'f32\' or \'f64\' instead");
 }

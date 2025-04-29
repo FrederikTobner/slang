@@ -96,8 +96,8 @@ fn test_boolean_true_literal() {
 #[test]
 fn test_boolean_false_literal() {
     let program = r#"
-        let is_true: bool = false;
-        print_value(is_true);
+        let is_false: bool = false;
+        print_value(is_false);
     "#;
     execute_program_and_assert(program, "false");
 }

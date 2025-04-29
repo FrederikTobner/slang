@@ -55,7 +55,7 @@ fn test_double_negation() {
 }
 
 #[test]
-fn test_boolean_negation() {
+fn test_boolean_not() {
     let program = r#"
         let a: bool = true;
         print_value(!a);
@@ -64,7 +64,7 @@ fn test_boolean_negation() {
 }
 
 #[test]
-fn test_boolean_negation_with_literal() {
+fn test_boolean_not_with_literal() {
     let program = r#"
         print_value(!false);
     "#;
@@ -72,7 +72,7 @@ fn test_boolean_negation_with_literal() {
 }
 
 #[test]
-fn test_double_boolean_negation() {
+fn test_double_boolean_not() {
     let program = r#"
         let a: bool = true;
         print_value(!(!a));
@@ -81,7 +81,7 @@ fn test_double_boolean_negation() {
 }
 
 #[test]
-fn test_boolean_negation_type_error() {
+fn test_boolean_not_type_error() {
     let program = r#"
         let a: i32 = 42;
         print_value(!a);

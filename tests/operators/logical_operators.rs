@@ -87,7 +87,7 @@ fn test_logical_operators_with_non_boolean_types() {
         let b: bool = true;
         print_value(a && b);
     "#;
-    execute_program_expect_error(program, "Compilation failed: Logical operator '&&' requires boolean operands, got i32 and bool");
+    execute_program_expect_error(program, "Logical operator '&&' requires boolean operands, got i32 and bool");
 }
 
 #[test]

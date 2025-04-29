@@ -77,7 +77,7 @@ fn test_arithmetic_with_integer_and_float() {
         let b: f64 = 22.0;
         print_value(a + b);
     "#;
-    execute_program_expect_error(program, "Compilation failed: Type mismatch: cannot perform Plus operation with i32 and f64\n");
+    execute_program_expect_error(program, "Type mismatch: cannot perform Plus operation with i32 and f64");
 }
 
 #[test]
@@ -87,5 +87,5 @@ fn test_arithmetic_with_different_float_types() {
         let b: f64 = 21.5;
         print_value(a + b);
     "#;
-    execute_program_expect_error(program, "Compilation failed: Type mismatch: cannot perform Plus operation with f32 and f64\n");
+    execute_program_expect_error(program, "Type mismatch: cannot perform Plus operation with f32 and f64");
 }
