@@ -12,6 +12,14 @@ pub enum Tokentype {
     Multiply,       // *
     Divide,         // /
     Not,            // !
+    And,            // &&
+    Or,             // ||
+    Greater,        // >
+    Less,           // <
+    GreaterEqual,   // >=
+    LessEqual,      // <=
+    EqualEqual,     // ==
+    NotEqual,       // !=
     Invalid,        // Unrecognized token
     Equal,          // =
     Colon,          // :     

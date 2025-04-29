@@ -36,6 +36,22 @@ pub enum OpCode {
     Jump = 14,
     /// Negate a boolean value (logical NOT)
     BoolNot = 15,
+    /// Boolean AND operation
+    BoolAnd = 16,
+    /// Boolean OR operation
+    BoolOr = 17,
+    /// Greater than comparison
+    Greater = 18,
+    /// Less than comparison
+    Less = 19,
+    /// Greater than or equal comparison
+    GreaterEqual = 20,
+    /// Less than or equal comparison
+    LessEqual = 21,
+    /// Equal comparison
+    Equal = 22,
+    /// Not equal comparison
+    NotEqual = 23,
 }
 
 impl OpCode {
@@ -66,6 +82,14 @@ impl OpCode {
             13 => Some(OpCode::JumpIfFalse),
             14 => Some(OpCode::Jump),
             15 => Some(OpCode::BoolNot),
+            16 => Some(OpCode::BoolAnd),
+            17 => Some(OpCode::BoolOr),
+            18 => Some(OpCode::Greater),
+            19 => Some(OpCode::Less),
+            20 => Some(OpCode::GreaterEqual),
+            21 => Some(OpCode::LessEqual),
+            22 => Some(OpCode::Equal),
+            23 => Some(OpCode::NotEqual),
             _ => None,
         }
     }

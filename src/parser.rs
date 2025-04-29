@@ -369,7 +369,100 @@ impl<'a> Parser<'a> {
     /// 
     /// The parsed expression or an error message
     fn expression(&mut self) -> Result<Expression, String> {
-        self.term()
+        self.logical_or()
+    }
+
+    /// Parses a logical OR expression
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed logical OR expression or an error message
+    fn logical_or(&mut self) -> Result<Expression, String> {
+        let mut expr = self.logical_and()?;
+
+        while self.match_token(Tokentype::Or) {
+            let operator = self.previous().token_type;
+            let right = self.logical_and()?;
+            expr = Expression::Binary(BinaryExpr {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+                expr_type: bool_type(),
+            });
+        }
+
+        Ok(expr)
+    }
+
+    /// Parses a logical AND expression
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed logical AND expression or an error message
+    fn logical_and(&mut self) -> Result<Expression, String> {
+        let mut expr = self.equality()?;
+
+        while self.match_token(Tokentype::And) {
+            let operator = self.previous().token_type;
+            let right = self.equality()?;
+            expr = Expression::Binary(BinaryExpr {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+                expr_type: bool_type(),
+            });
+        }
+
+        Ok(expr)
+    }
+
+    /// Parses an equality expression (== and !=)
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed equality expression or an error message
+    fn equality(&mut self) -> Result<Expression, String> {
+        let mut expr = self.comparison()?;
+
+        while self.match_any(&[Tokentype::EqualEqual, Tokentype::NotEqual]) {
+            let operator = self.previous().token_type;
+            let right = self.comparison()?;
+            expr = Expression::Binary(BinaryExpr {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+                expr_type: bool_type(),
+            });
+        }
+
+        Ok(expr)
+    }
+
+    /// Parses a comparison expression (>, <, >=, <=)
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed comparison expression or an error message
+    fn comparison(&mut self) -> Result<Expression, String> {
+        let mut expr = self.term()?;
+
+        while self.match_any(&[
+            Tokentype::Greater,
+            Tokentype::GreaterEqual,
+            Tokentype::Less,
+            Tokentype::LessEqual
+        ]) {
+            let operator = self.previous().token_type;
+            let right = self.term()?;
+            expr = Expression::Binary(BinaryExpr {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+                expr_type: bool_type(),
+            });
+        }
+
+        Ok(expr)
     }
 
     /// Parses a term (addition/subtraction)

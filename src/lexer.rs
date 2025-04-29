@@ -117,11 +117,87 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }
             '/' => {
                 chars.next();
-                tokens.push(Token::new(Tokentype::Divide, "/".to_string()));
+                if chars.peek() == Some(&'/') {
+                    // Single-line comment
+                    chars.next(); // Consume the second '/'
+                    
+                    // Skip all characters until the end of the line or end of file
+                    while let Some(&c) = chars.peek() {
+                        if c == '\n' {
+                            chars.next(); // Consume the newline
+                            break;
+                        }
+                        chars.next(); // Consume the current character
+                    }
+                } else if chars.peek() == Some(&'*') {
+                    // Multi-line comment
+                    chars.next(); // Consume the '*'
+                    
+                    // Loop until we find the closing '*/' or reach end of file
+                    let mut nesting = 1;
+                    while nesting > 0 {
+                        if chars.peek() == None {
+                            // Reached EOF without closing the comment
+                            break;
+                        }
+                        
+                        if chars.peek() == Some(&'*') {
+                            chars.next(); // Consume the '*'
+                            if chars.peek() == Some(&'/') {
+                                chars.next(); // Consume the '/'
+                                nesting -= 1;
+                                continue;
+                            }
+                        } else if chars.peek() == Some(&'/') {
+                            chars.next(); // Consume the '/'
+                            if chars.peek() == Some(&'*') {
+                                chars.next(); // Consume the '*'
+                                nesting += 1;
+                                continue;
+                            }
+                        } else {
+                            chars.next(); // Consume the current character
+                        }
+                    }
+                } else {
+                    tokens.push(Token::new(Tokentype::Divide, "/".to_string()));
+                }
             }
             '=' => {
                 chars.next();
-                tokens.push(Token::new(Tokentype::Equal, "=".to_string()));
+                if chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::new(Tokentype::EqualEqual, "==".to_string()));
+                } else {
+                    tokens.push(Token::new(Tokentype::Equal, "=".to_string()));
+                }
+            }
+            '<' => {
+                chars.next();
+                if chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::new(Tokentype::LessEqual, "<=".to_string()));
+                } else {
+                    tokens.push(Token::new(Tokentype::Less, "<".to_string()));
+                }
+            }
+            '>' => {
+                chars.next();
+                if chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::new(Tokentype::GreaterEqual, ">=".to_string()));
+                } else {
+                    tokens.push(Token::new(Tokentype::Greater, ">".to_string()));
+                }
+            }
+            '!' => {
+                chars.next();
+                if chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::new(Tokentype::NotEqual, "!=".to_string()));
+                } else {
+                    tokens.push(Token::new(Tokentype::Not, "!".to_string()));
+                }
             }
             ';' => {
                 chars.next();
@@ -147,9 +223,23 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 chars.next();
                 tokens.push(Token::new(Tokentype::RightParen, ")".to_string()));
             }
-            '!' => {
+            '&' => {
                 chars.next();
-                tokens.push(Token::new(Tokentype::Not, "!".to_string()));
+                if chars.peek() == Some(&'&') {
+                    chars.next();
+                    tokens.push(Token::new(Tokentype::And, "&&".to_string()));
+                } else {
+                    tokens.push(Token::new(Tokentype::Invalid, "&".to_string()));
+                }
+            }
+            '|' => {
+                chars.next();
+                if chars.peek() == Some(&'|') {
+                    chars.next();
+                    tokens.push(Token::new(Tokentype::Or, "||".to_string()));
+                } else {
+                    tokens.push(Token::new(Tokentype::Invalid, "|".to_string()));
+                }
             }
             _ => {
                 let invalid_char = chars.next().unwrap();

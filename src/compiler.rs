@@ -320,20 +320,75 @@ impl Visitor<Result<(), String>> for Compiler {
     }
 
     fn visit_binary_expression(&mut self, bin_expr: &BinaryExpr) -> Result<(), String> {
-        self.visit_expression(&bin_expr.left)?;
-
-        self.visit_expression(&bin_expr.right)?;
-
         match bin_expr.operator {
-            Tokentype::Plus => self.emit_op(OpCode::Add),
-            Tokentype::Minus => self.emit_op(OpCode::Subtract),
-            Tokentype::Multiply => self.emit_op(OpCode::Multiply),
-            Tokentype::Divide => self.emit_op(OpCode::Divide),
+            // Special handling for && (AND) operator with short-circuit evaluation
+            Tokentype::And => {
+                // Evaluate the left operand
+                self.visit_expression(&bin_expr.left)?;
+                
+                // If left is false, short-circuit (jump over right operand evaluation)
+                let jump_if_false = self.emit_jump(OpCode::JumpIfFalse);
+                
+                // Pop the left value since we don't need it anymore if we didn't jump
+                self.emit_op(OpCode::Pop);
+                
+                // Evaluate the right operand (only reached if left was true)
+                self.visit_expression(&bin_expr.right)?;
+                
+                // Patch the jump to this point
+                self.patch_jump(jump_if_false);
+                
+                return Ok(());
+            },
+            
+            // Special handling for || (OR) operator with short-circuit evaluation
+            Tokentype::Or => {
+                // Evaluate the left operand
+                self.visit_expression(&bin_expr.left)?;
+                
+                // If left is true, short-circuit (skip right operand)
+                let jump_if_true = self.emit_jump(OpCode::JumpIfFalse);
+                let jump_to_end = self.emit_jump(OpCode::Jump);
+                
+                // Patch jump_if_true to jump to here
+                self.patch_jump(jump_if_true);
+                
+                // Pop the left value since we don't need it anymore
+                self.emit_op(OpCode::Pop);
+                
+                // Evaluate right operand (only reached if left was false)
+                self.visit_expression(&bin_expr.right)?;
+                
+                // Patch jump_to_end
+                self.patch_jump(jump_to_end);
+                
+                return Ok(());
+            },
+            
+            // Handle regular arithmetic and comparison operators
             _ => {
-                return Err(format!(
-                    "Unsupported binary operator: {:?}",
-                    bin_expr.operator
-                ));
+                self.visit_expression(&bin_expr.left)?;
+                self.visit_expression(&bin_expr.right)?;
+                
+                match bin_expr.operator {
+                    Tokentype::Plus => self.emit_op(OpCode::Add),
+                    Tokentype::Minus => self.emit_op(OpCode::Subtract),
+                    Tokentype::Multiply => self.emit_op(OpCode::Multiply),
+                    Tokentype::Divide => self.emit_op(OpCode::Divide),
+                    // Relational operators
+                    Tokentype::Greater => self.emit_op(OpCode::Greater),
+                    Tokentype::Less => self.emit_op(OpCode::Less),
+                    Tokentype::GreaterEqual => self.emit_op(OpCode::GreaterEqual),
+                    Tokentype::LessEqual => self.emit_op(OpCode::LessEqual),
+                    Tokentype::EqualEqual => self.emit_op(OpCode::Equal),
+                    Tokentype::NotEqual => self.emit_op(OpCode::NotEqual),
+                    _ => {
+                        return Err(format!(
+                            "Unsupported binary operator: {:?}",
+                            bin_expr.operator
+                        ));
+                    }
+                }
             }
         }
 

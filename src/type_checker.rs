@@ -733,6 +733,82 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
         let left_type = self.visit_expression(&bin_expr.left)?;
         let right_type = self.visit_expression(&bin_expr.right)?;
 
+        // Handle logical operators (AND, OR)
+        if bin_expr.operator == Tokentype::And || bin_expr.operator == Tokentype::Or {
+            // Check that both operands are boolean
+            if left_type == bool_type() && right_type == bool_type() {
+                return Ok(bool_type());
+            } else {
+                // Get type names for better error messages
+                let left_type_name = TYPE_REGISTRY.with(|registry| {
+                    registry.borrow()
+                        .get_type_info(&left_type)
+                        .map(|t| t.name.clone())
+                        .unwrap_or_else(|| format!("{:?}", left_type))
+                });
+                
+                let right_type_name = TYPE_REGISTRY.with(|registry| {
+                    registry.borrow()
+                        .get_type_info(&right_type)
+                        .map(|t| t.name.clone())
+                        .unwrap_or_else(|| format!("{:?}", right_type))
+                });
+                
+                let operator_str = if bin_expr.operator == Tokentype::And { "&&" } else { "||" };
+                
+                return Err(format!(
+                    "Logical operator '{}' requires boolean operands, got {} and {}",
+                    operator_str, left_type_name, right_type_name
+                ));
+            }
+        }
+        
+        // Handle relational operators (>, <, >=, <=, ==, !=)
+        if matches!(
+            bin_expr.operator,
+            Tokentype::Greater | Tokentype::Less | Tokentype::GreaterEqual | 
+            Tokentype::LessEqual | Tokentype::EqualEqual | Tokentype::NotEqual
+        ) {
+            // For now, only allow comparing same types (or unspecified literals with specific types)
+            if left_type == right_type || 
+               (left_type == unspecified_int_type() && self.is_integer_type(&right_type)) ||
+               (right_type == unspecified_int_type() && self.is_integer_type(&left_type)) ||
+               (left_type == unspecified_float_type() && self.is_float_type(&right_type)) ||
+               (right_type == unspecified_float_type() && self.is_float_type(&left_type)) {
+                return Ok(bool_type());
+            }
+            
+            // Get type names for better error messages
+            let left_type_name = TYPE_REGISTRY.with(|registry| {
+                registry.borrow()
+                    .get_type_info(&left_type)
+                    .map(|t| t.name.clone())
+                    .unwrap_or_else(|| format!("{:?}", left_type))
+            });
+            
+            let right_type_name = TYPE_REGISTRY.with(|registry| {
+                registry.borrow()
+                    .get_type_info(&right_type)
+                    .map(|t| t.name.clone())
+                    .unwrap_or_else(|| format!("{:?}", right_type))
+            });
+            
+            let operator_str = match bin_expr.operator {
+                Tokentype::Greater => ">",
+                Tokentype::Less => "<",
+                Tokentype::GreaterEqual => ">=",
+                Tokentype::LessEqual => "<=",
+                Tokentype::EqualEqual => "==",
+                Tokentype::NotEqual => "!=",
+                _ => unreachable!(),
+            };
+            
+            return Err(format!(
+                "Cannot compare different types with '{}': {} and {}",
+                operator_str, left_type_name, right_type_name
+            ));
+        }
+        
         // Handle arithmetic operations using the type registry
         if matches!(
             bin_expr.operator,

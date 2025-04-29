@@ -6,6 +6,13 @@ Grammar of the slang language in the extended backus naur format:
 /* Program structure */
 program = { statement } ;
 
+/* Comments */
+comment = single_line_comment | multi_line_comment ;
+
+single_line_comment = "//", { character - "\n" }, [ "\n" ] ;
+
+multi_line_comment = "/*", { character | multi_line_comment }, "*/" ;
+
 /* Statements */
 statement = let_statement
           | expression_statement
@@ -33,7 +40,15 @@ block_statement = "{", { statement }, "}" ;
 return_statement = "return", [ expression ], ";" ;
 
 /* Expressions */
-expression = term ;
+expression = logical_or ;
+
+logical_or = logical_and, { "||", logical_and } ;
+
+logical_and = equality, { "&&", equality } ;
+
+equality = relational, { ( "==" | "!=" ), relational } ;
+
+relational = term, { ( ">" | "<" | ">=" | "<=" ), term } ;
 
 term = factor, { ( "+" | "-" ), factor } ;
 

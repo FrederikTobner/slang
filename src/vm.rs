@@ -438,6 +438,89 @@ impl VM {
                     _ => return Err("Can only negate boolean values".to_string()),
                 }
             }
+            OpCode::BoolAnd => {
+                self.binary_op(|a, b| match (a, b) {
+                    (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Boolean(*a && *b)),
+                    _ => Err("Logical AND operator requires boolean operands".to_string()),
+                })?;
+            }
+            OpCode::BoolOr => {
+                self.binary_op(|a, b| match (a, b) {
+                    (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Boolean(*a || *b)),
+                    _ => Err("Logical OR operator requires boolean operands".to_string()),
+                })?;
+            }
+            // Relational operators
+            OpCode::Greater => {
+                self.binary_op(|a, b| match (a, b) {
+                    (Value::I32(a), Value::I32(b)) => Ok(Value::Boolean(a > b)),
+                    (Value::I64(a), Value::I64(b)) => Ok(Value::Boolean(a > b)),
+                    (Value::U32(a), Value::U32(b)) => Ok(Value::Boolean(a > b)),
+                    (Value::U64(a), Value::U64(b)) => Ok(Value::Boolean(a > b)),
+                    (Value::F32(a), Value::F32(b)) => Ok(Value::Boolean(a > b)),
+                    (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a > b)),
+                    _ => Err("Cannot compare these types with >".to_string()),
+                })?;
+            }
+            OpCode::Less => {
+                self.binary_op(|a, b| match (a, b) {
+                    (Value::I32(a), Value::I32(b)) => Ok(Value::Boolean(a < b)),
+                    (Value::I64(a), Value::I64(b)) => Ok(Value::Boolean(a < b)),
+                    (Value::U32(a), Value::U32(b)) => Ok(Value::Boolean(a < b)),
+                    (Value::U64(a), Value::U64(b)) => Ok(Value::Boolean(a < b)),
+                    (Value::F32(a), Value::F32(b)) => Ok(Value::Boolean(a < b)),
+                    (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a < b)),
+                    _ => Err("Cannot compare these types with <".to_string()),
+                })?;
+            }
+            OpCode::GreaterEqual => {
+                self.binary_op(|a, b| match (a, b) {
+                    (Value::I32(a), Value::I32(b)) => Ok(Value::Boolean(a >= b)),
+                    (Value::I64(a), Value::I64(b)) => Ok(Value::Boolean(a >= b)),
+                    (Value::U32(a), Value::U32(b)) => Ok(Value::Boolean(a >= b)),
+                    (Value::U64(a), Value::U64(b)) => Ok(Value::Boolean(a >= b)),
+                    (Value::F32(a), Value::F32(b)) => Ok(Value::Boolean(a >= b)),
+                    (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a >= b)),
+                    _ => Err("Cannot compare these types with >=".to_string()),
+                })?;
+            }
+            OpCode::LessEqual => {
+                self.binary_op(|a, b| match (a, b) {
+                    (Value::I32(a), Value::I32(b)) => Ok(Value::Boolean(a <= b)),
+                    (Value::I64(a), Value::I64(b)) => Ok(Value::Boolean(a <= b)),
+                    (Value::U32(a), Value::U32(b)) => Ok(Value::Boolean(a <= b)),
+                    (Value::U64(a), Value::U64(b)) => Ok(Value::Boolean(a <= b)),
+                    (Value::F32(a), Value::F32(b)) => Ok(Value::Boolean(a <= b)),
+                    (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a <= b)),
+                    _ => Err("Cannot compare these types with <=".to_string()),
+                })?;
+            }
+            OpCode::Equal => {
+                self.binary_op(|a, b| match (a, b) {
+                    (Value::I32(a), Value::I32(b)) => Ok(Value::Boolean(a == b)),
+                    (Value::I64(a), Value::I64(b)) => Ok(Value::Boolean(a == b)),
+                    (Value::U32(a), Value::U32(b)) => Ok(Value::Boolean(a == b)),
+                    (Value::U64(a), Value::U64(b)) => Ok(Value::Boolean(a == b)),
+                    (Value::F32(a), Value::F32(b)) => Ok(Value::Boolean(a == b)),
+                    (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a == b)),
+                    (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Boolean(a == b)),
+                    (Value::String(a), Value::String(b)) => Ok(Value::Boolean(a == b)),
+                    _ => Err("Cannot compare these types with ==".to_string()),
+                })?;
+            }
+            OpCode::NotEqual => {
+                self.binary_op(|a, b| match (a, b) {
+                    (Value::I32(a), Value::I32(b)) => Ok(Value::Boolean(a != b)),
+                    (Value::I64(a), Value::I64(b)) => Ok(Value::Boolean(a != b)),
+                    (Value::U32(a), Value::U32(b)) => Ok(Value::Boolean(a != b)),
+                    (Value::U64(a), Value::U64(b)) => Ok(Value::Boolean(a != b)),
+                    (Value::F32(a), Value::F32(b)) => Ok(Value::Boolean(a != b)),
+                    (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a != b)),
+                    (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Boolean(a != b)),
+                    (Value::String(a), Value::String(b)) => Ok(Value::Boolean(a != b)),
+                    _ => Err("Cannot compare these types with !=".to_string()),
+                })?;
+            }
         }
 
         Ok(())
