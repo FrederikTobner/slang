@@ -120,6 +120,8 @@ pub enum Value {
     UnspecifiedFloat(f64),
     /// String value
     String(String),
+    /// Boolean value (true or false)
+    Boolean(bool),
 }
 
 /// A binary expression (e.g., a + b)

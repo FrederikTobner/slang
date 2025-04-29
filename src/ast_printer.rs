@@ -146,6 +146,7 @@ impl Visitor<()> for ASTPrinter {
             Value::F64(f) => println!("{}F64: {}", self.indent(), f),
             Value::F32(f) => println!("{}F32: {}", self.indent(), f),
             Value::UnspecifiedFloat(f) => println!("{}UnspecifiedFloat: {}", self.indent(), f),
+            Value::Boolean(b) => println!("{}Boolean: {}", self.indent(), b),
             Value::String(s) => println!("{}String: \"{}\"", self.indent(), s),
         }
     }

@@ -5,6 +5,7 @@ pub enum Tokentype {
     IntegerLiteral, // 123
     FloatLiteral,    // 123.45
     StringLiteral,  // "hello world"
+    BooleanLiteral, // true, false
     Let,            // let
     Plus,           // +
     Minus,          // -

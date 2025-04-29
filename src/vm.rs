@@ -84,22 +84,6 @@ impl VM {
         // Return 0 to indicate success
         Ok(Value::I32(0))
     }
-    
-    /// Gets the current variables map (for debugging/testing)
-    #[cfg(feature = "trace-execution")]
-    pub fn get_variables(&self) -> &HashMap<String, Value> {
-        &self.variables
-    }
-    
-    /// Resets the VM to its initial state
-    #[allow(dead_code)]
-    pub fn reset(&mut self) {
-        self.ip = 0;
-        self.stack.clear();
-        self.variables.clear();
-        self.frames.clear();
-        self.current_frame = None;
-    }
 
     /// Interprets and executes a bytecode chunk
     /// 
@@ -446,6 +430,7 @@ impl VM {
                     Value::F32(f) => *f != 0.0,
                     Value::F64(f) => *f != 0.0,
                     Value::String(s) => !s.is_empty(),
+                    Value::Boolean(b) => *b,
                     Value::Function(_) => true,
                     Value::NativeFunction(_) => true,
                 };

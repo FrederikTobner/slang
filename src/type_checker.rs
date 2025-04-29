@@ -37,6 +37,11 @@ fn f64_type() -> TypeId {
     crate::types::f64_type()
 }
 
+/// Helper function to get the boolean type ID
+fn bool_type() -> TypeId {
+    crate::types::bool_type()
+}
+
 /// Helper function to get the unspecified float type ID
 fn unspecified_float_type() -> TypeId {
     crate::types::unspecified_float_type()
@@ -148,22 +153,6 @@ impl TypeChecker {
         Ok(())
     }
 
-    /// Gets the map of variables and their types
-    #[allow(dead_code)]
-    pub fn get_variables(&self) -> &HashMap<String, TypeId> {
-        &self.variables
-    }
-    
-    /// Sets the type for a variable
-    /// 
-    /// # Arguments
-    /// 
-    /// * `name` - The variable name
-    /// * `type_id` - The type to assign
-    #[allow(dead_code)]
-    pub fn set_variable(&mut self, name: String, type_id: TypeId) {
-        self.variables.insert(name, type_id);
-    }
 }
 
 impl Visitor<Result<TypeId, String>> for TypeChecker {
@@ -736,6 +725,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             Value::UnspecifiedInteger(_) => Ok(unspecified_int_type()),
             Value::UnspecifiedFloat(_) => Ok(unspecified_float_type()),
             Value::String(_) => Ok(string_type()),
+            Value::Boolean(_) => Ok(bool_type()),
         }
     }
 

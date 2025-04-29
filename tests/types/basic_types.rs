@@ -67,13 +67,46 @@ fn test_string_type() {
 }
 
 #[test]
-fn test_type_inference() {
+fn test_string_type_inference() {
     let program = r#"
-        let a = 42; 
-        let b = "Hello";
-        print_value(a);
-        print_value(b);
+        let str = "Hello";
+        print_value(str);
     "#;
     execute_program_and_assert(program, "Hello");
+}
+
+#[test]
+fn test_integer_type_inference() {
+    let program = r#"
+        let a = 42;
+        print_value(a);
+    "#;
     execute_program_and_assert(program, "42");
+}
+
+#[test]
+fn test_boolean_true_literal() {
+    let program = r#"
+        let is_true: bool = true;
+        print_value(is_true);
+    "#;
+    execute_program_and_assert(program, "true");
+}
+
+#[test]
+fn test_boolean_false_literal() {
+    let program = r#"
+        let is_true: bool = false;
+        print_value(is_true);
+    "#;
+    execute_program_and_assert(program, "false");
+}
+
+#[test]
+fn test_boolean_type_inference() {
+    let program = r#"
+        let is_true = true;
+        print_value(is_true);
+    "#;
+    execute_program_and_assert(program, "true");
 }

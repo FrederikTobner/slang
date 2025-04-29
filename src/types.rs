@@ -15,6 +15,11 @@ impl TypeId {
     }
 }
 
+/// Returns the TypeId for booleans
+pub fn bool_type() -> TypeId {
+    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("bool").unwrap().clone())
+}
+
 /// Returns the TypeId for i32 integers
 pub fn i32_type() -> TypeId {
     TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("i32").unwrap().clone())
@@ -75,6 +80,8 @@ pub enum TypeKind {
     Float(FloatType),
     /// String type
     String,
+    /// Boolean type
+    Boolean,
     /// Struct type with fields
     Struct(StructType),
     /// Unknown or not yet determined type
@@ -131,6 +138,8 @@ thread_local! {
     /// The global type registry
     pub static TYPE_REGISTRY: RefCell<TypeRegistry> = RefCell::new(TypeRegistry::new());
 
+    /// Pre-defined type for booleans
+    pub static BOOL_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("bool").unwrap().clone()));
     /// Pre-defined type for i32 integers
     pub static I32_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("i32").unwrap().clone()));
     /// Pre-defined type for i64 integers
@@ -188,6 +197,7 @@ impl TypeRegistry {
         self.register_type("float", TypeKind::Float(FloatType { bits: 0, is_unspecified: true }));
         
         self.register_type("string", TypeKind::String);
+        self.register_type("bool", TypeKind::Boolean);
         
         self.register_type("unknown", TypeKind::Unknown);
     }

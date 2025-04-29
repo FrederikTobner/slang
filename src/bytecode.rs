@@ -118,6 +118,8 @@ pub enum Value {
     F64(f64),
     /// String value
     String(String),
+    /// Boolean value
+    Boolean(bool),
     /// Function value
     Function(Function),
     /// Native function value
@@ -137,6 +139,7 @@ impl Value {
             Value::Function(_) => 6,
             Value::NativeFunction(_) => 7,
             Value::F32(_) => 8,
+            Value::Boolean(_) => 9,
         }
     }
 
@@ -247,6 +250,12 @@ impl Value {
                 reader.read_exact(&mut bytes)?;
                 Ok(Value::F32(f32::from_le_bytes(bytes)))
             }
+            // Boolean
+            9 => {
+                let mut byte = [0u8; 1];
+                reader.read_exact(&mut byte)?;
+                Ok(Value::Boolean(byte[0] != 0))
+            }
             _ => Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 "Invalid value type tag",
@@ -265,6 +274,7 @@ impl fmt::Display for Value {
             Value::F32(flo) => write!(f, "{}", flo),
             Value::F64(flo) => write!(f, "{}", flo),
             Value::String(s) => write!(f, "\"{}\"", s),
+            Value::Boolean(b) => write!(f, "{}", b),
             Value::Function(func) => write!(f, "<fn {}>", func.name),
             Value::NativeFunction(func) => write!(f, "<native fn {}>", func.name),
         }
@@ -420,6 +430,9 @@ impl Chunk {
 
                     writer.write_all(&[func.arity])?;
                 }
+                Value::Boolean(b) => {
+                    writer.write_all(&[*b as u8])?;
+                }
             }
         }
 
@@ -445,7 +458,6 @@ impl Chunk {
     /// # Returns
     /// 
     /// The deserialized chunk or an IO error
-    #[allow(dead_code)]
     pub fn deserialize(reader: &mut dyn Read) -> std::io::Result<Self> {
         let mut chunk = Chunk::new();
 

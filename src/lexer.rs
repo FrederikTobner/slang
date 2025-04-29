@@ -36,6 +36,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "struct" => tokens.push(Token::new(Tokentype::Struct, identifier)),
                     "fn" => tokens.push(Token::new(Tokentype::Fn, identifier)),
                     "return" => tokens.push(Token::new(Tokentype::Return, identifier)),
+                    "true" => tokens.push(Token::new(Tokentype::BooleanLiteral, identifier)),
+                    "false" => tokens.push(Token::new(Tokentype::BooleanLiteral, identifier)),
                     _ => tokens.push(Token::new(Tokentype::Identifier, identifier)),
                 }
             }

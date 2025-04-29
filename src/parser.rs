@@ -5,7 +5,7 @@ use crate::ast::{
 use crate::token::{Token, Tokentype};
 use crate::types::{TypeId, TYPE_REGISTRY};
 use crate::types::{i32_type, i64_type, u32_type, u64_type, f32_type, f64_type, string_type, 
-                  unspecified_int_type, unspecified_float_type, unknown_type};
+                  unspecified_int_type, unspecified_float_type, unknown_type, bool_type};
 
 /// Error that occurs during parsing
 #[derive(Debug)]
@@ -454,6 +454,15 @@ impl<'a> Parser<'a> {
             return Ok(Expression::Literal(LiteralExpr {
                 value: Value::String(value),
                 expr_type: string_type(),
+            }));
+        }
+        
+        if self.match_token(Tokentype::BooleanLiteral) {
+            let lexeme = self.previous().lexeme.clone();
+            let bool_value = lexeme == "true";
+            return Ok(Expression::Literal(LiteralExpr {
+                value: Value::Boolean(bool_value),
+                expr_type: bool_type(),
             }));
         }
 

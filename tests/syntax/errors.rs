@@ -12,9 +12,7 @@ fn test_missing_semicolon() {
 #[test]
 fn test_mismatched_brackets() {
     let program = r#"
-        fn main() {
-            let a = 42;
-            print_value(a);
+        fn test() {
     "#;
     execute_program_expect_error(program, "Compilation failed: Expected \'}\' after function body\n");
 }
@@ -22,10 +20,8 @@ fn test_mismatched_brackets() {
 #[test]
 fn test_mismatched_parentheses() {
     let program = r#"
-        fn main() {
-            let a = 42;
-            print_value(a;
-        }
+        let a = 42;
+        print_value(a;
     "#;
     execute_program_expect_error(program, "Compilation failed: Expected \')\' after function arguments\n");
 }

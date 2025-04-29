@@ -1,6 +1,5 @@
 use crate::test_utils::execute_program_expect_error;
 
-
 #[test]
 fn test_type_mismatch_assignment() {
     let program = r#"

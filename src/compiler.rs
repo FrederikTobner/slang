@@ -311,6 +311,9 @@ impl Visitor<Result<(), String>> for Compiler {
             crate::ast::Value::String(s) => {
                 self.emit_constant(Value::String(s.clone()));
             }
+            crate::ast::Value::Boolean(b) => {
+                self.emit_constant(Value::Boolean(*b));
+            }
         }
 
         Ok(())
