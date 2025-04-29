@@ -922,6 +922,22 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 
                 Err(format!("Cannot negate non-numeric type"))
             },
+            Tokentype::Not => {
+                // Check if the operand is a boolean
+                if operand_type == bool_type() {
+                    return Ok(bool_type());
+                }
+                
+                // Get type name for better error message
+                let operand_type_name = TYPE_REGISTRY.with(|registry| {
+                    registry.borrow()
+                        .get_type_info(&operand_type)
+                        .map(|t| t.name.clone())
+                        .unwrap_or_else(|| format!("{:?}", operand_type))
+                });
+                
+                Err(format!("Boolean negation operator '!' can only be applied to boolean types, but got {}", operand_type_name))
+            },
             _ => Err(format!(
                 "Invalid unary operation: {:?}",
                 unary_expr.operator

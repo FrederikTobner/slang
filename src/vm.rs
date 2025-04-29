@@ -423,20 +423,19 @@ impl VM {
                 let condition = self.peek(0)?;
                 
                 let is_truthy = match condition {
-                    Value::I32(i) => *i != 0,
-                    Value::I64(i) => *i != 0,
-                    Value::U32(i) => *i != 0,
-                    Value::U64(i) => *i != 0,
-                    Value::F32(f) => *f != 0.0,
-                    Value::F64(f) => *f != 0.0,
-                    Value::String(s) => !s.is_empty(),
                     Value::Boolean(b) => *b,
-                    Value::Function(_) => true,
-                    Value::NativeFunction(_) => true,
+                    _ => return Err("Condition must be a boolean".to_string()),
                 };
                 
                 if !is_truthy {
                     self.ip += offset;
+                }
+            }
+            OpCode::BoolNot => {
+                let value = self.pop()?;
+                match value {
+                    Value::Boolean(b) => self.stack.push(Value::Boolean(!b)),
+                    _ => return Err("Can only negate boolean values".to_string()),
                 }
             }
         }

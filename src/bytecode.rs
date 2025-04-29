@@ -34,6 +34,8 @@ pub enum OpCode {
     JumpIfFalse = 13,
     /// Jump unconditionally
     Jump = 14,
+    /// Negate a boolean value (logical NOT)
+    BoolNot = 15,
 }
 
 impl OpCode {
@@ -63,6 +65,7 @@ impl OpCode {
             12 => Some(OpCode::Call),
             13 => Some(OpCode::JumpIfFalse),
             14 => Some(OpCode::Jump),
+            15 => Some(OpCode::BoolNot),
             _ => None,
         }
     }

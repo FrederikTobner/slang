@@ -345,6 +345,7 @@ impl Visitor<Result<(), String>> for Compiler {
         
         match unary_expr.operator {
             Tokentype::Minus => self.emit_op(OpCode::Negate),
+            Tokentype::Not => self.emit_op(OpCode::BoolNot),
             _ => return Err(format!("Unsupported unary operator: {:?}", unary_expr.operator)),
         }
         

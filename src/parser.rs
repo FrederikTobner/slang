@@ -431,6 +431,16 @@ impl<'a> Parser<'a> {
                 expr_type: unknown_type(),
             }));
         }
+        
+        if self.match_token(Tokentype::Not) {
+            let operator = self.previous().token_type.clone();
+            let right = self.primary()?;
+            return Ok(Expression::Unary(UnaryExpr {
+                operator,
+                right: Box::new(right),
+                expr_type: bool_type(),
+            }));
+        }
 
         self.primary()
     }

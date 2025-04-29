@@ -147,6 +147,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 chars.next();
                 tokens.push(Token::new(Tokentype::RightParen, ")".to_string()));
             }
+            '!' => {
+                chars.next();
+                tokens.push(Token::new(Tokentype::Not, "!".to_string()));
+            }
             _ => {
                 let invalid_char = chars.next().unwrap();
                 tokens.push(Token::new(Tokentype::Invalid, invalid_char.to_string()));

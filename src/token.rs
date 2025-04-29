@@ -11,6 +11,7 @@ pub enum Tokentype {
     Minus,          // -
     Multiply,       // *
     Divide,         // /
+    Not,            // !
     Invalid,        // Unrecognized token
     Equal,          // =
     Colon,          // :     
