@@ -14,73 +14,135 @@ where Self : Sized
 {
     /// Adds two values and returns the result.
     ///
-    /// Returns an error if the types are incompatible or if an overflow occurs.
+    /// ### Arguments
+    /// * `other` - The other value to add
+    /// 
+    /// ### Returns
+    /// * The result of the addition
+    /// * An error message if the types are incompatible
     fn add(&self, other: &Self) -> Result<Self, String>;
     
     /// Subtracts one value from another and returns the result.
     ///
-    /// Returns an error if the types are incompatible or if an underflow occurs.
+    /// ### Arguments
+    /// * `other` - The value to subtract
+    /// 
+    /// ### Returns
+    /// * The result of the subtraction
+    /// * An error message if the types are incompatible or if an underflow occurs
     fn subtract(&self, other: &Self) -> Result<Self, String>;
     
     /// Multiplies two values and returns the result.
     ///
-    /// Returns an error if the types are incompatible or if an overflow occurs.
+    /// ### Arguments
+    /// * `other` - The other value to multiply
+    /// 
+    /// ### Returns
+    /// * The result of the multiplication
+    /// * An error message if the types are incompatible or if an overflow occurs
     fn multiply(&self, other: &Self) -> Result<Self, String>;
     
     /// Divides one value by another and returns the result.
     ///
-    /// Returns an error if the types are incompatible, if the divisor is zero,
-    /// or if an overflow occurs.
+    /// ### Arguments
+    /// * `other` - The value to divide by
+    /// 
+    /// ### Returns
+    /// * The result of the division
+    /// * An error message if the types are incompatible or if division by zero occurs
     fn divide(&self, other: &Self) -> Result<Self, String>;
     
     /// Negates a value and returns the result.
     ///
-    /// Returns an error if the value cannot be negated (e.g., unsigned integers).
+    /// ### Returns
+    /// * The negated value
+    /// * An error message if the type is incompatible, or an overflow occurs
     fn negate(&self) -> Result<Self, String>;
     
     /// Performs logical NOT on a boolean value.
     ///
-    /// Returns an error if the value is not a boolean.
+    /// ### Returns 
+    /// * The negated boolean value
+    /// * An error message if the type is incompatible
     fn not(&self) -> Result<Self, String>;
     
     /// Performs logical AND between two boolean values.
     ///
-    /// Returns an error if either value is not a boolean.
+    /// ### Arguments
+    /// * `other` - The other value
+    /// 
+    /// ### Returns
+    /// * The result of the AND operation
+    /// * An error message if either value is not a boolean
     fn and(&self, other: &Self) -> Result<Self, String>;
     
     /// Performs logical OR between two boolean values.
     ///
-    /// Returns an error if either value is not a boolean.
+    /// ### Arguments
+    /// * `other` - The other value
+    /// 
+    /// ### Returns
+    /// * The result of the OR operation
+    /// * An error message if either value is not a boolean
     fn or(&self, other: &Self) -> Result<Self, String>;
     
     /// Tests if two values are equal.
     ///
-    /// Returns an error if the types cannot be compared.
+    /// ### Arguments
+    /// * `other` - The other value to compare
+    /// 
+    /// ### Returns
+    /// * The result of the equality comparison
+    /// * An error message if the types cannot be compared
     fn equal(&self, other: &Self) -> Result<Self, String>;
     
     /// Tests if two values are not equal.
     ///
-    /// Returns an error if the types cannot be compared.
+    /// ### Arguments
+    /// * `other` - The other value to compare
+    /// 
+    /// ### Returns
+    /// * The result of the inequality comparison
+    /// * An error message if the types cannot be compared
     fn not_equal(&self, other: &Self) -> Result<Self, String>;
     
     /// Tests if one value is less than another.
     ///
-    /// Returns an error if the types cannot be compared.
+    /// ### Arguments
+    /// * `other` - The other value to compare
+    /// 
+    /// ### Returns
+    /// * The result of the less-than comparison
+    /// * An error message if the types cannot be compared
     fn less_than(&self, other: &Self) -> Result<Self, String>;
     
     /// Tests if one value is less than or equal to another.
     ///
-    /// Returns an error if the types cannot be compared.
+    /// ### Arguments
+    /// * `other` - The other value to compare
+    /// 
+    /// ### Returns
+    /// * The result of the less-than-or-equal comparison
+    /// * An error message if the types cannot be compare
     fn less_than_equal(&self, other: &Self) -> Result<Self, String>;
     
     /// Tests if one value is greater than another.
     ///
-    /// Returns an error if the types cannot be compared.
+    /// R### Arguments
+    /// * `other` - The other value to compare
+    /// 
+    /// ### Returns
+    /// * The result of the greater-than comparison
     fn greater_than(&self, other: &Self) -> Result<Self, String>;
     
     /// Tests if one value is greater than or equal to another.
     ///
-    /// Returns an error if the types cannot be compared.
+    /// ### Arguments
+    /// * `other` - The other value to compare
+    /// 
+    /// ### Returns
+    /// * The result of the greater-than-or-equal comparison
+    /// * An error message if the types cannot be compared
     fn greater_than_equal(&self, other: &Self) -> Result<Self, String>;
 }
 
@@ -268,12 +330,38 @@ impl ValueOperation for Value {
     
     fn add(&self, other: &Self) -> Result<Value, String> {
         match (self, other) {
-            (Value::I32(a), Value::I32(b)) => Ok(Value::I32(*a + *b)),
-            (Value::I64(a), Value::I64(b)) => Ok(Value::I64(*a + *b)),
-            (Value::U32(a), Value::U32(b)) => Ok(Value::U32(*a + *b)),
-            (Value::U64(a), Value::U64(b)) => Ok(Value::U64(*a + *b)),
-            (Value::F32(a), Value::F32(b)) => Ok(Value::F32(*a + *b)),
-            (Value::F64(a), Value::F64(b)) => Ok(Value::F64(*a + *b)),
+            (Value::I32(a), Value::I32(b)) => match a.checked_add(*b) {
+                Some(result) => Ok(Value::I32(result)),
+                None => Err("Integer overflow in I32 addition".to_string()),
+            },
+            (Value::I64(a), Value::I64(b)) => match a.checked_add(*b) {
+                Some(result) => Ok(Value::I64(result)),
+                None => Err("Integer overflow in I64 addition".to_string()),
+            },
+            (Value::U32(a), Value::U32(b)) => match a.checked_add(*b) {
+                Some(result) => Ok(Value::U32(result)),
+                None => Err("Integer overflow in U32 addition".to_string()),
+            },
+            (Value::U64(a), Value::U64(b)) => match a.checked_add(*b) {
+                Some(result) => Ok(Value::U64(result)),
+                None => Err("Integer overflow in U64 addition".to_string()),
+            },
+            (Value::F32(a), Value::F32(b)) => {
+                let result = *a + *b;
+                if result.is_infinite() && !a.is_infinite() && !b.is_infinite() {
+                    Err("Floating point overflow in F32 addition".to_string())
+                } else {
+                    Ok(Value::F32(result))
+                }
+            },
+            (Value::F64(a), Value::F64(b)) => {
+                let result = *a + *b;
+                if result.is_infinite() && !a.is_infinite() && !b.is_infinite() {
+                    Err("Floating point overflow in F64 addition".to_string())
+                } else {
+                    Ok(Value::F64(result))
+                }
+            },
             (Value::String(a), Value::String(b)) => {
                 Ok(Value::String(format!("{}{}", a, b)))
             }
@@ -283,48 +371,76 @@ impl ValueOperation for Value {
 
     fn subtract(&self, other: &Self) -> Result<Value, String> {
         match (self, other) {
-            (Value::I32(a), Value::I32(b)) => Ok(Value::I32(*a - *b)),
-                    (Value::I64(a), Value::I64(b)) => Ok(Value::I64(*a - *b)),
-                    (Value::U32(a), Value::U32(b)) => {
-                        if *a >= *b {
-                            Ok(Value::U32(*a - *b))
-                        } else {
-                            Err("Unsigned underflow".to_string())
-                        }
-                    }
-                    (Value::U64(a), Value::U64(b)) => {
-                        if *a >= *b {
-                            Ok(Value::U64(*a - *b))
-                        } else {
-                            Err("Unsigned underflow".to_string())
-                        }
-                    }
-                    (Value::F32(a), Value::F32(b)) => Ok(Value::F32(*a - *b)),
-                    (Value::F64(a), Value::F64(b)) => Ok(Value::F64(*a - *b)),
-                    _ => Err("Cannot subtract these types".to_string()),
+            (Value::I32(a), Value::I32(b)) => match a.checked_sub(*b) {
+                Some(result) => Ok(Value::I32(result)),
+                None => Err("Integer underflow in I32 subtraction".to_string()),
+            },
+            (Value::I64(a), Value::I64(b)) => match a.checked_sub(*b) {
+                Some(result) => Ok(Value::I64(result)),
+                None => Err("Integer underflow in I64 subtraction".to_string()),
+            },
+            (Value::U32(a), Value::U32(b)) => match a.checked_sub(*b) {
+                Some(result) => Ok(Value::U32(result)),
+                None => Err("Integer underflow in U32 subtraction".to_string()),
+            },
+            (Value::U64(a), Value::U64(b)) => match a.checked_sub(*b) {
+                Some(result) => Ok(Value::U64(result)),
+                None => Err("Integer underflow in U64 subtraction".to_string()),
+            },
+            (Value::F32(a), Value::F32(b)) => {
+                let result = *a - *b;
+                if result.is_infinite() && !a.is_infinite() && !b.is_infinite() {
+                    Err("Floating point overflow/underflow in F32 subtraction".to_string())
+                } else {
+                    Ok(Value::F32(result))
+                }
+            },
+            (Value::F64(a), Value::F64(b)) => {
+                let result = *a - *b;
+                if result.is_infinite() && !a.is_infinite() && !b.is_infinite() {
+                    Err("Floating point overflow/underflow in F64 subtraction".to_string())
+                } else {
+                    Ok(Value::F64(result))
+                }
+            },
+            _ => Err("Cannot subtract these types".to_string()),
         }
     }
 
     fn multiply(&self, other: &Self) -> Result<Value, String> {
         match (self, other) {
-            (Value::I32(a), Value::I32(b)) => match (*a).checked_mul(*b) {
+            (Value::I32(a), Value::I32(b)) => match a.checked_mul(*b) {
                 Some(result) => Ok(Value::I32(result)),
                 None => Err("Integer overflow in I32 multiplication".to_string()),
             },
-            (Value::I64(a), Value::I64(b)) => match (*a).checked_mul(*b) {
+            (Value::I64(a), Value::I64(b)) => match a.checked_mul(*b) {
                 Some(result) => Ok(Value::I64(result)),
                 None => Err("Integer overflow in I64 multiplication".to_string()),
             },
-            (Value::U32(a), Value::U32(b)) => match (*a).checked_mul(*b) {
+            (Value::U32(a), Value::U32(b)) => match a.checked_mul(*b) {
                 Some(result) => Ok(Value::U32(result)),
                 None => Err("Integer overflow in U32 multiplication".to_string()),
             },
-            (Value::U64(a), Value::U64(b)) => match (*a).checked_mul(*b) {
+            (Value::U64(a), Value::U64(b)) => match a.checked_mul(*b) {
                 Some(result) => Ok(Value::U64(result)),
                 None => Err("Integer overflow in U64 multiplication".to_string()),
             },
-            (Value::F32(a), Value::F32(b)) => Ok(Value::F32(*a * *b)),
-            (Value::F64(a), Value::F64(b)) => Ok(Value::F64(*a * *b)),
+            (Value::F32(a), Value::F32(b)) => {
+                let result = *a * *b;
+                if result.is_infinite() && !a.is_infinite() && !b.is_infinite() {
+                    Err("Floating point overflow in F32 multiplication".to_string())
+                } else {
+                    Ok(Value::F32(result))
+                }
+            },
+            (Value::F64(a), Value::F64(b)) => {
+                let result = *a * *b;
+                if result.is_infinite() && !a.is_infinite() && !b.is_infinite() {
+                    Err("Floating point overflow in F64 multiplication".to_string())
+                } else {
+                    Ok(Value::F64(result))
+                }
+            },
             _ => Err("Cannot multiply these types".to_string()),
         }
     }
@@ -335,37 +451,66 @@ impl ValueOperation for Value {
                 if *b == 0 {
                     return Err("Division by zero".to_string());
                 }
-                Ok(Value::I32(*a / *b))
+
+                if *a == i32::MIN && *b == -1 {
+                    return Err("Integer overflow in I32 division".to_string());
+                }
+                match a.checked_div(*b) {
+                    Some(result) => Ok(Value::I32(result)),
+                    None => Err("Integer division error".to_string()),
+                }
             }
             (Value::I64(a), Value::I64(b)) => {
                 if *b == 0 {
                     return Err("Division by zero".to_string());
                 }
-                Ok(Value::I64(*a / *b))
+                if *a == i64::MIN && *b == -1 {
+                    return Err("Integer overflow in I64 division".to_string());
+                }
+                match a.checked_div(*b) {
+                    Some(result) => Ok(Value::I64(result)),
+                    None => Err("Integer division error".to_string()),
+                }
             }
             (Value::U32(a), Value::U32(b)) => {
                 if *b == 0 {
                     return Err("Division by zero".to_string());
                 }
-                Ok(Value::U32(*a / *b))
+                match a.checked_div(*b) {
+                    Some(result) => Ok(Value::U32(result)),
+                    None => Err("Integer division error".to_string()),
+                }
             }
             (Value::U64(a), Value::U64(b)) => {
                 if *b == 0 {
                     return Err("Division by zero".to_string());
                 }
-                Ok(Value::U64(*a / *b))
+                match a.checked_div(*b) {
+                    Some(result) => Ok(Value::U64(result)),
+                    None => Err("Integer division error".to_string()),
+                }
             }
             (Value::F32(a), Value::F32(b)) => {
                 if *b == 0.0 {
                     return Err("Division by zero".to_string());
                 }
-                Ok(Value::F32(*a / *b))
+                let result = *a / *b;
+                if result.is_infinite() && !a.is_infinite() {
+                    Err("Floating point overflow in F32 division".to_string())
+                } else {
+                    Ok(Value::F32(result))
+                }
             }
             (Value::F64(a), Value::F64(b)) => {
                 if *b == 0.0 {
                     return Err("Division by zero".to_string());
                 }
-                Ok(Value::F64(*a / *b))
+                let result = *a / *b;
+                if result.is_infinite() && !a.is_infinite() {
+                    Err("Floating point overflow in F64 division".to_string())
+                } else {
+                    Ok(Value::F64(result))
+                }
             }
             _ => Err("Cannot divide these types".to_string()),
         }
@@ -373,8 +518,18 @@ impl ValueOperation for Value {
 
     fn negate(&self) -> Result<Value, String> {
         match self {
-            Value::I32(i) => Ok(Value::I32(-i)),
-            Value::I64(i) => Ok(Value::I64(-i)),
+            Value::I32(i) => {
+                if *i == i32::MIN {
+                    return Err("Integer overflow in I32 negation".to_string());
+                }
+                Ok(Value::I32(-i))
+            },
+            Value::I64(i) => {
+                if *i == i64::MIN {
+                    return Err("Integer overflow in I64 negation".to_string());
+                }
+                Ok(Value::I64(-i))
+            },
             Value::U32(_) => Err("Cannot negate unsigned integer U32".to_string()),
             Value::U64(_) => Err("Cannot negate unsigned integer U64".to_string()),
             Value::F32(f) => Ok(Value::F32(-f)),
@@ -386,7 +541,7 @@ impl ValueOperation for Value {
     fn not(&self) -> Result<Value, String> {
         match self {
             Value::Boolean(b) => Ok(Value::Boolean(!b)),
-            _ => Err("Can only negate boolean values".to_string()),
+            _ => Err("Logical NOT operator requires a boolean operand".to_string()),
         }
     }
 

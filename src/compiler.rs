@@ -100,7 +100,7 @@ impl Compiler {
         // Emit placeholder jump offset (to be patched later)
         self.emit_byte(0xFF);
         self.emit_byte(0xFF);
-        self.chunk.code.len() - 2 // Return location to patch
+        self.chunk.code.len() - 2 
     }
     
     /// Patches a previously emitted jump instruction with the actual offset

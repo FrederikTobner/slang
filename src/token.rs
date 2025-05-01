@@ -44,11 +44,14 @@ pub struct Token {
     pub token_type: Tokentype,
     /// The actual text of the token
     pub lexeme: String,
+    /// Position index - used with LineInfo to determine line number
+    pub pos: usize,
 }
 
 impl Token {
-    /// Creates a new token with the given type and lexeme
-    pub fn new(token_type: Tokentype, lexeme: String) -> Token {
-        Token { token_type, lexeme }
+
+    /// Creates a new token with the given type, lexeme, and position
+    pub fn new(token_type: Tokentype, lexeme: String, pos: usize) -> Token {
+        Token { token_type, lexeme, pos }
     }
 }

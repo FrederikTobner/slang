@@ -6,20 +6,30 @@ use crate::token::{Token, Tokentype};
 use crate::types::{TypeId, TYPE_REGISTRY};
 use crate::types::{i32_type, i64_type, u32_type, u64_type, f32_type, f64_type, string_type, 
                   unspecified_int_type, unspecified_float_type, unknown_type, bool_type};
+use crate::lexer::LineInfo;
 
 /// Error that occurs during parsing
 #[derive(Debug)]
 pub struct ParseError {
     /// Error message describing the problem
     message: String,
+    /// Position in the source code where the error occurred
+    position: usize,
 }
 
 impl ParseError {
-    /// Creates a new parse error with the given message
-    pub fn new(message: &str) -> Self {
+    
+    /// Creates a new parse error with the given message and position
+    pub fn new(message: &str, position: usize) -> Self {
         ParseError {
             message: message.to_string(),
+            position,
         }
+    }
+    
+    /// Format this error using line information
+    pub fn format_with_line_info(&self, line_info: &LineInfo) -> String {
+        line_info.format_error(self.position, &self.message)
     }
 }
 
@@ -37,18 +47,22 @@ pub struct Parser<'a> {
     tokens: &'a [Token],
     /// Current position in the token list
     current: usize,
+    /// Line information for error reporting
+    line_info: &'a LineInfo<'a>,
 }
 
 impl<'a> Parser<'a> {
-    /// Creates a new parser for the given tokens
+    /// Creates a new parser for the given tokens and line information
     /// 
     /// # Arguments
     /// 
     /// * `tokens` - The tokens to parse
-    pub fn new(tokens: &'a [Token]) -> Self {
+    /// * `line_info` - Line information for error reporting
+    pub fn new(tokens: &'a [Token], line_info: &'a LineInfo) -> Self {
         Parser {
             tokens,
             current: 0,
+            line_info,
         }
     }
 
@@ -63,11 +77,21 @@ impl<'a> Parser<'a> {
         while !self.is_at_end() {
             match self.statement() {
                 Ok(stmt) => statements.push(stmt),
-                Err(e) => return Err(e),
+                Err(e) => return Err(e.format_with_line_info(self.line_info)),
             }
         }
 
         Ok(statements)
+    }
+
+    /// Creates an error at the current token position
+    fn error(&self, message: &str) -> ParseError {
+        ParseError::new(message, self.peek().pos)
+    }
+
+    /// Creates an error at the previous token position
+    fn error_previous(&self, message: &str) -> ParseError {
+        ParseError::new(message, self.previous().pos)
     }
 
     /// Parses a single statement
@@ -75,7 +99,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed statement or an error message
-    fn statement(&mut self) -> Result<Statement, String> {
+    fn statement(&mut self) -> Result<Statement, ParseError> {
         if self.match_token(Tokentype::Let) {
             return self.let_statement();
         } else if self.match_token(Tokentype::Struct) {
@@ -96,7 +120,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed block statement or an error message
-    fn block_statement(&mut self) -> Result<Statement, String> {
+    fn block_statement(&mut self) -> Result<Statement, ParseError> {
         let mut statements = Vec::new();
         
         while !self.check(Tokentype::RightBrace) && !self.is_at_end() {
@@ -104,7 +128,7 @@ impl<'a> Parser<'a> {
         }
         
         if !self.match_token(Tokentype::RightBrace) {
-            return Err("Expected '}' after block".to_string());
+            return Err(self.error("Expected '}' after block"));
         }
         
         Ok(Statement::Block(statements))
@@ -115,7 +139,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed return statement or an error message
-    fn return_statement(&mut self) -> Result<Statement, String> {
+    fn return_statement(&mut self) -> Result<Statement, ParseError> {
         let value = if !self.check(Tokentype::Semicolon) {
             Some(self.expression()?)
         } else {
@@ -123,7 +147,7 @@ impl<'a> Parser<'a> {
         };
         
         if !self.match_token(Tokentype::Semicolon) {
-            return Err("Expected ';' after return value".to_string());
+            return Err(self.error("Expected ';' after return value"));
         }
         
         Ok(Statement::Return(value))
@@ -134,16 +158,16 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed function declaration or an error message
-    fn function_declaration_statement(&mut self) -> Result<Statement, String> {
+    fn function_declaration_statement(&mut self) -> Result<Statement, ParseError> {
         // Parse function name
         if !self.check(Tokentype::Identifier) {
-            return Err("Expected function name".to_string());
+            return Err(self.error("Expected function name"));
         }
         let name = self.advance().lexeme.clone();
         
         // Parse parameter list
         if !self.match_token(Tokentype::LeftParen) {
-            return Err("Expected '(' after function name".to_string());
+            return Err(self.error("Expected '(' after function name"));
         }
         
         let mut parameters = Vec::new();
@@ -154,20 +178,20 @@ impl<'a> Parser<'a> {
             // Parse the rest of the parameters
             while self.match_token(Tokentype::Comma) {
                 if parameters.len() >= 255 {
-                    return Err("Cannot have more than 255 parameters".to_string());
+                    return Err(self.error("Cannot have more than 255 parameters"));
                 }
                 parameters.push(self.parameter()?);
             }
         }
         
         if !self.match_token(Tokentype::RightParen) {
-            return Err("Expected ')' after parameters".to_string());
+            return Err(self.error("Expected ')' after parameters"));
         }
         
         // Parse return type
         let return_type = if self.match_token(Tokentype::Arrow) {
             if !self.check(Tokentype::Identifier) {
-                return Err("Expected return type after '->'".to_string());
+                return Err(self.error("Expected return type after '->'"));
             }
             
             let type_name = self.advance().lexeme.clone();
@@ -182,7 +206,7 @@ impl<'a> Parser<'a> {
         };
         
         if !self.match_token(Tokentype::LeftBrace) {
-            return Err("Expected '{' before function body".to_string());
+            return Err(self.error("Expected '{' before function body"));
         }
         
         let mut body = Vec::new();
@@ -191,7 +215,7 @@ impl<'a> Parser<'a> {
         }
         
         if !self.match_token(Tokentype::RightBrace) {
-            return Err("Expected '}' after function body".to_string());
+            return Err(self.error("Expected '}' after function body"));
         }
         
         Ok(Statement::FunctionDeclaration(FunctionDeclarationStmt {
@@ -207,19 +231,19 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed parameter or an error message
-    fn parameter(&mut self) -> Result<Parameter, String> {
+    fn parameter(&mut self) -> Result<Parameter, ParseError> {
         if !self.check(Tokentype::Identifier) {
-            return Err("Expected parameter name".to_string());
+            return Err(self.error("Expected parameter name"));
         }
         
         let name = self.advance().lexeme.clone();
         
         if !self.match_token(Tokentype::Colon) {
-            return Err("Expected ':' after parameter name".to_string());
+            return Err(self.error("Expected ':' after parameter name"));
         }
         
         if !self.check(Tokentype::Identifier) {
-            return Err("Expected parameter type".to_string());
+            return Err(self.error("Expected parameter type"));
         }
         
         let type_name = self.advance().lexeme.clone();
@@ -231,7 +255,7 @@ impl<'a> Parser<'a> {
         });
         
         if param_type == unknown_type() {
-            return Err(format!("Unknown type: {}", type_name));
+            return Err(self.error(&format!("Unknown type: {}", type_name)));
         }
         
         Ok(Parameter { name, param_type })
@@ -242,49 +266,49 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed type definition or an error message
-    fn type_definition_statement(&mut self) -> Result<Statement, String> {
+    fn type_definition_statement(&mut self) -> Result<Statement, ParseError> {
         // Expect struct name
         if !self.check(Tokentype::Identifier) {
-            return Err("Expected struct name after 'struct' keyword".to_string());
+            return Err(self.error("Expected struct name after 'struct' keyword"));
         }
         
         let name = self.advance().lexeme.clone();
         
         // Expect opening brace
         if !self.match_token(Tokentype::LeftBrace) {
-            return Err("Expected '{' after struct name".to_string());
+            return Err(self.error("Expected '{' after struct name"));
         }
         
         let mut fields = Vec::new();
         
         while !self.check(Tokentype::RightBrace) && !self.is_at_end() {
             if !self.check(Tokentype::Identifier) {
-                return Err("Expected field name".to_string());
+                return Err(self.error("Expected field name"));
             }
             let field_name = self.advance().lexeme.clone();
             
             if !self.match_token(Tokentype::Colon) {
-                return Err("Expected ':' after field name".to_string());
+                return Err(self.error("Expected ':' after field name"));
             }
             
             let field_type = match self.parse_type() {
                 Ok(t) => t,
-                Err(e) => return Err(e.to_string()),
+                Err(e) => return Err(e),
             };
             
             fields.push((field_name, field_type));
             
             if !self.match_token(Tokentype::Comma) && !self.check(Tokentype::RightBrace) {
-                return Err("Expected ',' after field or '}'".to_string());
+                return Err(self.error("Expected ',' after field or '}'"));
             }
         }
         
         if !self.match_token(Tokentype::RightBrace) {
-            return Err("Expected '}' after struct fields".to_string());
+            return Err(self.error("Expected '}' after struct fields"));
         }
         
         if !self.match_token(Tokentype::Semicolon) {
-            return Err("Expected ';' after struct definition".to_string());
+            return Err(self.error("Expected ';' after struct definition"));
         }
         
         Ok(Statement::TypeDefinition(TypeDefinitionStmt { name, fields }))
@@ -295,9 +319,9 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed variable declaration or an error message
-    fn let_statement(&mut self) -> Result<Statement, String> {
+    fn let_statement(&mut self) -> Result<Statement, ParseError> {
         if !self.check(Tokentype::Identifier) {
-            return Err("Expected identifier after 'let'".to_string());
+            return Err(self.error("Expected identifier after 'let'"));
         }
 
         let token = self.advance();
@@ -306,16 +330,16 @@ impl<'a> Parser<'a> {
 
         if self.match_token(Tokentype::Colon) {
             if !self.check(Tokentype::Identifier) {
-                return Err("Expected type name after colon".to_string());
+                return Err(self.error("Expected type name after colon"));
             }
 
             let type_name = self.advance().lexeme.clone();
             
             // Explicitly reject placeholder types as type specifiers
             if type_name == "int" {
-                return Err("'int' is not a valid type specifier. Use 'i32', 'i64', 'u32', or 'u64' instead".to_string());
+                return Err(self.error("'int' is not a valid type specifier. Use 'i32', 'i64', 'u32', or 'u64' instead"));
             } else if type_name == "float" {
-                return Err("'float' is not a valid type specifier. Use 'f32' or 'f64' instead".to_string());
+                return Err(self.error("'float' is not a valid type specifier. Use 'f32' or 'f64' instead"));
             }
             
             var_type = TYPE_REGISTRY.with(|registry| {
@@ -326,19 +350,19 @@ impl<'a> Parser<'a> {
             });
             
             if var_type == unknown_type() {
-                return Err(format!("Unknown type: {}", type_name));
+                return Err(self.error(&format!("Unknown type: {}", type_name)));
             }
         }
 
         if !self.match_token(Tokentype::Equal) {
-            return Err("Expected '=' after variable name".to_string());
+            return Err(self.error("Expected '=' after variable name"));
         }
 
         let expr = self.expression()?;
 
         // Expect semicolon
         if !self.match_token(Tokentype::Semicolon) {
-            return Err("Expected ';' after let statement".to_string());
+            return Err(self.error("Expected ';' after let statement"));
         }
 
         Ok(Statement::Let(LetStatement {
@@ -353,11 +377,11 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed expression statement or an error message
-    fn expression_statement(&mut self) -> Result<Statement, String> {
+    fn expression_statement(&mut self) -> Result<Statement, ParseError> {
         let expr = self.expression()?;
         
         if !self.match_token(Tokentype::Semicolon) {
-            return Err("Expected ';' after expression".to_string());
+            return Err(self.error("Expected ';' after expression"));
         }
         
         Ok(Statement::Expression(expr))
@@ -368,7 +392,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed expression or an error message
-    fn expression(&mut self) -> Result<Expression, String> {
+    fn expression(&mut self) -> Result<Expression, ParseError> {
         self.logical_or()
     }
 
@@ -377,7 +401,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed logical OR expression or an error message
-    fn logical_or(&mut self) -> Result<Expression, String> {
+    fn logical_or(&mut self) -> Result<Expression, ParseError> {
         let mut expr = self.logical_and()?;
 
         while self.match_token(Tokentype::Or) {
@@ -399,7 +423,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed logical AND expression or an error message
-    fn logical_and(&mut self) -> Result<Expression, String> {
+    fn logical_and(&mut self) -> Result<Expression, ParseError> {
         let mut expr = self.equality()?;
 
         while self.match_token(Tokentype::And) {
@@ -421,7 +445,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed equality expression or an error message
-    fn equality(&mut self) -> Result<Expression, String> {
+    fn equality(&mut self) -> Result<Expression, ParseError> {
         let mut expr = self.comparison()?;
 
         while self.match_any(&[Tokentype::EqualEqual, Tokentype::NotEqual]) {
@@ -443,7 +467,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed comparison expression or an error message
-    fn comparison(&mut self) -> Result<Expression, String> {
+    fn comparison(&mut self) -> Result<Expression, ParseError> {
         let mut expr = self.term()?;
 
         while self.match_any(&[
@@ -470,7 +494,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed term or an error message
-    fn term(&mut self) -> Result<Expression, String> {
+    fn term(&mut self) -> Result<Expression, ParseError> {
         let mut expr = self.factor()?;
 
         while self.match_any(&[Tokentype::Plus, Tokentype::Minus]) {
@@ -492,7 +516,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed factor or an error message
-    fn factor(&mut self) -> Result<Expression, String> {
+    fn factor(&mut self) -> Result<Expression, ParseError> {
         let mut expr = self.unary()?;
 
         while self.match_any(&[Tokentype::Multiply, Tokentype::Divide]) {
@@ -514,7 +538,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed unary expression or an error message
-    fn unary(&mut self) -> Result<Expression, String> {
+    fn unary(&mut self) -> Result<Expression, ParseError> {
         if self.match_token(Tokentype::Minus) {
             let operator = self.previous().token_type.clone();
             let right = self.primary()?;
@@ -543,7 +567,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed primary expression or an error message
-    fn primary(&mut self) -> Result<Expression, String> {
+    fn primary(&mut self) -> Result<Expression, ParseError> {
         if self.match_token(Tokentype::IntegerLiteral) {
             return self.parse_integer();
         }
@@ -572,7 +596,7 @@ impl<'a> Parser<'a> {
         if self.match_token(Tokentype::LeftParen) {
             let expr = self.expression()?;
             if !self.match_token(Tokentype::RightParen) {
-                return Err("Expected ')' after expression".to_string());
+                return Err(self.error("Expected ')' after expression"));
             }
             return Ok(expr);
         }
@@ -587,14 +611,14 @@ impl<'a> Parser<'a> {
             return Ok(Expression::Variable(name));
         }
 
-        Err(format!("Expected expression, found {:?}", self.peek()))
+        Err(self.error(&format!("Expected expression, found {:?}", self.peek())))
     }
     
-fn parse_float(&mut self) -> Result<Expression, String> {
+fn parse_float(&mut self) -> Result<Expression, ParseError> {
         let value_str = self.previous().lexeme.clone();
         let value = value_str
             .parse::<f64>()
-            .map_err(|_| format!("Invalid float: {}", value_str))?;
+            .map_err(|_| self.error_previous(&format!("Invalid float: {}", value_str)))?;
         
         if self.check(Tokentype::Identifier) {
             let type_name = self.peek().lexeme.clone();
@@ -634,7 +658,7 @@ fn parse_float(&mut self) -> Result<Expression, String> {
     /// # Returns
     /// 
     /// The parsed function call expression or an error message
-    fn finish_call(&mut self, name: String) -> Result<Expression, String> {
+    fn finish_call(&mut self, name: String) -> Result<Expression, ParseError> {
         let mut arguments = Vec::new();
         
         if !self.check(Tokentype::RightParen) {
@@ -644,14 +668,14 @@ fn parse_float(&mut self) -> Result<Expression, String> {
             // Parse rest of the arguments
             while self.match_token(Tokentype::Comma) {
                 if arguments.len() >= 255 {
-                    return Err("Cannot have more than 255 arguments".to_string());
+                    return Err(self.error("Cannot have more than 255 arguments"));
                 }
                 arguments.push(self.expression()?);
             }
         }
         
         if !self.match_token(Tokentype::RightParen) {
-            return Err("Expected ')' after function arguments".to_string());
+            return Err(self.error("Expected ')' after function arguments"));
         }
         
         Ok(Expression::Call(FunctionCallExpr {
@@ -666,11 +690,11 @@ fn parse_float(&mut self) -> Result<Expression, String> {
     /// # Returns
     /// 
     /// The parsed integer literal expression or an error message
-    fn parse_integer(&mut self) -> Result<Expression, String> {
+    fn parse_integer(&mut self) -> Result<Expression, ParseError> {
         let value_str = self.previous().lexeme.clone();
         let base_value = value_str
             .parse::<i64>()
-            .map_err(|_| format!("Invalid integer: {}", value_str))?;
+            .map_err(|_| self.error_previous(&format!("Invalid integer: {}", value_str)))?;
 
         if self.check(Tokentype::Identifier) {
             let type_name = self.peek().lexeme.clone();
@@ -679,7 +703,7 @@ fn parse_float(&mut self) -> Result<Expression, String> {
                 "i32" => {
                     self.advance();
                     if base_value > i32::MAX as i64 || base_value < i32::MIN as i64 {
-                        return Err(format!("Value {} is out of range for i32", base_value));
+                        return Err(self.error_previous(&format!("Value {} is out of range for i32", base_value)));
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::I32(base_value as i32),
@@ -696,7 +720,7 @@ fn parse_float(&mut self) -> Result<Expression, String> {
                 "u32" => {
                     self.advance();
                     if base_value < 0 || base_value > u32::MAX as i64 {
-                        return Err(format!("Value {} is out of range for u32", base_value));
+                        return Err(self.error_previous(&format!("Value {} is out of range for u32", base_value)));
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::U32(base_value as u32),
@@ -706,7 +730,7 @@ fn parse_float(&mut self) -> Result<Expression, String> {
                 "u64" => {
                     self.advance();
                     if base_value < 0 {
-                        return Err(format!("Value {} is out of range for u64", base_value));
+                        return Err(self.error_previous(&format!("Value {} is out of range for u64", base_value)));
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::U64(base_value as u64),
@@ -745,7 +769,7 @@ fn parse_float(&mut self) -> Result<Expression, String> {
     /// The type ID for the parsed type or an error
     fn parse_type(&mut self) -> Result<TypeId, ParseError> {
         if !self.check(Tokentype::Identifier) {
-            return Err(ParseError::new("Expected type identifier"));
+            return Err(self.error("Expected type identifier"));
         }
         
         let type_name = self.advance().lexeme.clone();
@@ -755,7 +779,7 @@ fn parse_float(&mut self) -> Result<Expression, String> {
             if let Some(type_id) = registry.get_type_by_name(&type_name) {
                 Ok(type_id.clone())
             } else {
-                Err(ParseError::new(&format!("Unknown type: {}", type_name)))
+                Err(self.error(&format!("Unknown type: {}", type_name)))
             }
         })
     }

@@ -302,7 +302,7 @@ impl TypeRegistry {
             TypeKind::Float(float_type) => {
                 match float_type.bits {
                     32 => *value >= f32::MIN as f64 && *value <= f32::MAX as f64,
-                    64 => true, // all f64 values fit in f64
+                    64 => true,
                     _ => false,
                 }
             },

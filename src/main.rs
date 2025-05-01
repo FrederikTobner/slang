@@ -15,9 +15,8 @@ use ast::Statement;
 use bytecode::Chunk;
 use compiler::Compiler;
 use clap::{Parser as ClapParser, Subcommand};
-use lexer::tokenize;
+use lexer::{tokenize, LexerResult};
 use parser::Parser;
-use token::Token;
 use type_checker::TypeChecker;
 use vm::VM;
 use std::fs::{self, File};
@@ -77,13 +76,13 @@ fn init_type_system() {
 /// 
 /// # Arguments
 /// 
-/// * `tokens` - The tokens to parse
+/// * `lexer_result` - The lexer result containing tokens and line info
 /// 
 /// # Returns
 /// 
 /// The parsed AST statements or an error message
-fn parse(tokens: &[Token]) -> Result<Vec<Statement>, String> {
-    let mut parser = Parser::new(tokens);
+fn parse(lexer_result: &LexerResult) -> Result<Vec<Statement>, String> {
+    let mut parser = Parser::new(&lexer_result.tokens, &lexer_result.line_info);
     parser.parse()
 }
 
@@ -110,8 +109,8 @@ fn read_source_file(path: &str) -> Result<String, String> {
 /// 
 /// The compiled bytecode chunk or an error message
 fn compile_source(source: &str) -> Result<Chunk, String> {
-    let tokens = tokenize(source);
-    let ast = parse(&tokens)?;
+    let lexer_result = tokenize(source);
+    let ast = parse(&lexer_result)?;
     
     let mut type_checker = TypeChecker::new();
     type_checker.check(&ast)?;
@@ -235,12 +234,12 @@ fn repl() {
         }
         
 
-        let tokens = tokenize(&input);
-        if tokens.len() <= 1 {  // Just EOF token
+        let lexer_result = tokenize(&input);
+        if lexer_result.tokens.len() <= 1 {  // Just EOF token
             continue;
         }
 
-        match parse(&tokens) {
+        match parse(&lexer_result) {
             Ok(ast) => {
                 #[cfg(feature = "print-ast")]
                 {

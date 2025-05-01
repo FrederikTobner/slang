@@ -57,11 +57,11 @@ pub enum OpCode {
 impl OpCode {
     /// Convert a byte to an OpCode
     /// 
-    /// # Arguments
+    /// ### Arguments
     /// 
     /// * `value` - The byte to convert
     /// 
-    /// # Returns
+    /// ### Returns
     /// 
     /// Some(OpCode) if the byte represents a valid OpCode, None otherwise
     pub fn from_u8(value: u8) -> Option<OpCode> {
@@ -154,7 +154,7 @@ impl Chunk {
 
     /// Writes a byte to the chunk
     /// 
-    /// # Arguments
+    /// ### Arguments
     /// 
     /// * `byte` - The byte to write
     /// * `line` - The source code line number
@@ -165,7 +165,7 @@ impl Chunk {
 
     /// Writes an opcode to the chunk
     /// 
-    /// # Arguments
+    /// ### Arguments
     /// 
     /// * `op` - The opcode to write
     /// * `line` - The source code line number
@@ -175,11 +175,11 @@ impl Chunk {
 
     /// Adds a constant to the chunk's constant pool
     /// 
-    /// # Arguments
+    /// ### Arguments
     /// 
     /// * `value` - The constant value to add
     /// 
-    /// # Returns
+    /// ### Returns
     /// 
     /// The index of the constant in the constant pool
     pub fn add_constant(&mut self, value: Value) -> usize {
@@ -189,11 +189,11 @@ impl Chunk {
 
     /// Adds an identifier to the chunk's identifier pool
     /// 
-    /// # Arguments
+    /// ### Arguments
     /// 
     /// * `name` - The identifier name to add
     /// 
-    /// # Returns
+    /// ### Returns
     /// 
     /// The index of the identifier in the identifier pool
     pub fn add_identifier(&mut self, name: String) -> usize {
@@ -202,18 +202,17 @@ impl Chunk {
                 return i;
             }
         }
-
         self.identifiers.push(name);
         self.identifiers.len() - 1
     }
 
     /// Serializes the chunk to binary data
     /// 
-    /// # Arguments
+    /// ### Arguments
     /// 
     /// * `writer` - The writer to write the binary data to
     /// 
-    /// # Returns
+    /// ### Returns
     /// 
     /// IO result indicating success or failure
     pub fn serialize(&self, writer: &mut dyn Write) -> std::io::Result<()> {
@@ -298,11 +297,11 @@ impl Chunk {
 
     /// Deserializes a chunk from binary data
     /// 
-    /// # Arguments
+    /// ### Arguments
     /// 
     /// * `reader` - The reader to read the binary data from
     /// 
-    /// # Returns
+    /// ### Returns
     /// 
     /// The deserialized chunk or an IO error
     pub fn deserialize(reader: &mut dyn Read) -> std::io::Result<Self> {

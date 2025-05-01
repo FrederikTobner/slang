@@ -17,7 +17,7 @@ impl ASTPrinter {
 
     /// Prints the AST for a list of statements
     /// 
-    /// # Arguments
+    /// ### Arguments
     /// 
     /// * `statements` - The statements to print
     #[allow(dead_code)]

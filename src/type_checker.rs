@@ -6,61 +6,8 @@ use crate::token::Tokentype;
 use crate::visitor::Visitor;
 use crate::types::{TypeId, TypeKind, TYPE_REGISTRY, StructType};
 use std::collections::HashMap;
+use crate::types::*;
 
-/// Helper function to get the i32 type ID
-fn i32_type() -> TypeId {
-    crate::types::i32_type()
-}
-
-/// Helper function to get the i64 type ID
-fn i64_type() -> TypeId {
-    crate::types::i64_type()
-}
-
-/// Helper function to get the u32 type ID
-fn u32_type() -> TypeId {
-    crate::types::u32_type()
-}
-
-/// Helper function to get the u64 type ID
-fn u64_type() -> TypeId {
-    crate::types::u64_type()
-}
-
-/// Helper function to get the f32 type ID
-fn f32_type() -> TypeId {
-    crate::types::f32_type()
-}
-
-/// Helper function to get the f64 type ID
-fn f64_type() -> TypeId {
-    crate::types::f64_type()
-}
-
-/// Helper function to get the boolean type ID
-fn bool_type() -> TypeId {
-    crate::types::bool_type()
-}
-
-/// Helper function to get the unspecified float type ID
-fn unspecified_float_type() -> TypeId {
-    crate::types::unspecified_float_type()
-}
-
-/// Helper function to get the string type ID
-fn string_type() -> TypeId {
-    crate::types::string_type()
-}
-
-/// Helper function to get the unspecified integer type ID
-fn unspecified_int_type() -> TypeId {
-    crate::types::unspecified_int_type()
-}
-
-/// Helper function to get the unknown type ID
-fn unknown_type() -> TypeId {
-    crate::types::unknown_type()
-}
 
 /// Performs static type checking on the AST
 pub struct TypeChecker {
