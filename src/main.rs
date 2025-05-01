@@ -6,6 +6,7 @@ mod lexer;
 mod parser;
 mod token;
 mod type_checker;
+mod value;
 mod visitor;
 mod vm;
 mod types;

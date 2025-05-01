@@ -81,7 +81,7 @@ pub struct TypeDefinitionStmt {
 #[derive(Debug)]
 pub struct LiteralExpr {
     /// Value of the literal
-    pub value: Value,
+    pub value: LiteralValue,
     /// Type of the literal expression
     #[allow(dead_code)]
     pub expr_type: TypeId,
@@ -101,7 +101,7 @@ pub struct UnaryExpr {
 
 /// Possible values for literal expressions
 #[derive(Debug)]
-pub enum Value {
+pub enum LiteralValue {
     /// 32-bit signed integer
     I32(i32),
     /// 64-bit signed integer

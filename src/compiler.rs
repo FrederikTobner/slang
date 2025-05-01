@@ -1,7 +1,8 @@
 use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr};
-use crate::bytecode::{Chunk, Function, OpCode, Value};
+use crate::bytecode::{Chunk, Function, OpCode};
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
+use crate::value::Value;
 
 /// Compiles AST nodes into bytecode instructions
 pub struct Compiler {
@@ -282,36 +283,36 @@ impl Visitor<Result<(), String>> for Compiler {
 
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> Result<(), String> {
         match &lit_expr.value {
-            crate::ast::Value::I32(i) => {
+            crate::ast::LiteralValue::I32(i) => {
                 self.emit_constant(Value::I32(*i));
             }
-            crate::ast::Value::I64(i) => {
+            crate::ast::LiteralValue::I64(i) => {
                 self.emit_constant(Value::I64(*i));
             }
-            crate::ast::Value::U32(i) => {
+            crate::ast::LiteralValue::U32(i) => {
                 self.emit_constant(Value::U32(*i));
             }
-            crate::ast::Value::U64(i) => {
+            crate::ast::LiteralValue::U64(i) => {
                 self.emit_constant(Value::U64(*i));
             }
-            crate::ast::Value::UnspecifiedInteger(i) => {
+            crate::ast::LiteralValue::UnspecifiedInteger(i) => {
                 // Unspecified integers default to i64 in the VM
                 self.emit_constant(Value::I64(*i));
             }
-            crate::ast::Value::F32(f) => {
+            crate::ast::LiteralValue::F32(f) => {
                 self.emit_constant(Value::F32(*f));
             }
-            crate::ast::Value::F64(f) => {
+            crate::ast::LiteralValue::F64(f) => {
                 self.emit_constant(Value::F64(*f));
             }
-            crate::ast::Value::UnspecifiedFloat(f) => {
+            crate::ast::LiteralValue::UnspecifiedFloat(f) => {
                 // Unspecified floats default to f64 in the VM
                 self.emit_constant(Value::F64(*f));
             }
-            crate::ast::Value::String(s) => {
+            crate::ast::LiteralValue::String(s) => {
                 self.emit_constant(Value::String(s.clone()));
             }
-            crate::ast::Value::Boolean(b) => {
+            crate::ast::LiteralValue::Boolean(b) => {
                 self.emit_constant(Value::Boolean(*b));
             }
         }

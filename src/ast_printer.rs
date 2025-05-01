@@ -1,4 +1,4 @@
-use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, Value};
+use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, LiteralValue};
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
 
@@ -138,16 +138,16 @@ impl Visitor<()> for ASTPrinter {
 
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) {
         match &lit_expr.value {
-            Value::I32(i) => println!("{}I32: {}", self.indent(), i),
-            Value::I64(i) => println!("{}I64: {}", self.indent(), i),
-            Value::U32(u) => println!("{}U32: {}", self.indent(), u),
-            Value::U64(u) => println!("{}U64: {}", self.indent(), u),
-            Value::UnspecifiedInteger(i) => println!("{}UnspecifiedInteger: {}", self.indent(), i),
-            Value::F64(f) => println!("{}F64: {}", self.indent(), f),
-            Value::F32(f) => println!("{}F32: {}", self.indent(), f),
-            Value::UnspecifiedFloat(f) => println!("{}UnspecifiedFloat: {}", self.indent(), f),
-            Value::Boolean(b) => println!("{}Boolean: {}", self.indent(), b),
-            Value::String(s) => println!("{}String: \"{}\"", self.indent(), s),
+            LiteralValue::I32(i) => println!("{}I32: {}", self.indent(), i),
+            LiteralValue::I64(i) => println!("{}I64: {}", self.indent(), i),
+            LiteralValue::U32(u) => println!("{}U32: {}", self.indent(), u),
+            LiteralValue::U64(u) => println!("{}U64: {}", self.indent(), u),
+            LiteralValue::UnspecifiedInteger(i) => println!("{}UnspecifiedInteger: {}", self.indent(), i),
+            LiteralValue::F64(f) => println!("{}F64: {}", self.indent(), f),
+            LiteralValue::F32(f) => println!("{}F32: {}", self.indent(), f),
+            LiteralValue::UnspecifiedFloat(f) => println!("{}UnspecifiedFloat: {}", self.indent(), f),
+            LiteralValue::Boolean(b) => println!("{}Boolean: {}", self.indent(), b),
+            LiteralValue::String(s) => println!("{}String: \"{}\"", self.indent(), s),
         }
     }
 

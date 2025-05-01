@@ -1,5 +1,6 @@
-use crate::bytecode::{Chunk, Function, NativeFunction, OpCode, Value};
+use crate::bytecode::{Chunk, Function, NativeFunction, OpCode};
 use std::collections::HashMap;
+use crate::value::{Value, ValueOperation};
 
 /// Call frame to track function calls
 struct CallFrame {
@@ -37,9 +38,7 @@ impl VM {
             frames: Vec::new(),
             current_frame: None,
         };
-
         vm.register_native_functions();
-        
         vm
     }
     
@@ -137,117 +136,20 @@ impl VM {
                 self.stack.push(constant);
             }
             OpCode::Add => {
-                self.binary_op(|a, b| match (a, b) {
-                    (Value::I32(a), Value::I32(b)) => Ok(Value::I32(*a + *b)),
-                    (Value::I64(a), Value::I64(b)) => Ok(Value::I64(*a + *b)),
-                    (Value::U32(a), Value::U32(b)) => Ok(Value::U32(*a + *b)),
-                    (Value::U64(a), Value::U64(b)) => Ok(Value::U64(*a + *b)),
-                    (Value::F32(a), Value::F32(b)) => Ok(Value::F32(*a + *b)),
-                    (Value::F64(a), Value::F64(b)) => Ok(Value::F64(*a + *b)),
-                    (Value::String(a), Value::String(b)) => {
-                        Ok(Value::String(format!("{}{}", a, b)))
-                    }
-                    _ => Err("Cannot add these types".to_string()),
-                })?;
+                self.binary_op(|a, b| {a.add(&b)})?;
             }
             OpCode::Subtract => {
-                self.binary_op(|a, b| match (a, b) {
-                    (Value::I32(a), Value::I32(b)) => Ok(Value::I32(*a - *b)),
-                    (Value::I64(a), Value::I64(b)) => Ok(Value::I64(*a - *b)),
-                    (Value::U32(a), Value::U32(b)) => {
-                        if *a >= *b {
-                            Ok(Value::U32(*a - *b))
-                        } else {
-                            Err("Unsigned underflow".to_string())
-                        }
-                    }
-                    (Value::U64(a), Value::U64(b)) => {
-                        if *a >= *b {
-                            Ok(Value::U64(*a - *b))
-                        } else {
-                            Err("Unsigned underflow".to_string())
-                        }
-                    }
-                    (Value::F32(a), Value::F32(b)) => Ok(Value::F32(*a - *b)),
-                    (Value::F64(a), Value::F64(b)) => Ok(Value::F64(*a - *b)),
-                    _ => Err("Cannot subtract these types".to_string()),
-                })?;
+                self.binary_op(|a, b| {a.subtract(&b)})?;
             }
             OpCode::Multiply => {
-                self.binary_op(|a, b| match (a, b) {
-                    (Value::I32(a), Value::I32(b)) => match (*a).checked_mul(*b) {
-                        Some(result) => Ok(Value::I32(result)),
-                        None => Err("Integer overflow in I32 multiplication".to_string()),
-                    },
-                    (Value::I64(a), Value::I64(b)) => match (*a).checked_mul(*b) {
-                        Some(result) => Ok(Value::I64(result)),
-                        None => Err("Integer overflow in I64 multiplication".to_string()),
-                    },
-                    (Value::U32(a), Value::U32(b)) => match (*a).checked_mul(*b) {
-                        Some(result) => Ok(Value::U32(result)),
-                        None => Err("Integer overflow in U32 multiplication".to_string()),
-                    },
-                    (Value::U64(a), Value::U64(b)) => match (*a).checked_mul(*b) {
-                        Some(result) => Ok(Value::U64(result)),
-                        None => Err("Integer overflow in U64 multiplication".to_string()),
-                    },
-                    (Value::F32(a), Value::F32(b)) => Ok(Value::F32(*a * *b)),
-                    (Value::F64(a), Value::F64(b)) => Ok(Value::F64(*a * *b)),
-                    _ => Err("Cannot multiply these types".to_string()),
-                })?;
+                self.binary_op(|a, b| {a.multiply(&b)})?;
             }
             OpCode::Divide => {
-                self.binary_op(|a, b| match (a, b) {
-                    (Value::I32(a), Value::I32(b)) => {
-                        if *b == 0 {
-                            return Err("Division by zero".to_string());
-                        }
-                        Ok(Value::I32(*a / *b))
-                    }
-                    (Value::I64(a), Value::I64(b)) => {
-                        if *b == 0 {
-                            return Err("Division by zero".to_string());
-                        }
-                        Ok(Value::I64(*a / *b))
-                    }
-                    (Value::U32(a), Value::U32(b)) => {
-                        if *b == 0 {
-                            return Err("Division by zero".to_string());
-                        }
-                        Ok(Value::U32(*a / *b))
-                    }
-                    (Value::U64(a), Value::U64(b)) => {
-                        if *b == 0 {
-                            return Err("Division by zero".to_string());
-                        }
-                        Ok(Value::U64(*a / *b))
-                    }
-                    (Value::F32(a), Value::F32(b)) => {
-                        if *b == 0.0 {
-                            return Err("Division by zero".to_string());
-                        }
-                        Ok(Value::F32(*a / *b))
-                    }
-                    (Value::F64(a), Value::F64(b)) => {
-                        if *b == 0.0 {
-                            return Err("Division by zero".to_string());
-                        }
-                        Ok(Value::F64(*a / *b))
-                    }
-                    _ => Err("Cannot divide these types".to_string()),
-                })?;
+                self.binary_op(|a, b| {a.divide(&b)})?;
             }
             OpCode::Negate => {
                 let value = self.pop()?;
-                match value {
-                    Value::I32(i) => self.stack.push(Value::I32(-i)),
-                    Value::I64(i) => self.stack.push(Value::I64(-i)),
-                    Value::U32(_) => return Err("Cannot negate unsigned integer U32".to_string()),
-                    Value::U64(_) => return Err("Cannot negate unsigned integer U64".to_string()),
-                    Value::F32(f) => self.stack.push(Value::F32(-f)),
-                    Value::F64(f) => self.stack.push(Value::F64(-f)),
-                    _ => return Err("Can only negate numbers".to_string()),
-                }
+                self.stack.push(value.negate()?);
             }
             OpCode::Return => {
                 // If we're in a function, return to the caller
@@ -433,93 +335,31 @@ impl VM {
             }
             OpCode::BoolNot => {
                 let value = self.pop()?;
-                match value {
-                    Value::Boolean(b) => self.stack.push(Value::Boolean(!b)),
-                    _ => return Err("Can only negate boolean values".to_string()),
-                }
+                self.stack.push(value.not()?);
             }
             OpCode::BoolAnd => {
-                self.binary_op(|a, b| match (a, b) {
-                    (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Boolean(*a && *b)),
-                    _ => Err("Logical AND operator requires boolean operands".to_string()),
-                })?;
+                self.binary_op(|a, b| a.and(&b))?;
             }
             OpCode::BoolOr => {
-                self.binary_op(|a, b| match (a, b) {
-                    (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Boolean(*a || *b)),
-                    _ => Err("Logical OR operator requires boolean operands".to_string()),
-                })?;
+                self.binary_op(|a, b| a.or(&b))?;
             }
-            // Relational operators
             OpCode::Greater => {
-                self.binary_op(|a, b| match (a, b) {
-                    (Value::I32(a), Value::I32(b)) => Ok(Value::Boolean(a > b)),
-                    (Value::I64(a), Value::I64(b)) => Ok(Value::Boolean(a > b)),
-                    (Value::U32(a), Value::U32(b)) => Ok(Value::Boolean(a > b)),
-                    (Value::U64(a), Value::U64(b)) => Ok(Value::Boolean(a > b)),
-                    (Value::F32(a), Value::F32(b)) => Ok(Value::Boolean(a > b)),
-                    (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a > b)),
-                    _ => Err("Cannot compare these types with >".to_string()),
-                })?;
+                self.binary_op(|a, b| a.greater_than(&b))?;
             }
             OpCode::Less => {
-                self.binary_op(|a, b| match (a, b) {
-                    (Value::I32(a), Value::I32(b)) => Ok(Value::Boolean(a < b)),
-                    (Value::I64(a), Value::I64(b)) => Ok(Value::Boolean(a < b)),
-                    (Value::U32(a), Value::U32(b)) => Ok(Value::Boolean(a < b)),
-                    (Value::U64(a), Value::U64(b)) => Ok(Value::Boolean(a < b)),
-                    (Value::F32(a), Value::F32(b)) => Ok(Value::Boolean(a < b)),
-                    (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a < b)),
-                    _ => Err("Cannot compare these types with <".to_string()),
-                })?;
+                self.binary_op(|a, b| a.less_than(&b) )?;
             }
             OpCode::GreaterEqual => {
-                self.binary_op(|a, b| match (a, b) {
-                    (Value::I32(a), Value::I32(b)) => Ok(Value::Boolean(a >= b)),
-                    (Value::I64(a), Value::I64(b)) => Ok(Value::Boolean(a >= b)),
-                    (Value::U32(a), Value::U32(b)) => Ok(Value::Boolean(a >= b)),
-                    (Value::U64(a), Value::U64(b)) => Ok(Value::Boolean(a >= b)),
-                    (Value::F32(a), Value::F32(b)) => Ok(Value::Boolean(a >= b)),
-                    (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a >= b)),
-                    _ => Err("Cannot compare these types with >=".to_string()),
-                })?;
+                self.binary_op(|a, b| a.greater_than_equal(&b))?;
             }
             OpCode::LessEqual => {
-                self.binary_op(|a, b| match (a, b) {
-                    (Value::I32(a), Value::I32(b)) => Ok(Value::Boolean(a <= b)),
-                    (Value::I64(a), Value::I64(b)) => Ok(Value::Boolean(a <= b)),
-                    (Value::U32(a), Value::U32(b)) => Ok(Value::Boolean(a <= b)),
-                    (Value::U64(a), Value::U64(b)) => Ok(Value::Boolean(a <= b)),
-                    (Value::F32(a), Value::F32(b)) => Ok(Value::Boolean(a <= b)),
-                    (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a <= b)),
-                    _ => Err("Cannot compare these types with <=".to_string()),
-                })?;
+                self.binary_op(|a, b| a.less_than_equal(&b))?;
             }
             OpCode::Equal => {
-                self.binary_op(|a, b| match (a, b) {
-                    (Value::I32(a), Value::I32(b)) => Ok(Value::Boolean(a == b)),
-                    (Value::I64(a), Value::I64(b)) => Ok(Value::Boolean(a == b)),
-                    (Value::U32(a), Value::U32(b)) => Ok(Value::Boolean(a == b)),
-                    (Value::U64(a), Value::U64(b)) => Ok(Value::Boolean(a == b)),
-                    (Value::F32(a), Value::F32(b)) => Ok(Value::Boolean(a == b)),
-                    (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a == b)),
-                    (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Boolean(a == b)),
-                    (Value::String(a), Value::String(b)) => Ok(Value::Boolean(a == b)),
-                    _ => Err("Cannot compare these types with ==".to_string()),
-                })?;
+                self.binary_op(|a, b| a.equal(&b))?;
             }
             OpCode::NotEqual => {
-                self.binary_op(|a, b| match (a, b) {
-                    (Value::I32(a), Value::I32(b)) => Ok(Value::Boolean(a != b)),
-                    (Value::I64(a), Value::I64(b)) => Ok(Value::Boolean(a != b)),
-                    (Value::U32(a), Value::U32(b)) => Ok(Value::Boolean(a != b)),
-                    (Value::U64(a), Value::U64(b)) => Ok(Value::Boolean(a != b)),
-                    (Value::F32(a), Value::F32(b)) => Ok(Value::Boolean(a != b)),
-                    (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a != b)),
-                    (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Boolean(a != b)),
-                    (Value::String(a), Value::String(b)) => Ok(Value::Boolean(a != b)),
-                    _ => Err("Cannot compare these types with !=".to_string()),
-                })?;
+                self.binary_op(|a, b| a.not_equal(&b))?;
             }
         }
 

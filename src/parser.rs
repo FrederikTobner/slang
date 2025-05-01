@@ -1,6 +1,6 @@
 use crate::ast::{
     BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Parameter, 
-    Statement, TypeDefinitionStmt, UnaryExpr, Value,
+    Statement, TypeDefinitionStmt, UnaryExpr, LiteralValue,
 };
 use crate::token::{Token, Tokentype};
 use crate::types::{TypeId, TYPE_REGISTRY};
@@ -555,7 +555,7 @@ impl<'a> Parser<'a> {
         if self.match_token(Tokentype::StringLiteral) {
             let value = self.previous().lexeme.clone();
             return Ok(Expression::Literal(LiteralExpr {
-                value: Value::String(value),
+                value: LiteralValue::String(value),
                 expr_type: string_type(),
             }));
         }
@@ -564,7 +564,7 @@ impl<'a> Parser<'a> {
             let lexeme = self.previous().lexeme.clone();
             let bool_value = lexeme == "true";
             return Ok(Expression::Literal(LiteralExpr {
-                value: Value::Boolean(bool_value),
+                value: LiteralValue::Boolean(bool_value),
                 expr_type: bool_type(),
             }));
         }
@@ -603,14 +603,14 @@ fn parse_float(&mut self) -> Result<Expression, String> {
                 "f32" => {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
-                        value: Value::F32(value as f32),
+                        value: LiteralValue::F32(value as f32),
                         expr_type: f32_type(),
                     }));
                 }
                 "f64" => {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
-                        value: Value::F64(value),
+                        value: LiteralValue::F64(value),
                         expr_type: f64_type(),
                     }));
                 }
@@ -620,7 +620,7 @@ fn parse_float(&mut self) -> Result<Expression, String> {
         
         // Unspecified float literal
         Ok(Expression::Literal(LiteralExpr {
-            value: Value::UnspecifiedFloat(value),
+            value: LiteralValue::UnspecifiedFloat(value),
             expr_type: unspecified_float_type(),
         }))
     }
@@ -682,14 +682,14 @@ fn parse_float(&mut self) -> Result<Expression, String> {
                         return Err(format!("Value {} is out of range for i32", base_value));
                     }
                     return Ok(Expression::Literal(LiteralExpr {
-                        value: Value::I32(base_value as i32),
+                        value: LiteralValue::I32(base_value as i32),
                         expr_type: i32_type(),
                     }));
                 }
                 "i64" => {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
-                        value: Value::I64(base_value),
+                        value: LiteralValue::I64(base_value),
                         expr_type: i64_type(),
                     }));
                 }
@@ -699,7 +699,7 @@ fn parse_float(&mut self) -> Result<Expression, String> {
                         return Err(format!("Value {} is out of range for u32", base_value));
                     }
                     return Ok(Expression::Literal(LiteralExpr {
-                        value: Value::U32(base_value as u32),
+                        value: LiteralValue::U32(base_value as u32),
                         expr_type: u32_type(),
                     }));
                 }
@@ -709,21 +709,21 @@ fn parse_float(&mut self) -> Result<Expression, String> {
                         return Err(format!("Value {} is out of range for u64", base_value));
                     }
                     return Ok(Expression::Literal(LiteralExpr {
-                        value: Value::U64(base_value as u64),
+                        value: LiteralValue::U64(base_value as u64),
                         expr_type: u64_type(),
                     }));
                 }
                 "f32" => {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
-                        value: Value::F32(base_value as f32),
+                        value: LiteralValue::F32(base_value as f32),
                         expr_type: f32_type(),
                     }));
                 }
                 "f64" => {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
-                        value: Value::F64(base_value as f64),
+                        value: LiteralValue::F64(base_value as f64),
                         expr_type: f64_type(),
                     }));
                 }
@@ -733,7 +733,7 @@ fn parse_float(&mut self) -> Result<Expression, String> {
         
         // Unspecified integer literal
         Ok(Expression::Literal(LiteralExpr {
-            value: Value::UnspecifiedInteger(base_value),
+            value: LiteralValue::UnspecifiedInteger(base_value),
             expr_type: unspecified_int_type(),
         }))
     }

@@ -1,6 +1,6 @@
 use crate::ast::{
     BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, 
-    Statement, TypeDefinitionStmt, UnaryExpr, Value,
+    Statement, TypeDefinitionStmt, UnaryExpr, LiteralValue,
 };
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
@@ -228,7 +228,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 // Handle special case for unspecified integers
                 if actual_type == unspecified_int_type() {
                     if let Expression::Literal(lit) = expr {
-                        if let Value::UnspecifiedInteger(n) = &lit.value {
+                        if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                             let value_in_range = TYPE_REGISTRY.with(|registry| {
                                 registry.borrow().check_value_in_range(n, &expected_type)
                             });
@@ -243,7 +243,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 // Handle special case for unspecified floats
                 if actual_type == unspecified_float_type() {
                     if let Expression::Literal(lit) = expr {
-                        if let Value::UnspecifiedFloat(f) = &lit.value {
+                        if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
                             let value_in_range = TYPE_REGISTRY.with(|registry| {
                                 registry.borrow().check_float_value_in_range(f, &expected_type)
                             });
@@ -326,7 +326,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                     // Handle special case for unspecified integers
                     if arg_type == unspecified_int_type() {
                         if let Expression::Literal(lit) = arg {
-                            if let Value::UnspecifiedInteger(n) = &lit.value {
+                            if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                                 let value_in_range = TYPE_REGISTRY.with(|registry| {
                                     registry.borrow().check_value_in_range(n, param_type)
                                 });
@@ -407,7 +407,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 // Check for both direct literals and literals inside unary expressions
                 match &let_stmt.value {
                     Expression::Literal(lit) => {
-                        if let Value::UnspecifiedInteger(n) = &lit.value {
+                        if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                             // Check if the value is in range for the target type
                             let value_in_range = TYPE_REGISTRY.with(|registry| {
                                 registry.borrow().check_value_in_range(n, &let_stmt.expr_type)
@@ -455,7 +455,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                         if unary_expr.operator == Tokentype::Minus {
                             // Handle negated integer literals
                             if let Expression::Literal(lit) = &*unary_expr.right {
-                                if let Value::UnspecifiedInteger(n) = &lit.value {
+                                if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                                     // For negation, we need to check the negative value
                                     let negated_value = -*n;
                                     let value_in_range = TYPE_REGISTRY.with(|registry| {
@@ -528,7 +528,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 // Handle unspecified float literals
                 match &let_stmt.value {
                     Expression::Literal(lit) => {
-                        if let Value::UnspecifiedFloat(f) = &lit.value {
+                        if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
                             if self.is_float_type(&let_stmt.expr_type) {
                                 // Check if the float is in range for the target type
                                 let value_in_range = TYPE_REGISTRY.with(|registry| {
@@ -598,7 +598,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                         if unary_expr.operator == Tokentype::Minus {
                             // Handle negated float literals
                             if let Expression::Literal(lit) = &*unary_expr.right {
-                                if let Value::UnspecifiedFloat(f) = &lit.value {
+                                if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
                                     if self.is_float_type(&let_stmt.expr_type) {
                                         // For negation, we need to check the negative value
                                         let negated_value = -*f;
@@ -712,16 +712,16 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> Result<TypeId, String> {
         // Infer type from literal
         match lit_expr.value {
-            Value::I32(_) => Ok(i32_type()),
-            Value::I64(_) => Ok(i64_type()),
-            Value::U32(_) => Ok(u32_type()),
-            Value::U64(_) => Ok(u64_type()),
-            Value::F32(_) => Ok(f32_type()),
-            Value::F64(_) => Ok(f64_type()),
-            Value::UnspecifiedInteger(_) => Ok(unspecified_int_type()),
-            Value::UnspecifiedFloat(_) => Ok(unspecified_float_type()),
-            Value::String(_) => Ok(string_type()),
-            Value::Boolean(_) => Ok(bool_type()),
+            LiteralValue::I32(_) => Ok(i32_type()),
+            LiteralValue::I64(_) => Ok(i64_type()),
+            LiteralValue::U32(_) => Ok(u32_type()),
+            LiteralValue::U64(_) => Ok(u64_type()),
+            LiteralValue::F32(_) => Ok(f32_type()),
+            LiteralValue::F64(_) => Ok(f64_type()),
+            LiteralValue::UnspecifiedInteger(_) => Ok(unspecified_int_type()),
+            LiteralValue::UnspecifiedFloat(_) => Ok(unspecified_float_type()),
+            LiteralValue::String(_) => Ok(string_type()),
+            LiteralValue::Boolean(_) => Ok(bool_type()),
         }
     }
 
@@ -819,7 +819,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             if left_type == unspecified_int_type() && self.is_integer_type(&right_type) {
                 // Check if the unspecified integer literal value is in range
                 if let Expression::Literal(lit) = &*bin_expr.left {
-                    if let Value::UnspecifiedInteger(n) = &lit.value {
+                    if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                         // Check if value is in valid range for the target type
                         let value_in_range = TYPE_REGISTRY.with(|registry| {
                             registry.borrow().check_value_in_range(n, &right_type)
@@ -848,7 +848,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             if right_type == unspecified_int_type() && self.is_integer_type(&left_type) {
                 // Similar check for right side
                 if let Expression::Literal(lit) = &*bin_expr.right {
-                    if let Value::UnspecifiedInteger(n) = &lit.value {
+                    if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                         let value_in_range = TYPE_REGISTRY.with(|registry| {
                             registry.borrow().check_value_in_range(n, &left_type)
                         });
@@ -877,7 +877,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             if left_type == unspecified_float_type() && self.is_float_type(&right_type) {
                 // Check if the unspecified float literal value is in range
                 if let Expression::Literal(lit) = &*bin_expr.left {
-                    if let Value::UnspecifiedFloat(f) = &lit.value {
+                    if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
                         // Check if value is in valid range for the target type
                         let value_in_range = TYPE_REGISTRY.with(|registry| {
                             registry.borrow().check_float_value_in_range(f, &right_type)
@@ -906,7 +906,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             if right_type == unspecified_float_type() && self.is_float_type(&left_type) {
                 // Similar check for right side with float literals
                 if let Expression::Literal(lit) = &*bin_expr.right {
-                    if let Value::UnspecifiedFloat(f) = &lit.value {
+                    if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
                         let value_in_range = TYPE_REGISTRY.with(|registry| {
                             registry.borrow().check_float_value_in_range(f, &left_type)
                         });
