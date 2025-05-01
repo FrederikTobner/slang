@@ -148,7 +148,7 @@ impl Visitor<Result<(), String>> for Compiler {
         }
     }
     
-    fn visit_block_statement(&mut self, stmts: &Vec<Statement>) -> Result<(), String> {
+    fn visit_block_statement(&mut self, stmts: &[Statement]) -> Result<(), String> {
         self.begin_scope();
         
         for stmt in stmts {

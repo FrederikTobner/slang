@@ -71,7 +71,7 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level -= 2;
     }
     
-    fn visit_block_statement(&mut self, stmts: &Vec<Statement>) {
+    fn visit_block_statement(&mut self, stmts: &[Statement]) {
         println!("{}Block:", self.indent());
         self.indent_level += 1;
         for stmt in stmts {

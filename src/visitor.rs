@@ -8,7 +8,6 @@ use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationSt
 /// The generic parameter T represents the return type of the visit methods.
 pub trait Visitor<T> {
     /// Visit a general statement
-    #[allow(unused)]
     fn visit_statement(&mut self, stmt: &crate::ast::Statement) -> T;
     
     /// Visit an expression statement
@@ -24,7 +23,7 @@ pub trait Visitor<T> {
     fn visit_function_declaration_statement(&mut self, stmt: &FunctionDeclarationStmt) -> T;
     
     /// Visit a block statement (multiple statements in braces)
-    fn visit_block_statement(&mut self, stmts: &Vec<crate::ast::Statement>) -> T;
+    fn visit_block_statement(&mut self, stmts: &[crate::ast::Statement]) -> T;
     
     /// Visit a return statement
     fn visit_return_statement(&mut self, expr: &Option<Expression>) -> T;

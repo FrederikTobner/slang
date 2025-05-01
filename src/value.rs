@@ -3,22 +3,84 @@ use crate::bytecode::Function;
 use crate::bytecode::NativeFunction;
 use std::io::Read;
 
+/// Defines operations that can be performed on values in the virtual machine.
+///
+/// This trait provides a common interface for operations like arithmetic, 
+/// logical operations, and comparisons that can be performed on different
+/// types of values. Implementations should handle type checking and appropriate
+/// error conditions.
 pub trait ValueOperation 
 where Self : Sized
 {
+    /// Adds two values and returns the result.
+    ///
+    /// Returns an error if the types are incompatible or if an overflow occurs.
     fn add(&self, other: &Self) -> Result<Self, String>;
+    
+    /// Subtracts one value from another and returns the result.
+    ///
+    /// Returns an error if the types are incompatible or if an underflow occurs.
     fn subtract(&self, other: &Self) -> Result<Self, String>;
+    
+    /// Multiplies two values and returns the result.
+    ///
+    /// Returns an error if the types are incompatible or if an overflow occurs.
     fn multiply(&self, other: &Self) -> Result<Self, String>;
+    
+    /// Divides one value by another and returns the result.
+    ///
+    /// Returns an error if the types are incompatible, if the divisor is zero,
+    /// or if an overflow occurs.
     fn divide(&self, other: &Self) -> Result<Self, String>;
+    
+    /// Negates a value and returns the result.
+    ///
+    /// Returns an error if the value cannot be negated (e.g., unsigned integers).
     fn negate(&self) -> Result<Self, String>;
+    
+    /// Performs logical NOT on a boolean value.
+    ///
+    /// Returns an error if the value is not a boolean.
     fn not(&self) -> Result<Self, String>;
+    
+    /// Performs logical AND between two boolean values.
+    ///
+    /// Returns an error if either value is not a boolean.
     fn and(&self, other: &Self) -> Result<Self, String>;
+    
+    /// Performs logical OR between two boolean values.
+    ///
+    /// Returns an error if either value is not a boolean.
     fn or(&self, other: &Self) -> Result<Self, String>;
+    
+    /// Tests if two values are equal.
+    ///
+    /// Returns an error if the types cannot be compared.
     fn equal(&self, other: &Self) -> Result<Self, String>;
+    
+    /// Tests if two values are not equal.
+    ///
+    /// Returns an error if the types cannot be compared.
     fn not_equal(&self, other: &Self) -> Result<Self, String>;
+    
+    /// Tests if one value is less than another.
+    ///
+    /// Returns an error if the types cannot be compared.
     fn less_than(&self, other: &Self) -> Result<Self, String>;
+    
+    /// Tests if one value is less than or equal to another.
+    ///
+    /// Returns an error if the types cannot be compared.
     fn less_than_equal(&self, other: &Self) -> Result<Self, String>;
+    
+    /// Tests if one value is greater than another.
+    ///
+    /// Returns an error if the types cannot be compared.
     fn greater_than(&self, other: &Self) -> Result<Self, String>;
+    
+    /// Tests if one value is greater than or equal to another.
+    ///
+    /// Returns an error if the types cannot be compared.
     fn greater_than_equal(&self, other: &Self) -> Result<Self, String>;
 }
 
@@ -203,6 +265,7 @@ impl fmt::Display for Value {
 }
 
 impl ValueOperation for Value {
+    
     fn add(&self, other: &Self) -> Result<Value, String> {
         match (self, other) {
             (Value::I32(a), Value::I32(b)) => Ok(Value::I32(*a + *b)),
@@ -217,6 +280,7 @@ impl ValueOperation for Value {
             _ => Err("Cannot add these types".to_string()),
         }
     }
+
     fn subtract(&self, other: &Self) -> Result<Value, String> {
         match (self, other) {
             (Value::I32(a), Value::I32(b)) => Ok(Value::I32(*a - *b)),
@@ -240,6 +304,7 @@ impl ValueOperation for Value {
                     _ => Err("Cannot subtract these types".to_string()),
         }
     }
+
     fn multiply(&self, other: &Self) -> Result<Value, String> {
         match (self, other) {
             (Value::I32(a), Value::I32(b)) => match (*a).checked_mul(*b) {
@@ -263,6 +328,7 @@ impl ValueOperation for Value {
             _ => Err("Cannot multiply these types".to_string()),
         }
     }
+
     fn divide(&self, other: &Self) -> Result<Value, String> {
         match (self, other) {
             (Value::I32(a), Value::I32(b)) => {
@@ -320,7 +386,7 @@ impl ValueOperation for Value {
     fn not(&self) -> Result<Value, String> {
         match self {
             Value::Boolean(b) => Ok(Value::Boolean(!b)),
-            _ => return Err("Can only negate boolean values".to_string()),
+            _ => Err("Can only negate boolean values".to_string()),
         }
     }
 
@@ -413,5 +479,4 @@ impl ValueOperation for Value {
             _ => Err("Cannot compare these types with >=".to_string()),
         }
     }
-
 }

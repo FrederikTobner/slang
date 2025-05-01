@@ -197,7 +197,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
         result.and(Ok(fn_decl.return_type.clone()))
     }
     
-    fn visit_block_statement(&mut self, stmts: &Vec<Statement>) -> Result<TypeId, String> {
+    fn visit_block_statement(&mut self, stmts: &[Statement]) -> Result<TypeId, String> {
         // Save current variables to restore scope later
         let saved_variables = self.variables.clone();
         
@@ -847,10 +847,10 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             
             if right_type == unspecified_int_type() && self.is_integer_type(&left_type) {
                 // Similar check for right side
-                if let Expression::Literal(lit) = &*bin_expr.right {
-                    if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
+                if let Expression::Literal(literal) = &*bin_expr.right {
+                    if let LiteralValue::UnspecifiedInteger(num) = &literal.value {
                         let value_in_range = TYPE_REGISTRY.with(|registry| {
-                            registry.borrow().check_value_in_range(n, &left_type)
+                            registry.borrow().check_value_in_range(num, &left_type)
                         });
                         
                         if value_in_range {
@@ -865,7 +865,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                             
                             return Err(format!(
                                 "Integer literal {} is out of range for type {}",
-                                n, left_type_name
+                                num, left_type_name
                             ));
                         }
                     }
@@ -987,12 +987,12 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 if is_numeric {
                     // Special case for unsigned integers
                     if operand_type == u32_type() || operand_type == u64_type() {
-                        return Err(format!("Cannot negate unsigned type"));
+                        return Err("Cannot negate unsigned type".to_string());
                     }
                     return Ok(operand_type);
                 }
                 
-                Err(format!("Cannot negate non-numeric type"))
+                Err("Cannot negate non-numeric type".to_string())
             },
             Tokentype::Not => {
                 // Check if the operand is a boolean
