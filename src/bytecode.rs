@@ -2,7 +2,7 @@ pub use std::fmt;
 pub use std::io::{Read, Write};
 
 /// Operation codes for the bytecode interpreter
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum OpCode {
     /// Push a constant onto the stack
     Constant = 0,
@@ -606,6 +606,33 @@ impl Chunk {
                 let jump_offset = ((self.code[offset + 1] as usize) << 8) | (self.code[offset + 2] as usize);
                 println!("{:<16} {:4} -> {}", "JUMP", offset, offset + 3 + jump_offset);
                 offset + 3
+            },
+            Some(OpCode::BoolNot) => {
+                self.simple_instruction("BOOL_NOT", offset)
+            },
+            Some(OpCode::BoolAnd) => {
+                self.simple_instruction("BOOL_AND", offset)
+            },
+            Some(OpCode::BoolOr) => {
+                self.simple_instruction("BOOL_OR", offset)
+            },
+            Some(OpCode::Greater) => {
+                self.simple_instruction("GREATER", offset)
+            },
+            Some(OpCode::Less) => {
+                self.simple_instruction("LESS", offset)
+            },
+            Some(OpCode::GreaterEqual) => {
+                self.simple_instruction("GREATER_EQUAL", offset)
+            },
+            Some(OpCode::LessEqual) => {
+                self.simple_instruction("LESS_EQUAL", offset)
+            },
+            Some(OpCode::Equal) => {
+                self.simple_instruction("EQUAL", offset)
+            },
+            Some(OpCode::NotEqual) => {
+                self.simple_instruction("NOT_EQUAL", offset)
             },
             None => {
                 println!("Unknown opcode: {}", instruction);

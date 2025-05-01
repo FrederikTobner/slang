@@ -316,7 +316,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 let arg_type = self.visit_expression(arg)?;
                 let param_type = &param_types[i];
                 
-                // Skip type checking for special native functions
+                // function that can accept any type(s)
                 if is_special_native {
                     continue;
                 }
@@ -389,12 +389,8 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
 
     fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> Result<TypeId, String> {
         // Register the variable with a placeholder type first
-        let placeholder_type = if let_stmt.expr_type == unknown_type() {
-            unspecified_int_type()
-        } else {
-            let_stmt.expr_type.clone()
-        };
-        
+        let placeholder_type = let_stmt.expr_type.clone();
+
         // Add to symbol table with the placeholder type
         self.variables.insert(let_stmt.name.clone(), placeholder_type);
         
