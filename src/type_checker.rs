@@ -938,8 +938,13 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                     }
                     return Ok(operand_type);
                 }
-                
-                Err("Cannot negate non-numeric type".to_string())
+                let type_name = TYPE_REGISTRY.with(|registry| {
+                    registry.borrow()
+                        .get_type_info(&operand_type)
+                        .map(|t| t.name.clone())
+                        .unwrap_or_else(|| format!("{:?}", operand_type))
+                }); 
+                Err(format!("Cannot negate non-numeric type '{}'", type_name))
             },
             Tokentype::Not => {
                 // Check if the operand is a boolean
@@ -955,7 +960,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                         .unwrap_or_else(|| format!("{:?}", operand_type))
                 });
                 
-                Err(format!("Boolean negation operator '!' can only be applied to boolean types, but got {}", operand_type_name))
+                Err(format!("Boolean not operator '!' can only be applied to boolean types, but got {}", operand_type_name))
             },
             _ => Err(format!(
                 "Invalid unary operation: {:?}",

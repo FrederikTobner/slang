@@ -1,7 +1,7 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 
 #[test]
-fn test_negation_operator() {
+fn with_integer_variable() {
     let program = r#"
         let a: i32 = 42;
         print_value(-a);
@@ -10,16 +10,13 @@ fn test_negation_operator() {
 }
 
 #[test]
-fn test_negation_operator_with_int_literal() {
-    let program = r#"
-        let a: i32 = -42;
-        print_value(a);
-    "#;
+fn with_int_literal() {
+    let program = "print_value(-42);";
     execute_program_and_assert(program, "-42");
 }
 
 #[test]
-fn test_negation_with_float() {
+fn with_float_variable() {
     let program = r#"
         let a: f64 = 42.5;
         print_value(-a);
@@ -28,25 +25,31 @@ fn test_negation_with_float() {
 }
 
 #[test]
-fn test_negation_with_float_literal() {
-    let program = r#"
-        let a: f64 = -42.5;
-        print_value(a);
-    "#;
+fn with_float_literal() {
+    let program = "print_value(-42.5);";
     execute_program_and_assert(program, "-42.5");
 }
 
 #[test]
-fn test_unary_on_string_error() {
+fn with_string() {
     let program = r#"
         let a: string = "Hello";
         print_value(-a);
     "#;
-    execute_program_expect_error(program, "Cannot negate non-numeric type");
+    execute_program_expect_error(program, "Cannot negate non-numeric type \'string\'");
 }
 
 #[test]
-fn test_double_negation() {
+fn with_unsigned_integer() {
+    let program = r#"
+        let a: u32 = 42;
+        print_value(-a);
+    "#;
+    execute_program_expect_error(program, "Cannot negate unsigned type");
+}
+
+#[test]
+fn double_negation() {
     let program = r#"
         let a: i32 = 42;
         print_value(-(-a));

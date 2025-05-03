@@ -20,10 +20,10 @@ pub struct LineInfo<'a> {
 impl LineInfo<'_> {
     /// Creates a new LineInfo object
     /// 
-    /// # Arguments
+    /// ### Arguments
     /// * `source` - The source code string
     /// 
-    /// # Returns
+    /// ### Returns
     /// A new LineInfo object with the line starts calculated
     pub fn new<'a>(source: &'a str) -> LineInfo<'a> {
         let mut line_starts = vec![0];
@@ -61,10 +61,10 @@ impl LineInfo<'_> {
     
     /// Get the text for a specific line
     /// 
-    /// # Arguments
+    /// ### Arguments
     /// * `line` - The line number to retrieve
     /// 
-    /// # Returns
+    /// ### Returns
     /// The text of the line, or None if the line number is invalid
     pub fn get_line_text(&self, line: usize) -> Option<&str> {
         if line == 0 || line > self.line_starts.len() {
@@ -103,11 +103,11 @@ impl LineInfo<'_> {
 
 /// Converts source code text into a sequence of tokens with line information
 /// 
-/// # Arguments
+/// ### Arguments
 /// 
 /// * `input` - The source code to tokenize
 /// 
-/// # Returns
+/// ### Returns
 /// 
 /// A LexerResult containing tokens and line information
 pub fn tokenize(input: &str) -> LexerResult {

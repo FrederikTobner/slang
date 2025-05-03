@@ -1,7 +1,7 @@
 use crate::test_utils::execute_program_expect_error;
 
 #[test]
-fn test_missing_semicolon() {
+fn missing_semicolon() {
     let program = r#"
         let a = 42
         print_value(a);
@@ -10,7 +10,7 @@ fn test_missing_semicolon() {
 }
 
 #[test]
-fn test_mismatched_brackets() {
+fn mismatched_brackets() {
     let program = r#"
         fn test() {
     "#;
@@ -18,7 +18,7 @@ fn test_mismatched_brackets() {
 }
 
 #[test]
-fn test_mismatched_parentheses() {
+fn mismatched_parentheses() {
     let program = r#"
         let a = 42;
         print_value(a;
@@ -27,7 +27,7 @@ fn test_mismatched_parentheses() {
 }
 
 #[test]
-fn test_invalid_assignment() {
+fn invalid_assignment() {
     let program = r#"
         let a = 42;
         42 = a;
@@ -36,7 +36,7 @@ fn test_invalid_assignment() {
 }
 
 #[test]
-fn test_invalid_variable_declaration() {
+fn invalid_variable_declaration() {
     let program = r#"
         let 123abc = 42;
         print_value(123abc);
@@ -45,7 +45,7 @@ fn test_invalid_variable_declaration() {
 }
 
 #[test]
-fn test_invalid_function_declaration() {
+fn invalid_function_declaration() {
     let program = r#"
         fn 123invalid() {
             print_value(42);

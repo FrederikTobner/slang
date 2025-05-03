@@ -195,6 +195,15 @@ impl<'a> Parser<'a> {
             }
             
             let type_name = self.advance().lexeme.clone();
+
+            if type_name == "int" {
+                return Err(self.error("'int' is not a valid type specifier. Use 'i32', 'i64', 'u32', or 'u64' instead"));
+            } else if type_name == "float" {
+                return Err(self.error("'float' is not a valid type specifier. Use 'f32' or 'f64' instead"));
+            } else if type_name == "unknown" {
+                return Err(self.error("'unknown' is not a valid type specifier"));
+            }
+
             TYPE_REGISTRY.with(|registry| {
                 let registry = registry.borrow();
                 registry.get_type_by_name(&type_name)
@@ -340,13 +349,13 @@ impl<'a> Parser<'a> {
                 return Err(self.error("'int' is not a valid type specifier. Use 'i32', 'i64', 'u32', or 'u64' instead"));
             } else if type_name == "float" {
                 return Err(self.error("'float' is not a valid type specifier. Use 'f32' or 'f64' instead"));
-            }
+            } 
             
             var_type = TYPE_REGISTRY.with(|registry| {
                 let registry = registry.borrow();
                 registry.get_type_by_name(&type_name)
                     .cloned()
-                    .unwrap_or_else(|| unknown_type())
+                    .unwrap_or_else(unknown_type)
             });
             
             if var_type == unknown_type() {
@@ -773,6 +782,15 @@ fn parse_float(&mut self) -> Result<Expression, ParseError> {
         }
         
         let type_name = self.advance().lexeme.clone();
+
+        // Check for placeholder types
+        if type_name == "int" {
+            return Err(self.error("'int' is not a valid type specifier. Use 'i32', 'i64', 'u32', or 'u64' instead"));
+        } else if type_name == "float" {
+            return Err(self.error("'float' is not a valid type specifier. Use 'f32' or 'f64' instead"));
+        } else if type_name == "unknown" {
+            return Err(self.error("'unknown' is not a valid type specifier"));
+        }
         
         TYPE_REGISTRY.with(|registry| {
             let registry = registry.borrow();
@@ -841,7 +859,8 @@ fn parse_float(&mut self) -> Result<Expression, ParseError> {
     /// 
     /// # Returns
     /// 
-    /// The token that was current before advancing
+    /// The token that was current before advancing, if the end of the token stream was not reached
+    /// Otherwise, returns the last token
     fn advance(&mut self) -> &Token {
         if !self.is_at_end() {
             self.current += 1;
@@ -853,7 +872,7 @@ fn parse_float(&mut self) -> Result<Expression, ParseError> {
     /// 
     /// # Returns
     /// 
-    /// true if we're at the end, false otherwise
+    /// true if all tokens have been procesed, false otherwise
     fn is_at_end(&self) -> bool {
         self.peek().token_type == Tokentype::Eof
     }

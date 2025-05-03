@@ -1,4 +1,4 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use rstest::rstest;
 
 #[rstest]
@@ -6,7 +6,7 @@ use rstest::rstest;
 #[case("i64")]
 #[case("u32")]
 #[case("u64")]
-fn test_multiplication_operator_on_int(#[case] type_name: &str) {
+fn with_integer_types(#[case] type_name: &str) {
     let program = format!(r#"
         let a: {} = 6;
         let b: {} = 7;
@@ -18,7 +18,7 @@ fn test_multiplication_operator_on_int(#[case] type_name: &str) {
 #[rstest]
 #[case("f32")]
 #[case("f64")]
-fn test_multiplication_operator_on_float(#[case] type_name: &str) {
+fn with_float_types(#[case] type_name: &str) {
     let program = format!(r#"
         let a: {} = 6.0;
         let b: {} = 7.0;
@@ -26,3 +26,14 @@ fn test_multiplication_operator_on_float(#[case] type_name: &str) {
     "#, type_name, type_name);
     execute_program_and_assert(&program, "42");
 }
+
+#[test]
+fn with_string_and_integer() {
+    let program = r#"
+        let a = "string";
+        let b = a * 3;
+    "#;
+    execute_program_expect_error(program, "Type mismatch: cannot perform Multiply operation with string and int\n");
+}
+
+

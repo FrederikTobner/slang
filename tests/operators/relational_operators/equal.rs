@@ -93,7 +93,7 @@ fn test_equal_operator_with_booleans() {
 }
 
 #[test]
-fn test_equal_operator_with_strings() {
+fn with_strings() {
     let program = r#"
         let result1 = "hello" == "hello";
         let result2 = "hello" == "world";

@@ -6,7 +6,7 @@ use rstest::rstest;
 #[case("i64")]
 #[case("u32")]
 #[case("u64")]
-fn test_division_operator_on_int(#[case] type_name: &str) {
+fn with_integer_types(#[case] type_name: &str) {
     let program = format!(r#"
         let a: {} = 126;
         let b: {} = 3;
@@ -18,7 +18,7 @@ fn test_division_operator_on_int(#[case] type_name: &str) {
 #[rstest]
 #[case("f32")]
 #[case("f64")]
-fn test_division_operator_on_float(#[case] type_name: &str) {
+fn with_float_types(#[case] type_name: &str) {
     let program = format!(r#"
         let a: {} = 126.0;
         let b: {} = 3.0;

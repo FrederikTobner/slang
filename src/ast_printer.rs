@@ -52,7 +52,6 @@ impl Visitor<()> for ASTPrinter {
         
         self.indent_level += 1;
         
-        // Print parameters
         if !fn_decl.parameters.is_empty() {
             println!("{}Parameters:", self.indent());
             self.indent_level += 1;
@@ -62,7 +61,6 @@ impl Visitor<()> for ASTPrinter {
             self.indent_level -= 1;
         }
         
-        // Print body
         println!("{}Body:", self.indent());
         self.indent_level += 1;
         for stmt in &fn_decl.body {

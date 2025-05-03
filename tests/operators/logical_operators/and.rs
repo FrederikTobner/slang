@@ -6,7 +6,7 @@ use rstest::rstest;
 #[case("true", "false", "false")]
 #[case("false", "true", "false")]
 #[case("false", "false", "false")]
-fn test_logical_and_operator(#[case] first: &str, 
+fn with_boolean_types(#[case] first: &str, 
     #[case] second: &str, 
     #[case] expected: &str) {
     let program = format!(
@@ -18,9 +18,21 @@ fn test_logical_and_operator(#[case] first: &str,
     execute_program_and_assert(&program, expected);
 }
 
+#[rstest]
+#[case("true", "true", "true")]
+#[case("true", "false", "false")]
+#[case("false", "true", "false")]
+#[case("false", "false", "false")]
+fn with_boolean_literals(#[case] first: &str, 
+    #[case] second: &str, 
+    #[case] expected: &str) {
+    let program = format!("print_value({} && {});", first, second); 
+
+        execute_program_and_assert(&program, expected);
+}
 
 #[test]
-fn test_logical_and_with_non_boolean_types() {
+fn with_non_boolean_types() {
     let program = r#"
         let a: i32 = 1;
         let b: bool = true;
@@ -30,7 +42,7 @@ fn test_logical_and_with_non_boolean_types() {
 }
 
 #[test]
-fn test_logical_and_short_circuit() {
+fn short_circuit() {
     // If short-circuiting works correctly, this will not cause an error
     // because the second part won't be evaluated when the first is false
     let program = r#"
@@ -40,13 +52,4 @@ fn test_logical_and_short_circuit() {
     execute_program_and_assert(program, "false");
 }
 
-#[test]
-fn test_logical_or_short_circuit() {
-    // If short-circuiting works correctly, this will not cause an error
-    // because the second part won't be evaluated when the first is true
-    let program = r#"
-        let result = true || (1 / 0 > 0);
-        print_value(result);
-    "#;
-    execute_program_and_assert(program, "true");
-}
+

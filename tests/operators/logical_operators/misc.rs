@@ -1,7 +1,7 @@
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::test_utils::execute_program_and_assert;
 
 #[test]
-fn test_logical_operators_complex_expression() {
+fn complex_expression() {
     let program = r#"
         let a: bool = true;
         let b: bool = false;
@@ -12,7 +12,7 @@ fn test_logical_operators_complex_expression() {
 }
 
 #[test]
-fn test_logical_operators_with_not() {
+fn with_not() {
     let program = r#"
         let a: bool = true;
         let b: bool = true;
@@ -22,7 +22,7 @@ fn test_logical_operators_with_not() {
 }
 
 #[test]
-fn test_logical_operators_precedence() {
+fn precedence() {
     let program = r#"
         let a: bool = true;
         let b: bool = false;
@@ -32,3 +32,4 @@ fn test_logical_operators_precedence() {
     "#;
     execute_program_and_assert(program, "true");
 }
+

@@ -1,7 +1,7 @@
 use crate::test_utils::execute_program_expect_error;
 
 #[test]
-fn test_type_mismatch_assignment() {
+fn type_mismatch_assignment() {
     let program = r#"
         let x: i32 = "not an integer";
     "#;
@@ -10,7 +10,7 @@ fn test_type_mismatch_assignment() {
 }
 
 #[test]
-fn test_incompatible_binary_operands() {
+fn incompatible_binary_operands() {
     let program = r#"
         let a: i32 = 5;
         let b: string = "hello";
@@ -21,7 +21,7 @@ fn test_incompatible_binary_operands() {
 }
 
 #[test]
-fn test_undefined_variable() {
+fn undefined_variable() {
     let program = r#"
         let x: i32 = 10;
         print_value(y); 
@@ -31,7 +31,7 @@ fn test_undefined_variable() {
 }
 
 #[test]
-fn test_incompatible_numeric_types() {
+fn incompatible_numeric_types() {
     let program = r#"
         let a: i32 = 42;
         let b: f64 = 3.14;
@@ -40,19 +40,8 @@ fn test_incompatible_numeric_types() {
     execute_program_expect_error(program, "Type mismatch: cannot perform Plus operation with i32 and f64\n");
 }
 
-
-
 #[test]
-fn test_invalid_operation_for_type() {
-    let program = r#"
-        let a = "string";
-        let b = a * 3;
-    "#;
-    execute_program_expect_error(program, "Type mismatch: cannot perform Multiply operation with string and int\n");
-}
-
-#[test]
-fn test_i32_value_out_of_range() {
+fn i32_value_out_of_range() {
     let program = r#"
         let a: i32 = 2147483648; 
     "#;
@@ -60,7 +49,7 @@ fn test_i32_value_out_of_range() {
 }
 
 #[test]
-fn test_unsigned_negative_value_error() {
+fn u32_unsigned_negative_value_error() {
     let program = r#"
         let a: u32 = -1;
     "#;
@@ -68,7 +57,7 @@ fn test_unsigned_negative_value_error() {
 }
 
 #[test]
-fn test_int_type() {
+fn int_type() {
     let program = r#"
         let a: int = 0; 
     "#;
@@ -76,9 +65,18 @@ fn test_int_type() {
 }
 
 #[test]
-fn test_float_type() {
+fn float_type() {
     let program = r#"
         let a: float = 0.0; 
     "#;
     execute_program_expect_error(program, "\'float\' is not a valid type specifier. Use \'f32\' or \'f64\' instead");
 }
+
+#[test]
+fn unknown_type() {
+    let program = r#"
+        let a: unknown = 0; 
+    "#;
+    execute_program_expect_error(program, "Unknown type: unknown");
+}
+

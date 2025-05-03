@@ -57,3 +57,17 @@ fn test_undefined_function() {
     
     execute_program_expect_error(program, "Undefined function");
 }
+
+#[test]
+fn test_integer_return_type() {
+    let program = r#"
+        fn get_number() -> int {
+            return 42;
+        }
+        
+        let result = get_number();
+        print_value(result);
+    "#;
+    
+    execute_program_expect_error(program, "\'int\' is not a valid type specifier. Use \'i32\', \'i64\', \'u32\', or \'u64\' instead");
+}

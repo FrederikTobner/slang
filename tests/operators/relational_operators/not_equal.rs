@@ -79,7 +79,7 @@ fn not_equal_float(
 }
 
 #[test]
-fn test_equal_operator_with_booleans() {
+fn with_booleans() {
     let program = r#"
         let result1 = true != true;
         let result2 = false != false;
@@ -93,7 +93,7 @@ fn test_equal_operator_with_booleans() {
 }
 
 #[test]
-fn test_equal_operator_with_strings() {
+fn with_strings() {
     let program = r#"
         let result1 = "hello" != "hello";
         let result2 = "hello" != "world";

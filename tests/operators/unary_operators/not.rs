@@ -1,37 +1,88 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use rstest::rstest;
 
-#[test]
-fn test_boolean_not() {
-    let program = r#"
-        let a: bool = true;
+#[rstest]
+#[case("false", "true")]
+#[case("true", "false")]
+fn with_boolean_variable(#[case] input: &str, #[case] expected: &str) {
+    let program = format!(
+        r#"
+        let a: bool = {};
         print_value(!a);
-    "#;
-    execute_program_and_assert(program, "false");
+    "#,
+        input
+    );
+    execute_program_and_assert(&program, expected);
 }
 
-#[test]
-fn test_boolean_not_with_literal() {
-    let program = r#"
-        print_value(!false);
-    "#;
-    execute_program_and_assert(program, "true");
+#[rstest]
+#[case("false", "true")]
+#[case("true", "false")]
+fn with_boolean_literal(#[case] input: &str, #[case] expected: &str) {
+    let program = format!("print_value(!{});", input);
+    execute_program_and_assert(&program, expected);
 }
 
-#[test]
-fn test_double_boolean_not() {
-    let program = r#"
-        let a: bool = true;
+#[rstest]
+#[case("false")]
+#[case("true")]
+fn double_not_with_boolean_variable(#[case] input: &str) {
+    let program = format!(
+        r#"
+        let a: bool = {};
         print_value(!(!a));
-    "#;
-    execute_program_and_assert(program, "true");
+    "#,
+        input
+    );
+    execute_program_and_assert(&program, input);
 }
 
-#[test]
-fn test_boolean_not_type_error() {
-    let program = r#"
-        let a: i32 = 42;
+#[rstest]
+#[case("false")]
+#[case("true")]
+fn double_not_with_boolean_literal(#[case] input: &str) {
+    let program = format!("print_value(!(!{}));", input);
+    execute_program_and_assert(&program, input);
+}
+
+#[rstest]
+#[case("i32")]
+#[case("i64")]
+#[case("u32")]
+#[case("u64")]
+fn with_integer(#[case] type_name: &str) {
+    let program = format!(
+        r#"
+        let a: {} = 42;
         print_value(!a);
-    "#;
-    execute_program_expect_error(program, "Boolean negation operator '!' can only be applied to boolean types");
+    "#,
+        type_name
+    );
+    execute_program_expect_error(
+        &program,
+        &format!(
+            "Boolean not operator '!' can only be applied to boolean types, but got {}",
+            type_name
+        ),
+    );
 }
 
+#[rstest]
+#[case("f32")]
+#[case("f64")]
+fn with_float(#[case] type_name: &str) {
+    let program = format!(
+        r#"
+        let a: {} = 42.0;
+        print_value(!a);
+    "#,
+        type_name
+    );
+    execute_program_expect_error(
+        &program,
+        &format!(
+            "Boolean not operator '!' can only be applied to boolean types, but got {}",
+            type_name
+        ),
+    );
+}

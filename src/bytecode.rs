@@ -323,7 +323,7 @@ impl Chunk {
 
         for _ in 0..constants_len {
             let mut type_tag = [0u8; 1];
-            reader.read_exact(&mut type_tag)?;
+             reader.read_exact(&mut type_tag)?;
 
             let value = Value::deserialize_from_type_tag(type_tag[0], reader)?;
             chunk.constants.push(value);
@@ -351,6 +351,9 @@ impl Chunk {
     }
 
     /// Debugging function to print the chunk's bytecode
+    /// 
+    /// ### Arguments
+    /// * `name` - The name of the chunk (for debugging purposes)
     #[cfg(feature = "print-byte_code")]
     pub fn disassemble(&self, name: &str) {
         println!("== {} ==", name);
@@ -461,6 +464,13 @@ impl Chunk {
     }
     
     /// Helper for disassembling simple instructions
+    /// 
+    /// ### Arguments
+    /// * `name` - The name of the instruction
+    /// * `offset` - The offset in the bytecode
+    /// 
+    /// ### Returns
+    /// The new offset after disassembling the instruction
     #[cfg(feature = "print-byte_code")]
     fn simple_instruction(&self, name: &str, offset: usize) -> usize {
         println!("{}", name);
@@ -468,6 +478,13 @@ impl Chunk {
     }
     
     /// Helper for disassembling instructions with constant operands
+    /// 
+    /// ### Arguments
+    /// * `name` - The name of the instruction
+    /// * `offset` - The offset in the bytecode
+    /// 
+    /// ### Returns
+    /// The new offset after disassembling the instruction
     #[cfg(feature = "print-byte_code")]
     fn simple_instruction_with_operand(&self, name: &str, offset: usize) -> usize {
         let constant_index = self.code[offset + 1];
@@ -476,6 +493,13 @@ impl Chunk {
     }
     
     /// Helper for disassembling instructions with variable operands
+    /// 
+    /// ### Arguments
+    /// * `name` - The name of the instruction
+    /// * `offset` - The offset in the bytecode
+    /// 
+    /// ### Returns
+    /// The new offset after disassembling the instruction
     #[cfg(feature = "print-byte_code")]
     fn variable_instruction(&self, name: &str, offset: usize) -> usize {
         let var_index = self.code[offset + 1];

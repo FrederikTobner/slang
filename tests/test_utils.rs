@@ -55,3 +55,4 @@ pub fn execute_program_expect_error(program: &str, expected_error: &str) {
         .assert()
         .stderr(predicate::str::contains(expected_error));
 }
+

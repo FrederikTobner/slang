@@ -23,7 +23,6 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
 use zip::{ZipArchive, ZipWriter, write::FileOptions};
-use crate::types::TYPE_REGISTRY;
 
 /// The extension for compiled Slang binaries
 const SLANG_BYTECODE_EXTENSION: &str = "sip";
@@ -64,12 +63,6 @@ enum Commands {
         /// Input source file
         input: String,
     },
-}
-
-/// Initialize the type system with built-in types
-fn init_type_system() {
-    let _ = crate::types::unknown_type();
-    TYPE_REGISTRY.with(|_| ());
 }
 
 /// Parse source code into an AST
@@ -259,7 +252,7 @@ fn repl() {
                                     chunk.disassemble("REPL");
                                 }
                                 // Execute the bytecode
-                                if let Err(e) = vm.interpret(&chunk) {
+                                if let Err(e) = vm.interpret(chunk) {
                                     eprintln!("Runtime error: {}", e);
                                 }
                             }
@@ -279,9 +272,6 @@ fn repl() {
 /// Application entry point
 fn main() {
      let cli = Cli::parse();
-
-    // Initialize the type registry
-    init_type_system();
 
     match &cli.command {
         Some(Commands::Repl{}) => {

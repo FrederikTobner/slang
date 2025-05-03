@@ -1,7 +1,7 @@
 use crate::test_utils::execute_program_and_assert;
 
 #[test]
-fn test_single_line_comments() {
+fn single_line_comments() {
     let program = r#"
         let x = 5; // This is a single-line comment
         // This entire line is a comment
@@ -17,7 +17,7 @@ fn test_single_line_comments() {
 }
 
 #[test]
-fn test_multi_line_comments() {
+fn multi_line_comments() {
     let program = r#"
         let x = 5;
         /* This is a 
@@ -36,7 +36,7 @@ fn test_multi_line_comments() {
 }
 
 #[test]
-fn test_nested_multi_line_comments() {
+fn nested_multi_line_comments() {
     let program = r#"
         let x = 5;
         /* Outer comment
@@ -53,7 +53,7 @@ fn test_nested_multi_line_comments() {
 }
 
 #[test]
-fn test_comments_in_expressions() {
+fn in_expressions() {
     let program = r#"
         let x = 5 /* inline comment */ + 10;
         let y = 20 // End of line comment
@@ -69,7 +69,7 @@ fn test_comments_in_expressions() {
 }
 
 #[test]
-fn test_comments_in_complex_code() {
+fn in_complex_code() {
     let program = r#"
         // Function definition
         fn add(a: i32, b: i32) -> i32 {

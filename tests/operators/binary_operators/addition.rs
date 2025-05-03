@@ -6,7 +6,7 @@ use rstest::rstest;
 #[case("i64")]
 #[case("u32")]
 #[case("u64")]
-fn test_addition_operator_on_int(
+fn with_integer_types(
     #[case] type_name: &str,
 ) {
     let program = format!(
@@ -23,7 +23,7 @@ fn test_addition_operator_on_int(
 #[rstest]
 #[case("f32")]
 #[case("f64")]
-fn test_addition_operator_on_float(
+fn with_float_types(
     #[case] type_name: &str,
 ) {
     let program = format!(
@@ -38,7 +38,7 @@ fn test_addition_operator_on_float(
 }
 
 #[test]
-fn test_string_concatenation() {
+fn string_concatenation() {
     let program = r#"
         let hello = "Hello, ";
         let world = "world!";
@@ -48,7 +48,7 @@ fn test_string_concatenation() {
 }
 
 #[test]
-fn test_addition_with_different_integer_types() {
+fn with_different_integer_types() {
     let program = r#"
         let a: i32 = 20;
         let b: i64 = 22;
@@ -58,7 +58,7 @@ fn test_addition_with_different_integer_types() {
 }
 
 #[test]
-fn test_arithmetic_with_i32_and_f32() {
+fn with_i32_and_f32() {
     let program = r#"
         let a: i32 = 20;
         let b: f32 = 22.0;
@@ -68,7 +68,7 @@ fn test_arithmetic_with_i32_and_f32() {
 }
 
 #[test]
-fn test_arithmetic_with_i64_and_f64() {
+fn with_i64_and_f64() {
     let program = r#"
         let a: i64 = 20;
         let b: f64 = 22.0;
@@ -78,7 +78,7 @@ fn test_arithmetic_with_i64_and_f64() {
 }
 
 #[test]
-fn test_arithmetic_with_integer_and_float() {
+fn with_integer_and_float() {
     let program = r#"
         let a = 20;
         let b = 22.0;
@@ -88,7 +88,7 @@ fn test_arithmetic_with_integer_and_float() {
 }
 
 #[test]
-fn test_arithmetic_with_different_float_types() {
+fn with_f32_and_f64() {
     let program = r#"
         let a: f32 = 20.5;
         let b: f64 = 21.5;
