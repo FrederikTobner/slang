@@ -1,6 +1,6 @@
 use crate::bytecode::{Chunk, Function, NativeFunction, OpCode};
-use std::collections::HashMap;
 use crate::value::{Value, ValueOperation};
+use std::collections::HashMap;
 
 /// Call frame to track function calls
 struct CallFrame {
@@ -17,15 +17,15 @@ struct CallFrame {
 /// Virtual Machine that executes bytecode
 pub struct VM {
     /// Instruction pointer
-    ip: usize, 
+    ip: usize,
     /// Stack for values
     stack: Vec<Value>,
     /// Global variables
     variables: HashMap<String, Value>,
     /// Call frames for function calls
-    frames: Vec<CallFrame>, 
+    frames: Vec<CallFrame>,
     /// Index of the current call frame
-    current_frame: Option<usize>, 
+    current_frame: Option<usize>,
 }
 
 impl VM {
@@ -41,57 +41,62 @@ impl VM {
         vm.register_native_functions();
         vm
     }
-    
+
     /// Registers built-in functions
     fn register_native_functions(&mut self) {
         self.define_native("print_value", 1, VM::native_print_value);
     }
-    
+
     /// Defines a native (built-in) function
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `name` - Name of the native function
     /// * `arity` - Number of parameters
     /// * `function` - The Rust function implementing this native function
-    fn define_native(&mut self, name: &str, arity: u8, function: fn(&[Value]) -> Result<Value, String>) {
+    fn define_native(
+        &mut self,
+        name: &str,
+        arity: u8,
+        function: fn(&[Value]) -> Result<Value, String>,
+    ) {
         let native_fn = Value::NativeFunction(NativeFunction {
             name: name.to_string(),
             arity,
             function,
         });
-        
+
         self.variables.insert(name.to_string(), native_fn);
     }
-    
+
     /// Built-in function to print a value
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `args` - Arguments to the function (should be exactly 1)
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// Success with i32(0) if successful, or an error message
     fn native_print_value(args: &[Value]) -> Result<Value, String> {
         if args.len() != 1 {
             return Err("print_value expects exactly 1 argument".to_string());
         }
-        
+
         println!("{}", args[0]);
-        
+
         // Return 0 to indicate success
         Ok(Value::I32(0))
     }
 
     /// Interprets and executes a bytecode chunk
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `chunk` - The bytecode chunk to execute
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// Ok(()) on success, or an error message on failure
     pub fn interpret(&mut self, chunk: &Chunk) -> Result<(), String> {
         self.ip = 0;
@@ -113,13 +118,13 @@ impl VM {
     }
 
     /// Executes a single instruction
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `chunk` - The bytecode chunk containing the instruction
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// Ok(()) on success, or an error message on failure
     fn execute_instruction(&mut self, chunk: &Chunk) -> Result<(), String> {
         let instruction = self.read_byte(chunk);
@@ -136,16 +141,16 @@ impl VM {
                 self.stack.push(constant);
             }
             OpCode::Add => {
-                self.binary_op(|a, b| {a.add(&b)})?;
+                self.binary_op(|a, b| a.add(b))?;
             }
             OpCode::Subtract => {
-                self.binary_op(|a, b| {a.subtract(&b)})?;
+                self.binary_op(|a, b| a.subtract(b))?;
             }
             OpCode::Multiply => {
-                self.binary_op(|a, b| {a.multiply(&b)})?;
+                self.binary_op(|a, b| a.multiply(b))?;
             }
             OpCode::Divide => {
-                self.binary_op(|a, b| {a.divide(&b)})?;
+                self.binary_op(|a, b| a.divide(b))?;
             }
             OpCode::Negate => {
                 let value = self.pop()?;
@@ -159,19 +164,19 @@ impl VM {
                     } else {
                         self.pop()?
                     };
-                    
+
                     let frame = &self.frames[frame_index];
                     let return_address = frame.return_address;
                     let stack_offset = frame.stack_offset;
-                    
+
                     while self.stack.len() > stack_offset {
                         self.pop()?;
                     }
-                    
+
                     self.stack.push(return_value);
-                    
+
                     self.ip = return_address;
-                    
+
                     self.frames.pop();
                     self.current_frame = if self.frames.is_empty() {
                         None
@@ -193,7 +198,7 @@ impl VM {
                     return Err("Invalid variable index".to_string());
                 }
                 let var_name = &chunk.identifiers[var_index];
-                
+
                 let value = if let Some(frame_idx) = self.current_frame {
                     if let Some(value) = self.frames[frame_idx].locals.get(var_name) {
                         value.clone()
@@ -202,14 +207,12 @@ impl VM {
                     } else {
                         return Err(format!("Undefined variable '{}'", var_name));
                     }
+                } else if let Some(value) = self.variables.get(var_name) {
+                    value.clone()
                 } else {
-                    if let Some(value) = self.variables.get(var_name) {
-                        value.clone()
-                    } else {
-                        return Err(format!("Undefined variable '{}'", var_name));
-                    }
+                    return Err(format!("Undefined variable '{}'", var_name));
                 };
-                
+
                 self.stack.push(value);
             }
             OpCode::SetVariable => {
@@ -222,7 +225,7 @@ impl VM {
                 }
                 let var_name = chunk.identifiers[var_index].clone();
                 let value = self.stack.last().unwrap().clone();
-                
+
                 if let Some(frame_idx) = self.current_frame {
                     if self.frames[frame_idx].function.locals.contains(&var_name) {
                         // Local variable
@@ -241,11 +244,11 @@ impl VM {
             OpCode::DefineFunction => {
                 let var_index = self.read_byte(chunk) as usize;
                 let constant_index = self.read_byte(chunk) as usize;
-                
+
                 if var_index >= chunk.identifiers.len() || constant_index >= chunk.constants.len() {
                     return Err("Invalid index for function definition".to_string());
                 }
-                
+
                 let var_name = chunk.identifiers[var_index].clone();
                 let value = chunk.constants[constant_index].clone();
 
@@ -257,10 +260,10 @@ impl VM {
                 if self.stack.len() < arg_count + 1 {
                     return Err("Stack underflow during function call".to_string());
                 }
-                
+
                 let function_pos = self.stack.len() - 1;
                 let function_value = self.stack[function_pos].clone();
-                
+
                 match function_value {
                     Value::Function(func) => {
                         // Check argument count
@@ -270,7 +273,7 @@ impl VM {
                                 func.arity, arg_count
                             ));
                         }
-                        
+
                         let mut locals = HashMap::new();
 
                         for i in 0..arg_count {
@@ -280,19 +283,19 @@ impl VM {
                                 locals.insert(param_name.clone(), arg_value);
                             }
                         }
-                        
+
                         let frame = CallFrame {
                             function: func.clone(),
                             return_address: self.ip,
                             stack_offset: function_pos,
                             locals,
                         };
-                        
+
                         self.frames.push(frame);
                         self.current_frame = Some(self.frames.len() - 1);
-                        
+
                         self.ip = func.code_offset;
-                    },
+                    }
                     Value::NativeFunction(native_fn) => {
                         if arg_count != native_fn.arity as usize {
                             return Err(format!(
@@ -300,35 +303,37 @@ impl VM {
                                 native_fn.arity, arg_count
                             ));
                         }
-                        
+
                         let mut args = Vec::with_capacity(arg_count);
                         for i in 0..arg_count {
                             args.push(self.stack[function_pos - 1 - i].clone());
                         }
-                        
+
                         let result = (native_fn.function)(&args)?;
                         for _ in 0..=arg_count {
                             self.pop()?;
                         }
-                        
+
                         self.stack.push(result);
-                    },
+                    }
                     _ => return Err("Can only call functions".to_string()),
                 }
             }
             OpCode::Jump => {
-                let offset = ((self.read_byte(chunk) as usize) << 8) | self.read_byte(chunk) as usize;
+                let offset =
+                    ((self.read_byte(chunk) as usize) << 8) | self.read_byte(chunk) as usize;
                 self.ip += offset;
             }
             OpCode::JumpIfFalse => {
-                let offset = ((self.read_byte(chunk) as usize) << 8) | self.read_byte(chunk) as usize;
+                let offset =
+                    ((self.read_byte(chunk) as usize) << 8) | self.read_byte(chunk) as usize;
                 let condition = self.peek(0)?;
-                
+
                 let is_truthy = match condition {
                     Value::Boolean(b) => *b,
                     _ => return Err("Condition must be a boolean".to_string()),
                 };
-                
+
                 if !is_truthy {
                     self.ip += offset;
                 }
@@ -338,28 +343,28 @@ impl VM {
                 self.stack.push(value.not()?);
             }
             OpCode::BoolAnd => {
-                self.binary_op(|a, b| a.and(&b))?;
+                self.binary_op(|a, b| a.and(b))?;
             }
             OpCode::BoolOr => {
-                self.binary_op(|a, b| a.or(&b))?;
+                self.binary_op(|a, b| a.or(b))?;
             }
             OpCode::Greater => {
-                self.binary_op(|a, b| a.greater_than(&b))?;
+                self.binary_op(|a, b| a.greater_than(b))?;
             }
             OpCode::Less => {
-                self.binary_op(|a, b| a.less_than(&b) )?;
+                self.binary_op(|a, b| a.less_than(b))?;
             }
             OpCode::GreaterEqual => {
-                self.binary_op(|a, b| a.greater_than_equal(&b))?;
+                self.binary_op(|a, b| a.greater_than_equal(b))?;
             }
             OpCode::LessEqual => {
-                self.binary_op(|a, b| a.less_than_equal(&b))?;
+                self.binary_op(|a, b| a.less_than_equal(b))?;
             }
             OpCode::Equal => {
-                self.binary_op(|a, b| a.equal(&b))?;
+                self.binary_op(|a, b| a.equal(b))?;
             }
             OpCode::NotEqual => {
-                self.binary_op(|a, b| a.not_equal(&b))?;
+                self.binary_op(|a, b| a.not_equal(b))?;
             }
         }
 
@@ -367,13 +372,13 @@ impl VM {
     }
 
     /// Reads the next byte from the chunk and advances the instruction pointer
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `chunk` - The bytecode chunk to read from
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// The byte read from the chunk
     fn read_byte(&mut self, chunk: &Chunk) -> u8 {
         let byte = chunk.code[self.ip];
@@ -382,41 +387,41 @@ impl VM {
     }
 
     /// Pops a value off the stack
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// The popped value, or an error if the stack is empty
     fn pop(&mut self) -> Result<Value, String> {
         self.stack
             .pop()
             .ok_or_else(|| "Stack underflow".to_string())
     }
-    
+
     /// Looks at a value on the stack without removing it
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `distance` - How far from the top of the stack to look
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// Reference to the value, or an error if the stack isn't deep enough
     fn peek(&self, distance: usize) -> Result<&Value, String> {
         if distance >= self.stack.len() {
             return Err("Stack underflow".to_string());
         }
-        
+
         Ok(&self.stack[self.stack.len() - 1 - distance])
     }
 
     /// Performs a binary operation on the top two values of the stack
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `op` - Function that implements the binary operation
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// Ok(()) if successful, or an error message
     fn binary_op<F>(&mut self, op: F) -> Result<(), String>
     where

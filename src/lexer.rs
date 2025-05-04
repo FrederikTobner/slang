@@ -25,7 +25,7 @@ impl LineInfo<'_> {
     /// 
     /// ### Returns
     /// A new LineInfo object with the line starts calculated
-    pub fn new<'a>(source: &'a str) -> LineInfo<'a> {
+    pub fn new(source: &str) -> LineInfo {
         let mut line_starts = vec![0];
 
         for (i, c) in source.char_indices() {
@@ -289,7 +289,7 @@ pub fn tokenize(input: &str) -> LexerResult {
                     
                     let mut nesting = 1;
                     while nesting > 0 {
-                        if chars.peek() == None {
+                        if chars.peek().is_none()  {
                             break;
                         }
                         

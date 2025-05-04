@@ -101,17 +101,17 @@ impl<'a> Parser<'a> {
     /// The parsed statement or an error message
     fn statement(&mut self) -> Result<Statement, ParseError> {
         if self.match_token(Tokentype::Let) {
-            return self.let_statement();
+            self.let_statement()
         } else if self.match_token(Tokentype::Struct) {
-            return self.type_definition_statement();
+            self.type_definition_statement()
         } else if self.match_token(Tokentype::Fn) {
-            return self.function_declaration_statement();
+            self.function_declaration_statement()
         } else if self.match_token(Tokentype::Return) {
-            return self.return_statement();
+            self.return_statement()
         } else if self.match_token(Tokentype::LeftBrace) {
-            return self.block_statement();
+            self.block_statement()
         } else {
-            return self.expression_statement();
+            self.expression_statement()
         }
     }
     
@@ -208,7 +208,7 @@ impl<'a> Parser<'a> {
                 let registry = registry.borrow();
                 registry.get_type_by_name(&type_name)
                     .cloned()
-                    .unwrap_or_else(|| unknown_type())
+                    .unwrap_or_else(unknown_type)
             })
         } else {
             unknown_type()
@@ -260,7 +260,7 @@ impl<'a> Parser<'a> {
             let registry = registry.borrow();
             registry.get_type_by_name(&type_name)
                 .cloned()
-                .unwrap_or_else(|| unknown_type())
+                .unwrap_or_else(unknown_type)
         });
         
         if param_type == unknown_type() {
@@ -300,10 +300,7 @@ impl<'a> Parser<'a> {
                 return Err(self.error("Expected ':' after field name"));
             }
             
-            let field_type = match self.parse_type() {
-                Ok(t) => t,
-                Err(e) => return Err(e),
-            };
+            let field_type = self.parse_type()?;
             
             fields.push((field_name, field_type));
             
@@ -507,7 +504,7 @@ impl<'a> Parser<'a> {
         let mut expr = self.factor()?;
 
         while self.match_any(&[Tokentype::Plus, Tokentype::Minus]) {
-            let operator = self.previous().token_type.clone();
+            let operator = self.previous().token_type;
             let right = self.factor()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
@@ -549,7 +546,7 @@ impl<'a> Parser<'a> {
     /// The parsed unary expression or an error message
     fn unary(&mut self) -> Result<Expression, ParseError> {
         if self.match_token(Tokentype::Minus) {
-            let operator = self.previous().token_type.clone();
+            let operator = self.previous().token_type;
             let right = self.primary()?;
             return Ok(Expression::Unary(UnaryExpr {
                 operator,
@@ -559,7 +556,7 @@ impl<'a> Parser<'a> {
         }
         
         if self.match_token(Tokentype::Not) {
-            let operator = self.previous().token_type.clone();
+            let operator = self.previous().token_type;
             let right = self.primary()?;
             return Ok(Expression::Unary(UnaryExpr {
                 operator,

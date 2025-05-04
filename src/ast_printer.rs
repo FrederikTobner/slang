@@ -101,7 +101,7 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level -= 1;
     }
 
-    fn visit_type_definition_statement(&mut self, stmt: &TypeDefinitionStmt) -> () {
+    fn visit_type_definition_statement(&mut self, stmt: &TypeDefinitionStmt) {
         println!("{}Type Definition: {}", self.indent(), stmt.name);
         self.indent_level += 1;
         for field in &stmt.fields {
