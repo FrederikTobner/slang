@@ -6,7 +6,7 @@ use crate::token::{Token, Tokentype};
 use crate::types::{TypeId, TYPE_REGISTRY};
 use crate::types::{i32_type, i64_type, u32_type, u64_type, f32_type, f64_type, string_type, 
                   unspecified_int_type, unspecified_float_type, unknown_type, bool_type};
-use crate::lexer::LineInfo;
+use crate::token::LineInfo;
 
 /// Error that occurs during parsing
 #[derive(Debug)]

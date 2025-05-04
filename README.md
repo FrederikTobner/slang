@@ -1,3 +1,4 @@
 # Slang
 
-Toy scripting language
+Staticly typed scripting language for learning purposes written in Rust.
+

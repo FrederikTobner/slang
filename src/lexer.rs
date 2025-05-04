@@ -1,4 +1,4 @@
-use crate::token::{Token, Tokentype};
+use crate::token::{LineInfo, Token, Tokentype};
 
 pub struct LexerResult<'a> {
     /// The list of tokens generated from the input
@@ -7,457 +7,470 @@ pub struct LexerResult<'a> {
     pub line_info: LineInfo<'a>,
 }
 
-pub struct LineInfo<'a> {
-    /// Number of tokens on each line (run-length encoded)
-    /// (line_number, tokens_on_line)
-    pub per_line: Vec<(u16, u16)>, 
-    /// Reference to the original source code
-    source: &'a str,
-    /// The starting position of each line in the source code
-    pub line_starts: Vec<usize>,
+/// Lexer state for tracking position during tokenization
+struct LexerState<'a> {
+    /// Source text being tokenized
+    input: &'a str,
+    /// Iterator over source characters
+    chars: std::iter::Peekable<std::str::Chars<'a>>,
+    /// Current position in source
+    current_pos: usize,
+    /// Current line number
+    current_line: usize,
+    /// Number of tokens on current line
+    tokens_on_current_line: usize,
+    /// Tokens generated so far
+    tokens: Vec<Token>,
+    /// Line token counts for line info
+    line_tokens: Vec<(u16, u16)>,
 }
 
-impl LineInfo<'_> {
-    /// Creates a new LineInfo object
-    /// 
+impl<'a> LexerState<'a> {
+    /// Creates a new lexer state for the given input
+    ///
     /// ### Arguments
-    /// * `source` - The source code string
-    /// 
+    /// * `input` - The source code to tokenize
+    ///
     /// ### Returns
-    /// A new LineInfo object with the line starts calculated
-    pub fn new(source: &str) -> LineInfo {
-        let mut line_starts = vec![0];
+    /// A new LexerState object
+    fn new(input: &'a str) -> Self {
+        LexerState {
+            input,
+            chars: input.chars().peekable(),
+            current_pos: 0,
+            current_line: 1,
+            tokens_on_current_line: 0,
+            tokens: Vec::new(),
+            line_tokens: Vec::new(),
+        }
+    }
 
-        for (i, c) in source.char_indices() {
-            if c == '\n' {
-                line_starts.push(i + 1);
-            }
-        }
-        
-        LineInfo {
-            per_line: Vec::new(),
-            source,
-            line_starts,
-        }
-    }
-    
-    /// Get the line and column number for a token position
-    /// 
-    /// # Arguments
-    /// * `pos` - The position of the token in the source code
-    /// 
-    /// # Returns
-    /// A tuple containing the line number and column number
-    pub fn get_line_col(&self, pos: usize) -> (usize, usize) {
-        match self.line_starts.binary_search(&pos) {
-            Ok(line) => (line + 1, 1),
-            Err(line) => {
-                let line_idx = line - 1;
-                let col = pos - self.line_starts[line_idx] + 1;
-                (line_idx + 1, col)
-            }
-        }
-    }
-    
-    /// Get the text for a specific line
-    /// 
+    /// Advances to the next character in the input
+    ///
     /// ### Arguments
-    /// * `line` - The line number to retrieve
-    /// 
-    /// ### Returns
-    /// The text of the line, or None if the line number is invalid
-    pub fn get_line_text(&self, line: usize) -> Option<&str> {
-        if line == 0 || line > self.line_starts.len() {
-            return None;
+    /// * `self` - The current lexer state
+    fn advance(&mut self) -> Option<char> {
+        let c = self.chars.next();
+        if c.is_some() {
+            self.current_pos += 1;
         }
-        
-        let start = self.line_starts[line - 1];
-        let end = if line < self.line_starts.len() {
-            self.line_starts[line]
-        } else {
-            self.source.len()
-        };
-        
-        let actual_end = if start < end && end > 0 && 
-                           self.source.as_bytes().get(end - 1) == Some(&b'\n') {
-            end - 1
-        } else {
-            end
-        };
-        
-        Some(&self.source[start..actual_end])
+        c
     }
-    
-    /// Format an error message with line information and source code snippet
-    pub fn format_error(&self, pos: usize, message: &str) -> String {
-        let (line, col) = self.get_line_col(pos);
-        let line_str = self.get_line_text(line).unwrap_or("");
-        
-        format!(
-            "Error at line {}, column {}: {}\n{}\n{}^",
-            line, col, message, line_str,
-            " ".repeat(col - 1)
-        )
+
+    /// Peeks at the next character without consuming it
+    ///
+    /// ### Arguments
+    /// * `self` - The current lexer state
+    fn peek(&mut self) -> Option<&char> {
+        self.chars.peek()
+    }
+
+    /// Adds a token to the token list
+    ///
+    /// ### Arguments
+    /// * `self` - The current lexer state
+    /// * `token_type` - The type of token to add
+    /// * `lexeme` - The string representation of the token
+    /// * `start_pos` - The starting position of the token in the input
+    fn add_token(&mut self, token_type: Tokentype, lexeme: String, start_pos: usize) {
+        self.tokens.push(Token::new(token_type, lexeme, start_pos));
+        self.tokens_on_current_line += 1;
+    }
+
+    /// Records a line break, updating line counts
+    ///
+    /// ### Arguments
+    /// * `self` - The current lexer state
+    fn record_line_break(&mut self) {
+        if self.tokens_on_current_line > 0 {
+            self.line_tokens
+                .push((self.current_line as u16, self.tokens_on_current_line as u16));
+        }
+        self.current_line += 1;
+        self.tokens_on_current_line = 0;
+    }
+
+    /// Finishes tokenization and returns the result
+    ///
+    /// ### Arguments
+    /// * `self` - The current lexer state
+    fn finish(mut self) -> LexerResult<'a> {
+        // Add any remaining tokens on the last line
+        if self.tokens_on_current_line > 0 {
+            self.line_tokens
+                .push((self.current_line as u16, self.tokens_on_current_line as u16));
+        }
+
+        // Add EOF token
+        self.tokens
+            .push(Token::new(Tokentype::Eof, "".to_string(), self.current_pos));
+
+        // Create line info
+        let mut info = LineInfo::new(self.input);
+        info.per_line = self.line_tokens;
+
+        LexerResult {
+            tokens: self.tokens,
+            line_info: info,
+        }
     }
 }
 
 /// Converts source code text into a sequence of tokens with line information
-/// 
+///
 /// ### Arguments
-/// 
+///
 /// * `input` - The source code to tokenize
-/// 
+///
 /// ### Returns
-/// 
+///
 /// A LexerResult containing tokens and line information
 pub fn tokenize(input: &str) -> LexerResult {
-    let mut tokens = Vec::new();
-    let mut chars = input.chars().peekable();
-    let mut current_pos = 0;
-    let mut current_line = 1;
-    let mut tokens_on_current_line = 0;
-    let mut line_tokens = Vec::new();
-    
-    while let Some(&c) = chars.peek() {
-        let token_start_pos = current_pos;
-        
+    let mut state = LexerState::new(input);
+
+    while let Some(&c) = state.peek() {
+        let token_start_pos = state.current_pos;
+
         match c {
-            c if c.is_whitespace() => {
-                if c == '\n' {
-                    if tokens_on_current_line > 0 {
-                        line_tokens.push((current_line as u16, tokens_on_current_line as u16));
-                    }
-                    current_line += 1;
-                    tokens_on_current_line = 0;
-                }
-                chars.next();
-                current_pos += 1;
-                continue;
-            }
-
-            c if c.is_alphabetic() => {
-                let mut identifier = String::new();
-                let start_pos = current_pos;
-
-                while let Some(&c) = chars.peek() {
-                    if c.is_alphanumeric() || c == '_' {
-                        identifier.push(c);
-                        chars.next();
-                        current_pos += 1;
-                    } else {
-                        break;
-                    }
-                }
-
-                let token_type = match identifier.as_str() {
-                    "let" => Tokentype::Let,
-                    "struct" => Tokentype::Struct,
-                    "fn" => Tokentype::Fn,
-                    "return" => Tokentype::Return,
-                    "true" | "false" => Tokentype::BooleanLiteral,
-                    _ => Tokentype::Identifier,
-                };
-                
-                tokens.push(Token::new(token_type, identifier, start_pos));
-                tokens_on_current_line += 1;
-            }
-
-            c if c.is_ascii_digit() => {
-                let mut number = String::new();
-                let mut is_float = false;
-                let start_pos = current_pos;
-                
-                while let Some(&c) = chars.peek() {
-                    if c.is_ascii_digit() {
-                        number.push(c);
-                        chars.next();
-                        current_pos += 1;
-                    } else if c == '.' {
-                        if is_float {
-                            break; 
-                        }
-                        is_float = true;
-                        number.push(c);
-                        chars.next();
-                        current_pos += 1;
-                    } else if c == 'e' || c == 'E' {
-                        number.push(c);
-                        chars.next();
-                        current_pos += 1;
-                        if let Some(&next_c) = chars.peek() {
-                            if next_c == '+' || next_c == '-' {
-                                number.push(next_c);
-                                chars.next();
-                                current_pos += 1;
-                            }
-                        }
-                    } else {
-                        break;
-                    } 
-                }
-                
-                let token_type = if is_float {
-                    Tokentype::FloatLiteral
-                } else {
-                    Tokentype::IntegerLiteral
-                };
-                
-                tokens.push(Token::new(token_type, number, start_pos));
-                tokens_on_current_line += 1;
-            }
-
-            '"' => {
-                chars.next();
-                current_pos += 1;
-                let mut string = String::new();
-                let start_pos = current_pos;
-
-                while let Some(&c) = chars.peek() {
-                    if c == '"' {
-                        chars.next(); 
-                        current_pos += 1;
-                        break;
-                    } else if c == '\n' {
-                        current_line += 1;
-                        string.push(c);
-                        chars.next();
-                        current_pos += 1;
-                    } else {
-                        string.push(c);
-                        chars.next();
-                        current_pos += 1;
-                    }
-                }
-
-                tokens.push(Token::new(Tokentype::StringLiteral, string, start_pos));
-                tokens_on_current_line += 1;
-            }
-            ':' => {
-                chars.next();
-                current_pos += 1;
-                tokens.push(Token::new(Tokentype::Colon, ":".to_string(), token_start_pos));
-                tokens_on_current_line += 1;
-            }
-            '+' => {
-                chars.next();
-                current_pos += 1;
-                tokens.push(Token::new(Tokentype::Plus, "+".to_string(), token_start_pos));
-                tokens_on_current_line += 1;
-            }
-            '-' => {
-                chars.next();
-                current_pos += 1;
-                if chars.peek() == Some(&'>') {
-                    chars.next();
-                    current_pos += 1;
-                    tokens.push(Token::new(Tokentype::Arrow, "->".to_string(), token_start_pos));
-                } else {
-                    tokens.push(Token::new(Tokentype::Minus, "-".to_string(), token_start_pos));
-                }
-                tokens_on_current_line += 1;
-            }
-            '*' => {
-                chars.next();
-                current_pos += 1;
-                tokens.push(Token::new(Tokentype::Multiply, "*".to_string(), token_start_pos));
-                tokens_on_current_line += 1;
-            }
-            '/' => {
-                chars.next();
-                current_pos += 1;
-                if chars.peek() == Some(&'/') {
-                    chars.next();
-                    current_pos += 1;
-                    
-                    while let Some(&c) = chars.peek() {
-                        if c == '\n' {
-                            chars.next();
-                            current_pos += 1;
-                            if tokens_on_current_line > 0 {
-                                line_tokens.push((current_line as u16, tokens_on_current_line as u16));
-                            }
-                            current_line += 1;
-                            tokens_on_current_line = 0;
-                            break;
-                        }
-                        chars.next();
-                        current_pos += 1;
-                    }
-                } else if chars.peek() == Some(&'*') {
-                    chars.next();
-                    current_pos += 1;
-                    
-                    let mut nesting = 1;
-                    while nesting > 0 {
-                        if chars.peek().is_none()  {
-                            break;
-                        }
-                        
-                        let c = chars.peek().unwrap();
-                        if *c == '\n' {
-                            if tokens_on_current_line > 0 {
-                                line_tokens.push((current_line as u16, tokens_on_current_line as u16));
-                            }
-                            current_line += 1;
-                            tokens_on_current_line = 0;
-                        }
-                        
-                        if chars.peek() == Some(&'*') {
-                            chars.next();
-                            current_pos += 1;
-                            if chars.peek() == Some(&'/') {
-                                chars.next();
-                                current_pos += 1;
-                                nesting -= 1;
-                                continue;
-                            }
-                        } else if chars.peek() == Some(&'/') {
-                            chars.next();
-                            current_pos += 1;
-                            if chars.peek() == Some(&'*') {
-                                chars.next();
-                                current_pos += 1;
-                                nesting += 1;
-                                continue;
-                            }
-                        } else {
-                            chars.next();
-                            current_pos += 1;
-                        }
-                    }
-                } else {
-                    tokens.push(Token::new(Tokentype::Divide, "/".to_string(), token_start_pos));
-                    tokens_on_current_line += 1;
-                }
-            }
-            '=' => {
-                chars.next();
-                current_pos += 1;
-                if chars.peek() == Some(&'=') {
-                    chars.next();
-                    current_pos += 1;
-                    tokens.push(Token::new(Tokentype::EqualEqual, "==".to_string(), token_start_pos));
-                } else {
-                    tokens.push(Token::new(Tokentype::Equal, "=".to_string(), token_start_pos));
-                }
-                tokens_on_current_line += 1;
-            }
-            '<' => {
-                chars.next();
-                current_pos += 1;
-                if chars.peek() == Some(&'=') {
-                    chars.next();
-                    current_pos += 1;
-                    tokens.push(Token::new(Tokentype::LessEqual, "<=".to_string(), token_start_pos));
-                } else {
-                    tokens.push(Token::new(Tokentype::Less, "<".to_string(), token_start_pos));
-                }
-                tokens_on_current_line += 1;
-            }
-            '>' => {
-                chars.next();
-                current_pos += 1;
-                if chars.peek() == Some(&'=') {
-                    chars.next();
-                    current_pos += 1;
-                    tokens.push(Token::new(Tokentype::GreaterEqual, ">=".to_string(), token_start_pos));
-                } else {
-                    tokens.push(Token::new(Tokentype::Greater, ">".to_string(), token_start_pos));
-                }
-                tokens_on_current_line += 1;
-            }
-            '!' => {
-                chars.next();
-                current_pos += 1;
-                if chars.peek() == Some(&'=') {
-                    chars.next();
-                    current_pos += 1;
-                    tokens.push(Token::new(Tokentype::NotEqual, "!=".to_string(), token_start_pos));
-                } else {
-                    tokens.push(Token::new(Tokentype::Not, "!".to_string(), token_start_pos));
-                }
-                tokens_on_current_line += 1;
-            }
-            ';' => {
-                chars.next();
-                current_pos += 1;
-                tokens.push(Token::new(Tokentype::Semicolon, ";".to_string(), token_start_pos));
-                tokens_on_current_line += 1;
-            }
-            '{' => {
-                chars.next();
-                current_pos += 1;
-                tokens.push(Token::new(Tokentype::LeftBrace, "{".to_string(), token_start_pos));
-                tokens_on_current_line += 1;
-            }
-            '}' => {
-                chars.next();
-                current_pos += 1;
-                tokens.push(Token::new(Tokentype::RightBrace, "}".to_string(), token_start_pos));
-                tokens_on_current_line += 1;
-            }
-            ',' => {
-                chars.next();
-                current_pos += 1;
-                tokens.push(Token::new(Tokentype::Comma, ",".to_string(), token_start_pos));
-                tokens_on_current_line += 1;
-            }
-            '(' => {
-                chars.next();
-                current_pos += 1;
-                tokens.push(Token::new(Tokentype::LeftParen, "(".to_string(), token_start_pos));
-                tokens_on_current_line += 1;
-            }
-            ')' => {
-                chars.next();
-                current_pos += 1;
-                tokens.push(Token::new(Tokentype::RightParen, ")".to_string(), token_start_pos));
-                tokens_on_current_line += 1;
-            }
-            '&' => {
-                chars.next();
-                current_pos += 1;
-                if chars.peek() == Some(&'&') {
-                    chars.next();
-                    current_pos += 1;
-                    tokens.push(Token::new(Tokentype::And, "&&".to_string(), token_start_pos));
-                } else {
-                    tokens.push(Token::new(Tokentype::Invalid, "&".to_string(), token_start_pos));
-                }
-                tokens_on_current_line += 1;
-            }
-            '|' => {
-                chars.next();
-                current_pos += 1;
-                if chars.peek() == Some(&'|') {
-                    chars.next();
-                    current_pos += 1;
-                    tokens.push(Token::new(Tokentype::Or, "||".to_string(), token_start_pos));
-                } else {
-                    tokens.push(Token::new(Tokentype::Invalid, "|".to_string(), token_start_pos));
-                }
-                tokens_on_current_line += 1;
-            }
-            _ => {
-                let invalid_char = chars.next().unwrap();
-                current_pos += 1;
-                tokens.push(Token::new(Tokentype::Invalid, invalid_char.to_string(), token_start_pos));
-                tokens_on_current_line += 1;
-            }
+            c if c.is_whitespace() => handle_whitespace(&mut state),
+            c if c.is_alphabetic() => handle_identifier(&mut state, token_start_pos),
+            c if c.is_ascii_digit() => handle_number(&mut state, token_start_pos),
+            '"' => handle_string(&mut state),
+            ':' => handle_simple_token(&mut state, Tokentype::Colon, ":", token_start_pos),
+            '+' => handle_simple_token(&mut state, Tokentype::Plus, "+", token_start_pos),
+            '-' => handle_dash(&mut state, token_start_pos),
+            '*' => handle_simple_token(&mut state, Tokentype::Multiply, "*", token_start_pos),
+            '/' => handle_slash(&mut state, token_start_pos),
+            '=' => handle_equals(&mut state, token_start_pos),
+            '<' => handle_less_than(&mut state, token_start_pos),
+            '>' => handle_greater_than(&mut state, token_start_pos),
+            '!' => handle_exclamation(&mut state, token_start_pos),
+            ';' => handle_simple_token(&mut state, Tokentype::Semicolon, ";", token_start_pos),
+            '{' => handle_simple_token(&mut state, Tokentype::LeftBrace, "{", token_start_pos),
+            '}' => handle_simple_token(&mut state, Tokentype::RightBrace, "}", token_start_pos),
+            ',' => handle_simple_token(&mut state, Tokentype::Comma, ",", token_start_pos),
+            '(' => handle_simple_token(&mut state, Tokentype::LeftParen, "(", token_start_pos),
+            ')' => handle_simple_token(&mut state, Tokentype::RightParen, ")", token_start_pos),
+            '&' => handle_ampersand(&mut state, token_start_pos),
+            '|' => handle_pipe(&mut state, token_start_pos),
+            _ => handle_invalid_char(&mut state, token_start_pos),
         }
     }
-    
-    if tokens_on_current_line > 0 {
-        line_tokens.push((current_line as u16, tokens_on_current_line as u16));
+
+    state.finish()
+}
+
+/// Handles whitespace characters in the input
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+fn handle_whitespace(state: &mut LexerState) {
+    let c = state.advance().unwrap();
+
+    if c == '\n' {
+        state.record_line_break();
     }
-    
-    tokens.push(Token::new(Tokentype::Eof, "".to_string(), current_pos));
-    
-    let mut info = LineInfo::new(input);
-    info.per_line = line_tokens;
-    
-    LexerResult {
-        tokens,
-        line_info: info,
+}
+
+/// Handles alphabetic identifiers and keywords
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+/// * `start_pos` - The starting position of the identifier in the input
+fn handle_identifier(state: &mut LexerState, start_pos: usize) {
+    let mut identifier = String::new();
+
+    while let Some(&c) = state.peek() {
+        if c.is_alphanumeric() || c == '_' {
+            identifier.push(c);
+            state.advance();
+        } else {
+            break;
+        }
     }
+
+    let token_type = match identifier.as_str() {
+        "let" => Tokentype::Let,
+        "struct" => Tokentype::Struct,
+        "fn" => Tokentype::Fn,
+        "return" => Tokentype::Return,
+        "true" | "false" => Tokentype::BooleanLiteral,
+        _ => Tokentype::Identifier,
+    };
+
+    state.add_token(token_type, identifier, start_pos);
+}
+
+/// Handles numeric literals (integers and floating point)
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+/// * `start_pos` - The starting position of the number in the input
+fn handle_number(state: &mut LexerState, start_pos: usize) {
+    let mut number = String::new();
+    let mut is_float = false;
+
+    while let Some(&c) = state.peek() {
+        if c.is_ascii_digit() {
+            number.push(c);
+            state.advance();
+        } else if c == '.' {
+            if is_float {
+                break;
+            }
+            is_float = true;
+            number.push(c);
+            state.advance();
+        } else if c == 'e' || c == 'E' {
+            number.push(c);
+            state.advance();
+            if let Some(&next_c) = state.peek() {
+                if next_c == '+' || next_c == '-' {
+                    number.push(next_c);
+                    state.advance();
+                }
+            }
+        } else {
+            break;
+        }
+    }
+
+    let token_type = if is_float {
+        Tokentype::FloatLiteral
+    } else {
+        Tokentype::IntegerLiteral
+    };
+
+    state.add_token(token_type, number, start_pos);
+}
+
+/// Handles string literals
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+fn handle_string(state: &mut LexerState) {
+    state.advance(); // Skip opening quote
+    let mut string = String::new();
+    let start_pos = state.current_pos;
+
+    while let Some(&c) = state.peek() {
+        if c == '"' {
+            state.advance();
+            break;
+        } else if c == '\n' {
+            state.current_line += 1;
+            string.push(c);
+            state.advance();
+        } else {
+            string.push(c);
+            state.advance();
+        }
+    }
+
+    state.add_token(Tokentype::StringLiteral, string, start_pos);
+}
+
+/// Handles simple one-character tokens
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+/// * `token_type` - The type of token to add
+/// * `lexeme` - The string representation of the token
+/// * `start_pos` - The starting position of the token in the input
+fn handle_simple_token(
+    state: &mut LexerState,
+    token_type: Tokentype,
+    lexeme: &str,
+    start_pos: usize,
+) {
+    state.advance();
+    state.add_token(token_type, lexeme.to_string(), start_pos);
+}
+
+/// Handles dash character (minus or arrow)
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+/// * `start_pos` - The starting position of the dash in the input
+fn handle_dash(state: &mut LexerState, start_pos: usize) {
+    state.advance();
+    if state.peek() == Some(&'>') {
+        state.advance();
+        state.add_token(Tokentype::Arrow, "->".to_string(), start_pos);
+    } else {
+        state.add_token(Tokentype::Minus, "-".to_string(), start_pos);
+    }
+}
+
+/// Handles slash character (divide or comments)
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+/// * `start_pos` - The starting position of the slash in the input
+fn handle_slash(state: &mut LexerState, start_pos: usize) {
+    state.advance();
+
+    if state.peek() == Some(&'/') {
+        handle_line_comment(state);
+    } else if state.peek() == Some(&'*') {
+        handle_block_comment(state);
+    } else {
+        state.add_token(Tokentype::Divide, "/".to_string(), start_pos);
+    }
+}
+
+/// Handles single-line comments
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+fn handle_line_comment(state: &mut LexerState) {
+    state.advance(); // Skip the second '/'
+
+    while let Some(&c) = state.peek() {
+        if c == '\n' {
+            state.advance();
+            state.record_line_break();
+            break;
+        }
+        state.advance();
+    }
+}
+
+/// Handles multi-line block comments
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+fn handle_block_comment(state: &mut LexerState) {
+    state.advance(); // Skip the '*'
+
+    let mut nesting = 1;
+    while nesting > 0 {
+        if state.peek().is_none() {
+            break;
+        }
+
+        if let Some(&c) = state.peek() {
+            if c == '\n' {
+                state.record_line_break();
+            }
+        }
+
+        if state.peek() == Some(&'*') {
+            state.advance();
+            if state.peek() == Some(&'/') {
+                state.advance();
+                nesting -= 1;
+                continue;
+            }
+        } else if state.peek() == Some(&'/') {
+            state.advance();
+            if state.peek() == Some(&'*') {
+                state.advance();
+                nesting += 1;
+                continue;
+            }
+        } else {
+            state.advance();
+        }
+    }
+}
+
+/// Handles equals character (assignment or equality)
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+/// * `start_pos` - The starting position of the equals in the input
+fn handle_equals(state: &mut LexerState, start_pos: usize) {
+    state.advance();
+    if state.peek() == Some(&'=') {
+        state.advance();
+        state.add_token(Tokentype::EqualEqual, "==".to_string(), start_pos);
+    } else {
+        state.add_token(Tokentype::Equal, "=".to_string(), start_pos);
+    }
+}
+
+/// Handles less than character (less than or less than or equal)
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+/// * `start_pos` - The starting position of the less than in the input
+fn handle_less_than(state: &mut LexerState, start_pos: usize) {
+    state.advance();
+    if state.peek() == Some(&'=') {
+        state.advance();
+        state.add_token(Tokentype::LessEqual, "<=".to_string(), start_pos);
+    } else {
+        state.add_token(Tokentype::Less, "<".to_string(), start_pos);
+    }
+}
+
+/// Handles greater than character (greater than or greater than or equal)
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+/// * `start_pos` - The starting position of the greater than in the input
+fn handle_greater_than(state: &mut LexerState, start_pos: usize) {
+    state.advance();
+    if state.peek() == Some(&'=') {
+        state.advance();
+        state.add_token(Tokentype::GreaterEqual, ">=".to_string(), start_pos);
+    } else {
+        state.add_token(Tokentype::Greater, ">".to_string(), start_pos);
+    }
+}
+
+/// Handles exclamation mark (not or not equal)
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+/// * `start_pos` - The starting position of the exclamation mark in the input
+fn handle_exclamation(state: &mut LexerState, start_pos: usize) {
+    state.advance();
+    if state.peek() == Some(&'=') {
+        state.advance();
+        state.add_token(Tokentype::NotEqual, "!=".to_string(), start_pos);
+    } else {
+        state.add_token(Tokentype::Not, "!".to_string(), start_pos);
+    }
+}
+
+/// Handles ampersand character (logical AND)
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+/// * `start_pos` - The starting position of the ampersand in the input
+fn handle_ampersand(state: &mut LexerState, start_pos: usize) {
+    state.advance();
+    if state.peek() == Some(&'&') {
+        state.advance();
+        state.add_token(Tokentype::And, "&&".to_string(), start_pos);
+    } else {
+        state.add_token(Tokentype::Invalid, "&".to_string(), start_pos);
+    }
+}
+
+/// Handles pipe character (logical OR)
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+/// * `start_pos` - The starting position of the pipe in the input
+fn handle_pipe(state: &mut LexerState, start_pos: usize) {
+    state.advance();
+    if state.peek() == Some(&'|') {
+        state.advance();
+        state.add_token(Tokentype::Or, "||".to_string(), start_pos);
+    } else {
+        state.add_token(Tokentype::Invalid, "|".to_string(), start_pos);
+    }
+}
+
+/// Handles invalid characters
+///
+/// ### Arguments
+/// * `self` - The current lexer state
+/// * `start_pos` - The starting position of the invalid character in the input
+fn handle_invalid_char(state: &mut LexerState, start_pos: usize) {
+    let invalid_char = state.advance().unwrap();
+    state.add_token(Tokentype::Invalid, invalid_char.to_string(), start_pos);
 }
