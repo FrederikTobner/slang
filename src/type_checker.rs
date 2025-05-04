@@ -229,7 +229,6 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                         .map(|t| t.name.clone())
                         .unwrap_or_else(|| format!("{:?}", expected_type))
                 });
-                
                 return Err(format!(
                     "Type mismatch: function returns {} but no return value provided",
                     expected_type_name

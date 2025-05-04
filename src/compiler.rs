@@ -39,9 +39,9 @@ impl Compiler {
     /// ### Returns
     /// 
     /// A reference to the compiled bytecode chunk, or an error message
-    pub fn compile(&mut self, statements: &[Statement]) -> Result<&Chunk, String> {
+    pub fn compile(mut self, statements: &[Statement]) -> Result<Chunk, String> {
         for stmt in statements {
-            match stmt.accept(self) {
+            match stmt.accept(&mut self) {
                 Ok(_) => (),
                 Err(e) => return Err(e),
             }
@@ -49,7 +49,7 @@ impl Compiler {
 
         self.emit_op(OpCode::Return);
 
-        Ok(&self.chunk)
+        Ok(self.chunk)
     }
 
     /// Emits a single byte to the bytecode chunk

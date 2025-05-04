@@ -15,21 +15,24 @@ pub struct ParseError {
     message: String,
     /// Position in the source code where the error occurred
     position: usize,
+    /// Length of the underlined part 
+    underline_length: usize,
 }
 
 impl ParseError {
     
     /// Creates a new parse error with the given message and position
-    pub fn new(message: &str, position: usize) -> Self {
+    pub fn new(message: &str, position: usize, underline_length: usize) -> Self {
         ParseError {
             message: message.to_string(),
             position,
+            underline_length,
         }
     }
     
     /// Format this error using line information
     pub fn format_with_line_info(&self, line_info: &LineInfo) -> String {
-        line_info.format_error(self.position, &self.message)
+        line_info.format_error(self.position, &self.message, self.underline_length)
     }
 }
 
@@ -86,12 +89,12 @@ impl<'a> Parser<'a> {
 
     /// Creates an error at the current token position
     fn error(&self, message: &str) -> ParseError {
-        ParseError::new(message, self.peek().pos)
+        ParseError::new(message, self.peek().pos, self.peek().lexeme.len())
     }
 
     /// Creates an error at the previous token position
     fn error_previous(&self, message: &str) -> ParseError {
-        ParseError::new(message, self.previous().pos)
+        ParseError::new(message, self.previous().pos, self.previous().lexeme.len())
     }
 
     /// Parses a single statement
@@ -161,13 +164,15 @@ impl<'a> Parser<'a> {
     fn function_declaration_statement(&mut self) -> Result<Statement, ParseError> {
         // Parse function name
         if !self.check(Tokentype::Identifier) {
-            return Err(self.error("Expected function name"));
+            return Err(self.error(&format!("Expected function name found {}", 
+                        self.peek().token_type)));
         }
         let name = self.advance().lexeme.clone();
         
         // Parse parameter list
         if !self.match_token(Tokentype::LeftParen) {
-            return Err(self.error("Expected '(' after function name"));
+            return Err(self.error(&format!("Expected '(' after function name, found {}", 
+                        self.peek().token_type)));
         }
         
         let mut parameters = Vec::new();
@@ -185,7 +190,8 @@ impl<'a> Parser<'a> {
         }
         
         if !self.match_token(Tokentype::RightParen) {
-            return Err(self.error("Expected ')' after parameters"));
+            return Err(self.error(&format!("Expected ')' after parameters found {}", 
+                        self.peek().token_type)));
         }
         
         // Parse return type
@@ -617,7 +623,7 @@ impl<'a> Parser<'a> {
             return Ok(Expression::Variable(name));
         }
 
-        Err(self.error(&format!("Expected expression, found {:?}", self.peek())))
+        Err(self.error(&format!("Expected expression, found {}", self.peek())))
     }
     
 fn parse_float(&mut self) -> Result<Expression, ParseError> {

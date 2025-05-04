@@ -1,3 +1,6 @@
+use std::fmt::Display;
+use colored::Colorize;
+
 /// Types of tokens in the language lexer
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Tokentype {
@@ -37,8 +40,49 @@ pub enum Tokentype {
     Eof,            // End of file
 }
 
+impl Display for Tokentype {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            Tokentype::Identifier => "identifier",
+            Tokentype::IntegerLiteral => "integer literal",
+            Tokentype::FloatLiteral => "float literal",
+            Tokentype::StringLiteral => "string literal",
+            Tokentype::BooleanLiteral => "boolean literal",
+            Tokentype::Let => "let keyword",
+            Tokentype::Plus => "'+'",
+            Tokentype::Minus => "'-'",
+            Tokentype::Multiply => "'*'",
+            Tokentype::Divide => "'/'",
+            Tokentype::Not => "'!'",
+            Tokentype::And => "'&&'",
+            Tokentype::Or => "'||'",
+            Tokentype::Greater => "'>'",
+            Tokentype::Less => "'<'",
+            Tokentype::GreaterEqual => "'>='",
+            Tokentype::LessEqual => "'<='",
+            Tokentype::EqualEqual => "'=='",
+            Tokentype::NotEqual => "'!='",
+            Tokentype::Invalid => "invalid token",
+            Tokentype::Equal => "'='",
+            Tokentype::Colon => "':'",     
+            Tokentype::Semicolon => "';'",
+            Tokentype::Struct => "sturct keyword",
+            Tokentype::LeftBrace => "'{'",
+            Tokentype::RightBrace => "'}'",
+            Tokentype::Comma => "','",
+            Tokentype::Fn => "fn keyword",
+            Tokentype::LeftParen => "'('",
+            Tokentype::RightParen => "')'",
+            Tokentype::Arrow => "'->'",
+            Tokentype::Return => "return keyword", 
+            
+            // End of file
+            Tokentype::Eof  => "<EOF>",
+        })
+    }
+}
+
 /// Represents a token in the source code
-#[derive(Debug)]
 pub struct Token {
     /// The type of the token
     pub token_type: Tokentype,
@@ -53,6 +97,12 @@ impl Token {
     /// Creates a new token with the given type, lexeme, and position
     pub fn new(token_type: Tokentype, lexeme: String, pos: usize) -> Token {
         Token { token_type, lexeme, pos }
+    }
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.token_type, self.lexeme)
     }
 }
 
@@ -138,14 +188,14 @@ impl LineInfo<'_> {
     }
     
     /// Format an error message with line information and source code snippet
-    pub fn format_error(&self, pos: usize, message: &str) -> String {
+    pub fn format_error(&self, pos: usize, message: &str, token_length: usize) -> String {
         let (line, col) = self.get_line_col(pos);
         let line_str = self.get_line_text(line).unwrap_or("");
         
         format!(
-            "Error at line {}, column {}: {}\n{}\n{}^",
+            "Error at line {}, column {}: {}\n{}\n{}{}",
             line, col, message, line_str,
-            " ".repeat(col - 1)
+            " ".repeat(col - 1), "^".repeat(token_length).red()
         )
     }
 }
