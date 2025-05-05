@@ -54,6 +54,11 @@ pub struct Parser<'a> {
     line_info: &'a LineInfo<'a>,
 }
 
+pub fn parse(tokens: &[Token], line_info: &LineInfo) -> Result<Vec<Statement>, String> {
+    let mut parser = Parser::new(tokens, line_info);
+    parser.parse()
+}
+
 impl<'a> Parser<'a> {
     /// Creates a new parser for the given tokens and line information
     /// 
@@ -61,7 +66,7 @@ impl<'a> Parser<'a> {
     /// 
     /// * `tokens` - The tokens to parse
     /// * `line_info` - Line information for error reporting
-    pub fn new(tokens: &'a [Token], line_info: &'a LineInfo) -> Self {
+    fn new(tokens: &'a [Token], line_info: &'a LineInfo) -> Self {
         Parser {
             tokens,
             current: 0,
@@ -74,7 +79,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     /// 
     /// The parsed statements or an error message
-    pub fn parse(&mut self) -> Result<Vec<Statement>, String> {
+    fn parse(&mut self) -> Result<Vec<Statement>, String> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
@@ -625,7 +630,12 @@ impl<'a> Parser<'a> {
 
         Err(self.error(&format!("Expected expression, found {}", self.peek())))
     }
-    
+   
+/// Parses a float literal with optional type suffix
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed float literal expression or an error message
 fn parse_float(&mut self) -> Result<Expression, ParseError> {
         let value_str = self.previous().lexeme.clone();
         let value = value_str

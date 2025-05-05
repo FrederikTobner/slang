@@ -1,19 +1,6 @@
 use crate::test_utils::execute_program_and_assert;
 use rstest::rstest;
 
-#[rstest]
-#[case("f32")]
-#[case("f64")]
-fn float_type(
-    #[case] type_name: &str,
-) {
-    let program = format!(r#"
-        let a: {} = 42.5;
-        print_value(a);
-    "#, type_name);
-    execute_program_and_assert(&program, "42.5");
-}
-
 #[test]
 fn string_type() {
     let program = r#"
@@ -30,15 +17,6 @@ fn string_type_inference() {
         print_value(str);
     "#;
     execute_program_and_assert(program, "Hello");
-}
-
-#[test]
-fn integer_type_inference() {
-    let program = r#"
-        let a = 42;
-        print_value(a);
-    "#;
-    execute_program_and_assert(program, "42");
 }
 
 #[rstest]

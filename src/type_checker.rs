@@ -20,6 +20,11 @@ impl Scope {
     }
 }
 
+pub fn execute(statements: &[Statement]) -> Result<(), String> {
+    let mut type_checker = TypeChecker::new();
+    type_checker.check(statements)
+}
+
 /// Performs static type checking on the AST
 pub struct TypeChecker {
     /// Map of variable names to their types
@@ -38,9 +43,7 @@ impl TypeChecker {
             functions: HashMap::new(),
             current_return_type: None,
         };
-
         tc.register_native_functions();
-
         tc
     }
 
@@ -145,9 +148,9 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
             Statement::TypeDefinition(type_def) => self.visit_type_definition_statement(type_def),
-            Statement::FunctionDeclaration(fn_decl) => {
-                self.visit_function_declaration_statement(fn_decl)
-            }
+            Statement::FunctionDeclaration(fn_decl) => 
+                self.visit_function_declaration_statement(fn_decl),
+            
             Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(expr) => self.visit_return_statement(expr),
         }
@@ -157,17 +160,14 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
         &mut self,
         fn_decl: &FunctionDeclarationStmt,
     ) -> Result<TypeId, String> {
-        // Check parameter types
         let mut param_types = Vec::new();
         for param in &fn_decl.parameters {
             param_types.push(param.param_type.clone());
         }
-
         self.functions.insert(
             fn_decl.name.clone(),
             (param_types, fn_decl.return_type.clone()),
         );
-
         let previous_return_type = self.current_return_type.clone();
         self.current_return_type = Some(fn_decl.return_type.clone());
 

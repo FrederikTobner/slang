@@ -5,7 +5,7 @@ use crate::visitor::Visitor;
 use crate::value::Value;
 
 /// Compiles AST nodes into bytecode instructions
-pub struct Compiler {
+struct Compiler {
     /// The bytecode chunk being constructed
     pub chunk: Chunk,
     /// Current line number for debugging information
@@ -18,9 +18,14 @@ pub struct Compiler {
     local_scopes: Vec<Vec<String>>,
 }
 
+pub fn compile(statements: &[Statement]) -> Result<Chunk, String> {
+    let compiler = Compiler::new();
+    compiler.compile(statements)
+}
+
 impl Compiler {
     /// Creates a new compiler with an empty chunk
-    pub fn new() -> Self {
+    fn new() -> Self {
         Compiler {
             chunk: Chunk::new(),
             line: 1, 
@@ -39,7 +44,7 @@ impl Compiler {
     /// ### Returns
     /// 
     /// A reference to the compiled bytecode chunk, or an error message
-    pub fn compile(mut self, statements: &[Statement]) -> Result<Chunk, String> {
+    fn compile(mut self, statements: &[Statement]) -> Result<Chunk, String> {
         for stmt in statements {
             match stmt.accept(&mut self) {
                 Ok(_) => (),

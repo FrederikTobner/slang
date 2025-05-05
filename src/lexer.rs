@@ -1,6 +1,6 @@
 use crate::token::{LineInfo, Token, Tokentype};
 
-pub struct LexerResult<'a> {
+pub struct Result<'a> {
     /// The list of tokens generated from the input
     pub tokens: Vec<Token>,
     /// The line information for the tokens
@@ -94,22 +94,18 @@ impl<'a> LexerState<'a> {
     ///
     /// ### Arguments
     /// * `self` - The current lexer state
-    fn finish(mut self) -> LexerResult<'a> {
+    fn finish(mut self) -> Result<'a> {
         // Add any remaining tokens on the last line
         if self.tokens_on_current_line > 0 {
             self.line_tokens
                 .push((self.current_line as u16, self.tokens_on_current_line as u16));
         }
-
-        // Add EOF token
         self.tokens
             .push(Token::new(Tokentype::Eof, "".to_string(), self.current_pos));
-
-        // Create line info
         let mut info = LineInfo::new(self.input);
         info.per_line = self.line_tokens;
 
-        LexerResult {
+        Result {
             tokens: self.tokens,
             line_info: info,
         }
@@ -125,7 +121,7 @@ impl<'a> LexerState<'a> {
 /// ### Returns
 ///
 /// A LexerResult containing tokens and line information
-pub fn tokenize(input: &str) -> LexerResult {
+pub fn tokenize(input: &str) -> Result {
     let mut state = LexerState::new(input);
 
     while let Some(&c) = state.peek() {
