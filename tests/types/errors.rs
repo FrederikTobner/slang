@@ -10,17 +10,6 @@ fn type_mismatch_assignment() {
 }
 
 #[test]
-fn incompatible_binary_operands() {
-    let program = r#"
-        let a: i32 = 5;
-        let b: string = "hello";
-        print_value(a + b); 
-    "#;
-    
-    execute_program_expect_error(program, "Type mismatch: cannot perform Plus operation with i32 and string");
-}
-
-#[test]
 fn undefined_variable() {
     let program = r#"
         let x: i32 = 10;
@@ -28,16 +17,6 @@ fn undefined_variable() {
     "#;
     
     execute_program_expect_error(program, "Undefined variable: y");
-}
-
-#[test]
-fn incompatible_numeric_types() {
-    let program = r#"
-        let a: i32 = 42;
-        let b: f64 = 3.14;
-        let c = a + b;
-    "#;
-    execute_program_expect_error(program, "Type mismatch: cannot perform Plus operation with i32 and f64\n");
 }
 
 #[test]

@@ -1,7 +1,7 @@
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::collections::HashMap;
-use std::cell::RefCell;
 
 /// A unique identifier for a type in the type system
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -15,6 +15,26 @@ impl TypeId {
     }
 }
 
+pub fn get_type_name(type_id: &TypeId) -> String {
+    TYPE_REGISTRY.with(|registry| {
+        registry
+            .borrow()
+            .get_type_info(type_id)
+            .map(|t| t.name.clone())
+            .unwrap_or_else(|| format!("{:?}", type_id))
+    })
+}
+pub fn type_fullfills<F>(type_id: &TypeId, predicate: F) -> bool
+where
+    F: Fn(&TypeInfo) -> bool,
+{
+    TYPE_REGISTRY.with(|registry| {
+        registry
+            .borrow()
+            .get_type_info(type_id)
+            .is_some_and(predicate)
+    })
+}
 /// Returns the TypeId for booleans
 pub fn bool_type() -> TypeId {
     TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("bool").unwrap().clone())
@@ -132,7 +152,6 @@ pub struct TypeInfo {
     pub kind: TypeKind,
 }
 
-
 // Thread-local storage for the type registry and commonly used types
 thread_local! {
     /// The global type registry
@@ -170,7 +189,6 @@ pub struct TypeRegistry {
     type_names: HashMap<String, TypeId>,
 }
 
-
 impl TypeRegistry {
     /// Creates a new TypeRegistry with built-in types registered
     pub fn new() -> Self {
@@ -186,31 +204,84 @@ impl TypeRegistry {
 
     /// Registers all built-in types in the type registry
     fn register_built_in_types(&mut self) {
-        self.register_type("i32", TypeKind::Integer(IntegerType { signed: true, bits: 32, is_unspecified: false }));
-        self.register_type("i64", TypeKind::Integer(IntegerType { signed: true, bits: 64, is_unspecified: false }));
-        self.register_type("u32", TypeKind::Integer(IntegerType { signed: false, bits: 32, is_unspecified: false }));
-        self.register_type("u64", TypeKind::Integer(IntegerType { signed: false, bits: 64, is_unspecified: false }));
-        self.register_type("int", TypeKind::Integer(IntegerType { signed: true, bits: 0, is_unspecified: true }));
-        
-        self.register_type("f32", TypeKind::Float(FloatType { bits: 32, is_unspecified: false }));
-        self.register_type("f64", TypeKind::Float(FloatType { bits: 64, is_unspecified: false }));
-        self.register_type("float", TypeKind::Float(FloatType { bits: 0, is_unspecified: true }));
-        
+        self.register_type(
+            "i32",
+            TypeKind::Integer(IntegerType {
+                signed: true,
+                bits: 32,
+                is_unspecified: false,
+            }),
+        );
+        self.register_type(
+            "i64",
+            TypeKind::Integer(IntegerType {
+                signed: true,
+                bits: 64,
+                is_unspecified: false,
+            }),
+        );
+        self.register_type(
+            "u32",
+            TypeKind::Integer(IntegerType {
+                signed: false,
+                bits: 32,
+                is_unspecified: false,
+            }),
+        );
+        self.register_type(
+            "u64",
+            TypeKind::Integer(IntegerType {
+                signed: false,
+                bits: 64,
+                is_unspecified: false,
+            }),
+        );
+        self.register_type(
+            "int",
+            TypeKind::Integer(IntegerType {
+                signed: true,
+                bits: 0,
+                is_unspecified: true,
+            }),
+        );
+
+        self.register_type(
+            "f32",
+            TypeKind::Float(FloatType {
+                bits: 32,
+                is_unspecified: false,
+            }),
+        );
+        self.register_type(
+            "f64",
+            TypeKind::Float(FloatType {
+                bits: 64,
+                is_unspecified: false,
+            }),
+        );
+        self.register_type(
+            "float",
+            TypeKind::Float(FloatType {
+                bits: 0,
+                is_unspecified: true,
+            }),
+        );
+
         self.register_type("string", TypeKind::String);
         self.register_type("bool", TypeKind::Boolean);
-        
+
         self.register_type("unknown", TypeKind::Unknown);
     }
 
     /// Registers a new type in the registry
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `name` - The name of the type
     /// * `kind` - The kind of type to register
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The TypeId assigned to the newly registered type
     pub fn register_type(&mut self, name: &str, kind: TypeKind) -> TypeId {
         let id = TypeId::new();
@@ -219,55 +290,55 @@ impl TypeRegistry {
             name: name.to_string(),
             kind,
         };
-        
+
         self.types.insert(id.clone(), type_info);
         self.type_names.insert(name.to_string(), id.clone());
-        
+
         id
     }
 
     /// Looks up a type by name
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `name` - The name of the type to look up
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Some(TypeId) if found, None otherwise
     pub fn get_type_by_name(&self, name: &str) -> Option<&TypeId> {
         self.type_names.get(name)
     }
- 
+
     /// Gets type information for a given TypeId
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `id` - The TypeId to look up
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Some(TypeInfo) if found, None otherwise
     pub fn get_type_info(&self, id: &TypeId) -> Option<&TypeInfo> {
         self.types.get(id)
     }
 
     /// Checks if a value is within the valid range for a given type
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `value` - The value to check
     /// * `type_id` - The type to check against
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// true if the value is in range, false otherwise
     pub fn check_value_in_range(&self, value: &i64, type_id: &TypeId) -> bool {
         let type_info = match self.get_type_info(type_id) {
             Some(info) => info,
             None => return false,
         };
-        
+
         match &type_info.kind {
             TypeKind::Integer(int_type) => {
                 match (int_type.signed, int_type.bits) {
@@ -277,36 +348,40 @@ impl TypeRegistry {
                     (false, 64) => *value >= 0, // all positive i64 fit in u64
                     _ => false,
                 }
+            }
+            TypeKind::Float(float_type) => match float_type.bits {
+                32 => *value >= f32::MIN as i64 && *value <= f32::MAX as i64,
+                64 => true,
+               _ => *value >= f64::MIN as i64 && *value <= f64::MAX as i64,
             },
             _ => false,
         }
     }
 
     /// Checks if a float value is within the valid range for a given type
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `value` - The value to check
     /// * `type_id` - The type to check against
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// true if the value is in range, false otherwise
     pub fn check_float_value_in_range(&self, value: &f64, type_id: &TypeId) -> bool {
         let type_info = match self.get_type_info(type_id) {
             Some(info) => info,
             None => return false,
         };
-        
+
         match &type_info.kind {
-            TypeKind::Float(float_type) => {
-                match float_type.bits {
-                    32 => *value >= f32::MIN as f64 && *value <= f32::MAX as f64,
-                    64 => true,
-                    _ => false,
-                }
+            TypeKind::Float(float_type) => match float_type.bits {
+                32 => *value >= f32::MIN as f64 && *value <= f32::MAX as f64,
+                64 => true,
+                _ => false,
             },
             _ => false,
         }
     }
 }
+

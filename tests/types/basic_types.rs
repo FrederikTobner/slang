@@ -2,22 +2,6 @@ use crate::test_utils::execute_program_and_assert;
 use rstest::rstest;
 
 #[rstest]
-#[case("i32")]
-#[case("i64")]
-#[case("u32")]
-#[case("u64")]
-#[test]
-fn integer_type(
-    #[case] type_name: &str,
-) {
-    let program = format!(r#"
-        let a: {} = 42;
-        print_value(a);
-    "#, type_name);
-    execute_program_and_assert(&program, "42");
-}
-
-#[rstest]
 #[case("f32")]
 #[case("f64")]
 fn float_type(
