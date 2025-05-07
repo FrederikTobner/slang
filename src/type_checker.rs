@@ -148,9 +148,10 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
             Statement::TypeDefinition(type_def) => self.visit_type_definition_statement(type_def),
-            Statement::FunctionDeclaration(fn_decl) => 
-                self.visit_function_declaration_statement(fn_decl),
-            
+            Statement::FunctionDeclaration(fn_decl) => {
+                self.visit_function_declaration_statement(fn_decl)
+            }
+
             Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(expr) => self.visit_return_statement(expr),
         }
@@ -367,34 +368,33 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 match &let_stmt.value {
                     Expression::Literal(lit) => {
                         if self.is_integer_type(&let_stmt.expr_type) {
-                            if let LiteralValue::UnspecifiedInteger(n) = &lit.value  {
-                            // Check if the value is in range for the target type
-                            let value_in_range = TYPE_REGISTRY.with(|registry| {
-                                registry
-                                    .borrow()
-                                    .check_value_in_range(n, &let_stmt.expr_type)
-                            });
+                            if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
+                                // Check if the value is in range for the target type
+                                let value_in_range = TYPE_REGISTRY.with(|registry| {
+                                    registry
+                                        .borrow()
+                                        .check_value_in_range(n, &let_stmt.expr_type)
+                                });
 
-                            if value_in_range {
-                                let_stmt.expr_type.clone()
+                                if value_in_range {
+                                    let_stmt.expr_type.clone()
+                                } else {
+                                    return Err(format!(
+                                        "Integer literal {} is out of range for type {}",
+                                        n,
+                                        get_type_name(&let_stmt.expr_type)
+                                    ));
+                                }
                             } else {
+                                // Non-integer literals can't be assigned to integer types
                                 return Err(format!(
-                                    "Integer literal {} is out of range for type {}",
-                                    n,
-                                    get_type_name(&let_stmt.expr_type)
+                                    "Type mismatch: variable {} is {} but expression is {}",
+                                    let_stmt.name,
+                                    get_type_name(&let_stmt.expr_type),
+                                    get_type_name(&expr_type)
                                 ));
                             }
                         } else {
-                            // Non-integer literals can't be assigned to integer types
-                            return Err(format!(
-                                "Type mismatch: variable {} is {} but expression is {}",
-                                let_stmt.name,
-                                get_type_name(&let_stmt.expr_type),
-                                get_type_name(&expr_type)
-                            ));
-                        }
-                    }
-                        else {
                             // integer literals can't be assigned to non-integer types
                             return Err(format!(
                                 "Type mismatch: variable {} is {} but expression is {}",

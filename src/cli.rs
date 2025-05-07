@@ -7,11 +7,58 @@ use crate::parser::parse;
 use crate::type_checker;
 use crate::type_checker::TypeChecker;
 use crate::vm::VM;
+use clap::{Parser as ClapParser, Subcommand};
 use colored::Colorize;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
 use zip::{ZipArchive, ZipWriter, write::FileOptions};
+
+/// Command line interface for the Slang language
+#[derive(ClapParser)]
+#[command(
+    version,
+    about = "Slang programming language",
+    long_about = r#"Slang is a simple programming language designed for educational purposes.
+It features a REPL, compilation to bytecode, and execution of both source files and compiled bytecode."#
+)]
+pub struct CliParser {
+    #[command(subcommand)]
+    pub command: Option<Commands>,
+}
+
+/// Available commands for the Slang CLI
+#[derive(Subcommand)]
+pub enum Commands {
+    /// Run the interactive REPL
+    Repl {},
+
+    /// Compile a Slang source file to bytecode
+    Compile {
+        /// Input source file
+        input: String,
+
+        /// Output bytecode file (default: same as input with .sip extension)
+        #[arg(short, long)]
+        output: Option<String>,
+    },
+
+    /// Run a compiled Slang bytecode file
+    Run {
+        /// Input compiled bytecode file
+        input: String,
+    },
+
+    /// Run a Slang source file directly
+    Execute {
+        /// Input source file
+        input: String,
+    },
+}
+
+pub fn parse_args() -> CliParser {
+    CliParser::parse()
+}
 
 /// The extension for compiled Slang binaries
 const SLANG_BYTECODE_EXTENSION: &str = "sip";
@@ -311,14 +358,11 @@ pub fn repl() {
         );
         if error_collector.has_errors() {
             error_collector.report_errors();
+            error_collector.clear();
             continue;
         }
         match parse_result {
             Ok(ast) => {
-                if error_collector.has_errors() {
-                    error_collector.report_errors();
-                    continue;
-                }
                 #[cfg(feature = "print-ast")]
                 {
                     println!("\n=== AST ===");
