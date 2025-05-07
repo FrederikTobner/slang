@@ -919,9 +919,32 @@ dependencies = [
  "colored",
  "predicates",
  "rstest",
+ "slang_backend",
+ "slang_frontend",
+ "slang_ir",
  "tempfile",
  "zip",
 ]
+
+[[package]]
+name = "slang_backend"
+version = "0.1.0"
+dependencies = [
+ "slang_frontend",
+ "slang_ir",
+]
+
+[[package]]
+name = "slang_frontend"
+version = "0.1.0"
+dependencies = [
+ "colored",
+ "slang_ir",
+]
+
+[[package]]
+name = "slang_ir"
+version = "0.1.0"
 
 [[package]]
 name = "strsim"

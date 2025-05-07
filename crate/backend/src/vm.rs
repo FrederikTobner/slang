@@ -1,5 +1,5 @@
-use crate::bytecode::{Chunk, Function, NativeFunction, OpCode};
-use crate::value::{Value, ValueOperation};
+use slang_ir::bytecode::{Chunk, Function, NativeFunction, OpCode};
+use slang_ir::value::{Value, ValueOperation};
 use std::collections::HashMap;
 
 /// Call frame to track function calls

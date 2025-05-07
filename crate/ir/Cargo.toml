@@ -1,0 +1,14 @@
+[package]
+name = "slang_ir"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[features]
+default = []
+print-byte_code = []
+
+[lib]
+name = "slang_ir"
+path = "src/lib.rs"

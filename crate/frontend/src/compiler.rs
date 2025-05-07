@@ -1,8 +1,8 @@
 use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr};
-use crate::bytecode::{Chunk, Function, OpCode};
+use slang_ir::bytecode::{Chunk, Function, OpCode};
 use crate::token::Tokentype;
 use crate::visitor::Visitor;
-use crate::value::Value;
+use slang_ir::value::Value;
 
 /// Compiles AST nodes into bytecode instructions
 struct Compiler {

@@ -1,0 +1,16 @@
+[package]
+name = "slang_frontend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+colored = "2.0.4"
+slang_ir = { path = "../ir" }
+
+[features]
+default = []
+print-ast = []
+
+[lib]
+name = "slang_frontend"
+path = "src/lib.rs"

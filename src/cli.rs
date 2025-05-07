@@ -1,12 +1,12 @@
-use crate::bytecode::Chunk;
-use crate::compiler::compile;
-use crate::error::ErrorCollector;
 use crate::exit;
-use crate::lexer;
-use crate::parser::parse;
-use crate::type_checker;
-use crate::type_checker::TypeChecker;
-use crate::vm::VM;
+use slang_ir::bytecode::Chunk;
+use slang_ir::error::ErrorCollector;
+use slang_frontend::compiler::compile;
+use slang_frontend::lexer;
+use slang_frontend::parser::parse;
+use slang_frontend::type_checker;
+use slang_frontend::type_checker::TypeChecker;
+use slang_backend::vm::VM;
 use clap::{Parser as ClapParser, Subcommand};
 use colored::Colorize;
 use std::fs::{self, File};
@@ -345,7 +345,7 @@ pub fn repl() {
             continue;
         }
 
-        let lexer_result = crate::lexer::tokenize(&input);
+        let lexer_result = slang_frontend::lexer::tokenize(&input);
         if lexer_result.tokens.len() <= 1 {
             // Just EOF token
             continue;
@@ -366,7 +366,7 @@ pub fn repl() {
                 #[cfg(feature = "print-ast")]
                 {
                     println!("\n=== AST ===");
-                    let mut printer = crate::ast_printer::ASTPrinter::new();
+                    let mut printer = slang_frontend::ast_printer::ASTPrinter::new();
                     printer.print(&ast);
                 }
                 match type_checker.check(&ast) {

@@ -1,18 +1,5 @@
-mod ast;
-mod ast_printer;
-mod bytecode;
 mod cli;
-mod compiler;
-mod error;
 mod exit;
-mod lexer;
-mod parser;
-mod token;
-mod type_checker;
-mod types;
-mod value;
-mod visitor;
-mod vm;
 
 /// Application entry point
 fn main() {

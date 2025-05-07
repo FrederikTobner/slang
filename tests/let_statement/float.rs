@@ -16,7 +16,6 @@ fn from_literal(
 }
 
 #[rstest]
-#[case("")] // No type suffix
 #[case("f32")]
 #[case("f64")]
 fn from_literal_with_type_suffix(

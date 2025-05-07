@@ -19,7 +19,6 @@ fn from_literal(
 }
 
 #[rstest]
-#[case("")] // No type suffix
 #[case("i32")]
 #[case("i64")]
 #[case("u32")]
