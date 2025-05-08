@@ -9,7 +9,7 @@ use crate::types::{
     bool_type, f32_type, f64_type, i32_type, i64_type, string_type, u32_type, u64_type,
     unknown_type, unspecified_float_type, unspecified_int_type,
 };
-use slang_ir::error::{ErrorCollector, CompilerError};
+use crate::error::{ErrorCollector, CompilerError};
 
 /// Error that occurs during parsing
 #[derive(Debug)]

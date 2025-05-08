@@ -8,6 +8,7 @@ pub mod types;
 pub mod visitor;
 pub mod ast_printer;
 pub mod compiler;
+pub mod error;
 
 // Re-export common types
 pub use ast::{Expression, Statement};

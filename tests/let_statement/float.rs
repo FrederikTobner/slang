@@ -142,3 +142,10 @@ fn from_float_literal_with_u64_suffix(
 }
 
 
+#[test]
+fn float_type() {
+    let program = r#"
+        let a: float = 0.0; 
+    "#;
+    execute_program_expect_error(program, "\'float\' is not a valid type specifier. Use \'f32\' or \'f64\' instead");
+}

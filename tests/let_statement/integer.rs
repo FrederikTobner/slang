@@ -135,3 +135,26 @@ fn from_float_literal_with_f64_suffix(
 }
 
 
+#[test]
+fn int_type() {
+    let program = r#"
+        let a: int = 0; 
+    "#;
+    execute_program_expect_error(program, "\'int\' is not a valid type specifier. Use \'i32\', \'i64\', \'u32\', or \'u64\' instead");
+}
+
+#[test]
+fn i32_value_out_of_range() {
+    let program = r#"
+        let a: i32 = 2147483648; 
+    "#;
+    execute_program_expect_error(program, "Integer literal 2147483648 is out of range for type i32");
+}
+
+#[test]
+fn u32_unsigned_negative_value_error() {
+    let program = r#"
+        let a: u32 = -1;
+    "#;
+    execute_program_expect_error(program, "Integer literal -1 is out of range for type u32");
+}

@@ -1,7 +1,7 @@
 use crate::exit;
 use slang_ir::bytecode::Chunk;
-use slang_ir::error::ErrorCollector;
-use slang_frontend::compiler::compile;
+use slang_frontend::error::ErrorCollector;
+use slang_frontend::compiler;
 use slang_frontend::lexer;
 use slang_frontend::parser::parse;
 use slang_frontend::type_checker;
@@ -190,7 +190,7 @@ fn compile_source(source: &str) -> Result<Chunk, String> {
 
     type_checker::execute(&ast)?;
 
-    let chunk = compile(&ast)?;
+    let chunk = compiler::compile(&ast)?;
 
     Ok(chunk)
 }
@@ -371,7 +371,7 @@ pub fn repl() {
                 }
                 match type_checker.check(&ast) {
                     Ok(_) => {
-                        match compile(&ast) {
+                        match compiler::compile(&ast) {
                             Ok(chunk) => {
                                 #[cfg(feature = "print-byte_code")]
                                 {
