@@ -639,7 +639,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 return Ok(bool_type());
             } else {
                 return Err(format!(
-                    "Logical operator {} requires boolean operands, got {} and {}",
+                    "Logical operator '{}' requires boolean operands, got {} and {}",
                     bin_expr.operator,
                     get_type_name(&left_type),
                     get_type_name(&right_type)
@@ -685,7 +685,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                     || (bin_expr.operator != BinaryOperator::Add && left_type == string_type())
                 {
                     return Err(format!(
-                        "Type mismatch: cannot apply {} operator on {} and {}",
+                        "Type mismatch: cannot apply '{}' operator on {} and {}",
                         bin_expr.operator,
                         get_type_name(&left_type),
                         get_type_name(&right_type)
@@ -797,7 +797,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             return Ok(string_type());
         }
         Err(format!(
-            "Type mismatch: cannot apply {} operator on {} and {}",
+            "Type mismatch: cannot apply '{}' operator on {} and {}",
             bin_expr.operator,
             get_type_name(&left_type),
             get_type_name(&right_type)
