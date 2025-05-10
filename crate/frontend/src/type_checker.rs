@@ -1,12 +1,12 @@
-use crate::ast::{
+use slang_ir::ast::{
     BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr,
-    LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
+    LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator, BinaryOperator,
 };
-use crate::token::Tokentype;
-use crate::types::*;
-use crate::types::{StructType, TYPE_REGISTRY, TypeId, TypeKind, get_type_name, type_fullfills};
-use crate::visitor::Visitor;
+use slang_types::types::*;
+use slang_types::types::{StructType, TYPE_REGISTRY, TypeId, TypeKind, get_type_name, type_fullfills};
+use slang_ir::visitor::Visitor;
 use std::collections::HashMap;
+use crate::error::{CompilerError, CompileResult};
 
 struct Scope {
     variables: HashMap<String, TypeId>,
@@ -20,7 +20,7 @@ impl Scope {
     }
 }
 
-pub fn execute(statements: &[Statement]) -> Result<(), String> {
+pub fn execute(statements: &[Statement]) -> CompileResult<()> {
     let mut type_checker = TypeChecker::new();
     type_checker.check(statements)
 }
@@ -33,6 +33,8 @@ pub struct TypeChecker {
     functions: HashMap<String, (Vec<TypeId>, TypeId)>,
     /// Current function's return type for validating return statements
     current_return_type: Option<TypeId>,
+    /// Collected type errors
+    errors: Vec<CompilerError>,
 }
 
 impl TypeChecker {
@@ -42,9 +44,22 @@ impl TypeChecker {
             scopes: vec![Scope::new()],
             functions: HashMap::new(),
             current_return_type: None,
+            errors: Vec::new(),
         };
         tc.register_native_functions();
         tc
+    }
+
+    // Add an error to the collection
+    fn add_error(&mut self, message: String, line: usize, column: usize) {
+        self.errors.push(CompilerError::new(message, line, column));
+    }
+
+    // Convert a String error to a CompilerError and add it to the collection
+    fn add_string_error(&mut self, message: String) {
+        // Since we don't have line/column info in the current error handling,
+        // temporarily use 0,0 - this will be improved in a future update
+        self.add_error(message, 0, 0);
     }
 
     /// Begins a new scope
@@ -130,15 +145,20 @@ impl TypeChecker {
     ///
     /// # Returns
     ///
-    /// Ok(()) if type-safe, or an error message
-    pub fn check(&mut self, statements: &[Statement]) -> Result<(), String> {
+    /// CompileResult with () if type-safe, or a list of errors
+    pub fn check(&mut self, statements: &[Statement]) -> CompileResult<()> {
         for stmt in statements {
             match stmt.accept(self) {
                 Ok(_) => continue,
-                Err(e) => return Err(e),
+                Err(e) => self.add_string_error(e),
             }
         }
-        Ok(())
+        
+        if !self.errors.is_empty() {
+            Err(std::mem::take(&mut self.errors))
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -323,7 +343,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
             let mut registry = registry.borrow_mut();
 
             // Create a new struct type
-            let type_kind = crate::types::TypeKind::Struct(StructType {
+            let type_kind = TypeKind::Struct(StructType {
                 name: type_def.name.clone(),
                 fields: type_def.fields.clone(),
             });
@@ -405,7 +425,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                         }
                     }
                     Expression::Unary(unary_expr) => {
-                        if unary_expr.operator == Tokentype::Minus {
+                        if unary_expr.operator == UnaryOperator::Negate {
                             // Handle negated integer literals
                             if let Expression::Literal(lit) = &*unary_expr.right {
                                 if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
@@ -504,7 +524,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                         }
                     }
                     Expression::Unary(unary_expr) => {
-                        if unary_expr.operator == Tokentype::Minus {
+                        if unary_expr.operator == UnaryOperator::Negate {
                             // Handle negated float literals
                             if let Expression::Literal(lit) = &*unary_expr.right {
                                 if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
@@ -613,7 +633,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
         let right_type = self.visit_expression(&bin_expr.right)?;
 
         // Handle logical operators (AND, OR)
-        if bin_expr.operator == Tokentype::And || bin_expr.operator == Tokentype::Or {
+        if bin_expr.operator == BinaryOperator::And || bin_expr.operator == BinaryOperator::Or {
             // Check that both operands are boolean
             if left_type == bool_type() && right_type == bool_type() {
                 return Ok(bool_type());
@@ -630,12 +650,12 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
         // Handle relational operators (>, <, >=, <=, ==, !=)
         if matches!(
             bin_expr.operator,
-            Tokentype::Greater
-                | Tokentype::Less
-                | Tokentype::GreaterEqual
-                | Tokentype::LessEqual
-                | Tokentype::EqualEqual
-                | Tokentype::NotEqual
+            BinaryOperator::GreaterThan
+                | BinaryOperator::LessThan
+                | BinaryOperator::GreaterThanOrEqual
+                | BinaryOperator::LessThanOrEqual
+                | BinaryOperator::Equal
+                | BinaryOperator::NotEqual
         ) {
             // For now, only allow comparing same types (or unspecified literals with specific types)
             if left_type == right_type
@@ -657,12 +677,12 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
         // Handle arithmetic operations using the type registry
         if matches!(
             bin_expr.operator,
-            Tokentype::Plus | Tokentype::Minus | Tokentype::Multiply | Tokentype::Divide
+            BinaryOperator::Add | BinaryOperator::Subtract | BinaryOperator::Multiply | BinaryOperator::Divide
         ) {
             // Only allow operations between same types, with special handling for unspecified literals
             if left_type == right_type {
                 if left_type == bool_type()
-                    || (bin_expr.operator != Tokentype::Plus && left_type == string_type())
+                    || (bin_expr.operator != BinaryOperator::Add && left_type == string_type())
                 {
                     return Err(format!(
                         "Type mismatch: cannot apply {} operator on {} and {}",
@@ -770,7 +790,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
         }
 
         // String concatenation - still allowed
-        if bin_expr.operator == Tokentype::Plus
+        if bin_expr.operator == BinaryOperator::Add
             && left_type == string_type()
             && right_type == string_type()
         {
@@ -788,7 +808,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
         let operand_type = self.visit_expression(&unary_expr.right)?;
 
         match unary_expr.operator {
-            Tokentype::Minus => {
+            UnaryOperator::Negate => {
                 // Special case for unspecified integers - preserve unspecified_int_type
                 // This allows them to be later coerced to specific types like i32
                 if operand_type == unspecified_int_type() {
@@ -812,7 +832,7 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                 let type_name = get_type_name(&operand_type);
                 Err(format!("Cannot negate non-numeric type '{}'", type_name))
             }
-            Tokentype::Not => {
+            UnaryOperator::Not => {
                 // Check if the operand is a boolean
                 if operand_type == bool_type() {
                     return Ok(bool_type());
@@ -826,10 +846,6 @@ impl Visitor<Result<TypeId, String>> for TypeChecker {
                     operand_type_name
                 ))
             }
-            _ => Err(format!(
-                "Invalid unary operation: {:?}",
-                unary_expr.operator
-            )),
         }
     }
 

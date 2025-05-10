@@ -1,7 +1,5 @@
 // Re-exported modules
-pub mod bytecode;
-pub mod value;
-
-// Re-export common types
-pub use bytecode::{Chunk, OpCode};
-pub use value::Value;
+#[cfg(feature = "print-ast")] 
+pub mod ast_printer;
+pub mod ast;
+pub mod visitor;

@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CompilerError {
     pub message: String,
     pub line: usize,
@@ -19,6 +19,21 @@ impl CompilerError {
             "Error at line {}, column {}: {}",
             self.line, self.column, self.message
         )
+    }
+}
+
+impl std::fmt::Display for CompilerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.format())
+    }
+}
+
+pub type CompileResult<T> = Result<T, Vec<CompilerError>>;
+
+/// Reports a list of compiler errors to stderr
+pub fn report_errors(errors: &[CompilerError]) {
+    for error in errors.iter() {
+        eprintln!("{}", error);
     }
 }
 
@@ -47,5 +62,9 @@ impl ErrorCollector {
 
     pub fn clear(&mut self) {
         self.errors.clear();
+    }
+
+    pub fn take_errors(&mut self) -> Vec<CompilerError> {
+        std::mem::take(&mut self.errors)
     }
 }

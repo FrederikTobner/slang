@@ -1,8 +1,7 @@
-use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr};
-use slang_ir::bytecode::{Chunk, Function, OpCode};
-use crate::token::Tokentype;
-use crate::visitor::Visitor;
-use slang_ir::value::Value;
+use slang_ir::ast::{BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator};
+use crate::bytecode::{Chunk, Function, OpCode};
+use slang_ir::visitor::Visitor;
+use crate::value::Value;
 
 /// Compiles AST nodes into bytecode instructions
 struct Compiler {
@@ -264,34 +263,34 @@ impl Visitor<Result<(), String>> for Compiler {
 
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> Result<(), String> {
         match &lit_expr.value {
-            crate::ast::LiteralValue::I32(i) => {
+            slang_ir::ast::LiteralValue::I32(i) => {
                 self.emit_constant(Value::I32(*i));
             }
-            crate::ast::LiteralValue::I64(i) => {
+            slang_ir::ast::LiteralValue::I64(i) => {
                 self.emit_constant(Value::I64(*i));
             }
-            crate::ast::LiteralValue::U32(i) => {
+            slang_ir::ast::LiteralValue::U32(i) => {
                 self.emit_constant(Value::U32(*i));
             }
-            crate::ast::LiteralValue::U64(i) => {
+            slang_ir::ast::LiteralValue::U64(i) => {
                 self.emit_constant(Value::U64(*i));
             }
-            crate::ast::LiteralValue::UnspecifiedInteger(i) => {
+            slang_ir::ast::LiteralValue::UnspecifiedInteger(i) => {
                 self.emit_constant(Value::I64(*i));
             }
-            crate::ast::LiteralValue::F32(f) => {
+            slang_ir::ast::LiteralValue::F32(f) => {
                 self.emit_constant(Value::F32(*f));
             }
-            crate::ast::LiteralValue::F64(f) => {
+            slang_ir::ast::LiteralValue::F64(f) => {
                 self.emit_constant(Value::F64(*f));
             }
-            crate::ast::LiteralValue::UnspecifiedFloat(f) => {
+            slang_ir::ast::LiteralValue::UnspecifiedFloat(f) => {
                 self.emit_constant(Value::F64(*f));
             }
-            crate::ast::LiteralValue::String(s) => {
+            slang_ir::ast::LiteralValue::String(s) => {
                 self.emit_constant(Value::String(s.clone()));
             }
-            crate::ast::LiteralValue::Boolean(b) => {
+            slang_ir::ast::LiteralValue::Boolean(b) => {
                 self.emit_constant(Value::Boolean(*b));
             }
         }
@@ -301,7 +300,7 @@ impl Visitor<Result<(), String>> for Compiler {
 
     fn visit_binary_expression(&mut self, bin_expr: &BinaryExpr) -> Result<(), String> {
         match bin_expr.operator {
-            Tokentype::And => {
+            BinaryOperator::And => {
                 self.visit_expression(&bin_expr.left)?;
                 let jump_if_false = self.emit_jump(OpCode::JumpIfFalse);
                 self.emit_op(OpCode::Pop);
@@ -310,7 +309,7 @@ impl Visitor<Result<(), String>> for Compiler {
                 return Ok(());
             },
             
-            Tokentype::Or => {
+            BinaryOperator::Or => {
                 self.visit_expression(&bin_expr.left)?;
                 let jump_if_true = self.emit_jump(OpCode::JumpIfFalse);
                 let jump_to_end = self.emit_jump(OpCode::Jump);
@@ -326,16 +325,16 @@ impl Visitor<Result<(), String>> for Compiler {
                 self.visit_expression(&bin_expr.right)?;
                 
                 match bin_expr.operator {
-                    Tokentype::Plus => self.emit_op(OpCode::Add),
-                    Tokentype::Minus => self.emit_op(OpCode::Subtract),
-                    Tokentype::Multiply => self.emit_op(OpCode::Multiply),
-                    Tokentype::Divide => self.emit_op(OpCode::Divide),
-                    Tokentype::Greater => self.emit_op(OpCode::Greater),
-                    Tokentype::Less => self.emit_op(OpCode::Less),
-                    Tokentype::GreaterEqual => self.emit_op(OpCode::GreaterEqual),
-                    Tokentype::LessEqual => self.emit_op(OpCode::LessEqual),
-                    Tokentype::EqualEqual => self.emit_op(OpCode::Equal),
-                    Tokentype::NotEqual => self.emit_op(OpCode::NotEqual),
+                    BinaryOperator::Add => self.emit_op(OpCode::Add),
+                    BinaryOperator::Subtract => self.emit_op(OpCode::Subtract),
+                    BinaryOperator::Multiply => self.emit_op(OpCode::Multiply),
+                    BinaryOperator::Divide => self.emit_op(OpCode::Divide),
+                    BinaryOperator::GreaterThan => self.emit_op(OpCode::Greater),
+                    BinaryOperator::LessThan => self.emit_op(OpCode::Less),
+                    BinaryOperator::GreaterThanOrEqual => self.emit_op(OpCode::GreaterEqual),
+                    BinaryOperator::LessThanOrEqual => self.emit_op(OpCode::LessEqual),
+                    BinaryOperator::Equal => self.emit_op(OpCode::Equal),
+                    BinaryOperator::NotEqual => self.emit_op(OpCode::NotEqual),
                     _ => {
                         return Err(format!(
                             "Unsupported binary operator: {:?}",
@@ -353,9 +352,8 @@ impl Visitor<Result<(), String>> for Compiler {
         self.visit_expression(&unary_expr.right)?;
         
         match unary_expr.operator {
-            Tokentype::Minus => self.emit_op(OpCode::Negate),
-            Tokentype::Not => self.emit_op(OpCode::BoolNot),
-            _ => return Err(format!("Unsupported unary operator: {:?}", unary_expr.operator)),
+            UnaryOperator::Negate => self.emit_op(OpCode::Negate),
+            UnaryOperator::Not => self.emit_op(OpCode::BoolNot),
         }
         
         Ok(())

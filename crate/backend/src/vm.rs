@@ -1,5 +1,5 @@
-use slang_ir::bytecode::{Chunk, Function, NativeFunction, OpCode};
-use slang_ir::value::{Value, ValueOperation};
+use crate::bytecode::{Chunk, Function, NativeFunction, OpCode};
+use crate::value::{Value, ValueOperation};
 use std::collections::HashMap;
 
 /// Call frame to track function calls
@@ -157,7 +157,6 @@ impl VM {
                 self.stack.push(value.negate()?);
             }
             OpCode::Return => {
-                // If we're in a function, return to the caller
                 if let Some(frame_index) = self.current_frame {
                     let return_value = if self.stack.is_empty() {
                         Value::I32(0) // Default return value
@@ -184,7 +183,6 @@ impl VM {
                         Some(self.frames.len() - 1)
                     };
                 } else {
-                    // If we're not in a function, stop execution
                     self.ip = chunk.code.len();
                 }
             }

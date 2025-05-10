@@ -922,6 +922,7 @@ dependencies = [
  "slang_backend",
  "slang_frontend",
  "slang_ir",
+ "slang_types",
  "tempfile",
  "zip",
 ]
@@ -940,10 +941,18 @@ version = "0.1.0"
 dependencies = [
  "colored",
  "slang_ir",
+ "slang_types",
 ]
 
 [[package]]
 name = "slang_ir"
+version = "0.1.0"
+dependencies = [
+ "slang_types",
+]
+
+[[package]]
+name = "slang_types"
 version = "0.1.0"
 
 [[package]]

@@ -1,5 +1,4 @@
-use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, LiteralValue};
-use crate::token::Tokentype;
+use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, LiteralValue, UnaryOperator, BinaryOperator};
 use crate::visitor::Visitor;
 
 /// A visitor implementation that prints the AST in a human-readable format
@@ -151,10 +150,10 @@ impl Visitor<()> for ASTPrinter {
 
     fn visit_binary_expression(&mut self, bin_expr: &BinaryExpr) {
         let op_str = match bin_expr.operator {
-            Tokentype::Plus => "+",
-            Tokentype::Minus => "-",
-            Tokentype::Multiply => "*",
-            Tokentype::Divide => "/",
+            BinaryOperator::Add => "+",
+            BinaryOperator::Subtract => "-",
+            BinaryOperator::Multiply => "*",
+            BinaryOperator::Divide => "/",
             _ => "?",
         };
 
@@ -168,7 +167,7 @@ impl Visitor<()> for ASTPrinter {
 
     fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) {
         let op_str = match unary_expr.operator {
-            Tokentype::Minus => "-",
+            UnaryOperator::Negate => "-",
             _ => "?",
         };
 

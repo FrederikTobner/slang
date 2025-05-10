@@ -1,0 +1,11 @@
+[package]
+name = "slang_types"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = []
+
+[lib]
+name = "slang_types"
+path = "src/lib.rs"

@@ -12,8 +12,8 @@ members = [
 
 [features]
 default = []
-print-byte_code = ["slang_ir/print-byte_code"]
-print-ast = ["slang_frontend/print-ast"]
+print-byte_code = ["slang_backend/print-byte_code"]
+print-ast = ["slang_ir/print-ast"]
 trace-execution = ["slang_backend/trace-execution"]
 
 [dependencies]
@@ -23,6 +23,7 @@ colored = "2.0.4"
 slang_frontend = { path = "crate/frontend", features = [] }
 slang_ir = { path = "crate/ir", features = [] }
 slang_backend = { path = "crate/backend", features = [] }
+slang_types = { path = "crate/types", features = [] }
 
 [dev-dependencies]
 assert_cmd = "2.0.12"

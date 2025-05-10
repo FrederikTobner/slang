@@ -1,18 +1,21 @@
 use crate::exit;
-use slang_ir::bytecode::Chunk;
-use slang_frontend::error::ErrorCollector;
-use slang_frontend::compiler;
-use slang_frontend::lexer;
-use slang_frontend::parser::parse;
-use slang_frontend::type_checker;
-use slang_frontend::type_checker::TypeChecker;
-use slang_backend::vm::VM;
 use clap::{Parser as ClapParser, Subcommand};
 use colored::Colorize;
+use slang_backend::vm::VM;
+use slang_backend::compiler;
+use slang_frontend::error::{CompileResult, report_errors};
+use slang_frontend::lexer;
+use slang_frontend::parser;
+use slang_frontend::type_checker;
+use slang_backend::bytecode::Chunk;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
 use zip::{ZipArchive, ZipWriter, write::FileOptions};
+
+//------------------------------------------------------------------------------
+// Public CLI Interface
+//------------------------------------------------------------------------------
 
 /// Command line interface for the Slang language
 #[derive(ClapParser)]
@@ -56,16 +59,92 @@ pub enum Commands {
     },
 }
 
+/// The extension for compiled Slang bytecode files
+const SLANG_BYTECODE_EXTENSION: &str = "sip";
+
+/// Parse command line arguments
 pub fn parse_args() -> CliParser {
     CliParser::parse()
 }
 
-/// The extension for compiled Slang binaries
-const SLANG_BYTECODE_EXTENSION: &str = "sip";
+//------------------------------------------------------------------------------
+// Main Command Implementations
+//------------------------------------------------------------------------------
 
-/// Exit the program with an appropriate exit code
-pub fn execute(input: &str) {
+/// Run the interactive REPL
+pub fn repl() {
+    let mut vm = VM::new();
+    println!("Slang REPL - Type 'exit' to exit");
+
+    loop {
+        let mut input = String::new();
+        print!(">>> ");
+        std::io::stdout().flush().unwrap();
+
+        if std::io::stdin().read_line(&mut input).is_ok() {
+            let trimmed = input.trim();
+            if trimmed == "exit" {
+                break;
+            } else if trimmed.is_empty() {
+                continue;
+            }
+        } else {
+            println!("Error reading input. Try again.");
+            continue;
+        }
+
+        // Compile the input
+        match compile_source(&input) {
+            Ok(chunk) => {
+                #[cfg(feature = "print-byte_code")]
+                {
+                    println!("\n=== Bytecode ===");
+                    chunk.disassemble("REPL");
+                }
+
+                // Execute the bytecode
+                if let Err(e) = vm.interpret(&chunk) {
+                    eprintln!("{}: {}", "Runtime error".red(), e);
+                }
+            }
+            Err(errors) => {
+                // In REPL mode, we just report errors and continue
+                report_errors(&errors);
+            }
+        }
+    }
+}
+
+/// Compile a Slang source file to bytecode
+pub fn compile_file(input: &str, output: Option<String>) {
+    let output_path = determine_output_path(input, output);
+    println!("Compiling {} to {}", input, output_path);
+
+    match read_source_file(input) {
+        Ok(source) => match compile_source(&source) {
+            Ok(chunk) => {
+                if let Err((code, message)) = write_bytecode(&chunk, &output_path) {
+                    exit::with_code(code, &message)
+                } else {
+                    println!("Successfully compiled to {}", output_path);
+                }
+            }
+            Err(errors) => {
+                report_errors(&errors);
+                exit::with_code(
+                    exit::Code::Software,
+                    &format!("{}: Compilation failed due to errors", "Error".red()),
+                );
+            }
+        },
+        Err((code, message)) => exit::with_code(code, &message),
+    }
+}
+
+/// Execute a Slang source file directly
+pub fn execute_file(input: &str) {
     println!("Executing source file: {}", input);
+    
     match read_source_file(input) {
         Ok(source) => match compile_source(&source) {
             Ok(chunk) => {
@@ -76,10 +155,11 @@ pub fn execute(input: &str) {
                     );
                 }
             }
-            Err(e) => {
+            Err(errors) => {
+                report_errors(&errors);
                 exit::with_code(
                     exit::Code::Software,
-                    &format!("{}: {}", "Compilation Error".red(), e),
+                    &format!("{}: Compilation failed due to errors", "Error".red()),
                 );
             }
         },
@@ -88,9 +168,10 @@ pub fn execute(input: &str) {
 }
 
 /// Run a compiled Slang bytecode file
-pub fn run(input: &str) {
+pub fn run_file(input: &str) {
     println!("Running compiled file: {}", input);
-    match read_bytecode(input) {
+    
+    match read_bytecode_file(input) {
         Ok(chunk) => {
             if let Err(e) = run_bytecode(&chunk) {
                 exit::with_code(
@@ -103,9 +184,40 @@ pub fn run(input: &str) {
     }
 }
 
-pub fn comp(input: &str, output: Option<String>) {
-    let output_path = match output {
-        Some(path) => path.clone(),
+//------------------------------------------------------------------------------
+// Compilation
+//------------------------------------------------------------------------------
+
+/// Compile source code to bytecode
+///
+/// # Arguments
+///
+/// * `source` - The source code to compile
+///
+/// # Returns
+///
+/// The compiled bytecode chunk or compilation errors
+fn compile_source(source: &str) -> CompileResult<Chunk> {
+    let lexer_result = lexer::tokenize(source);
+    let statements = parser::parse(&lexer_result.tokens, &lexer_result.line_info)?;
+    #[cfg(feature = "print-ast")]
+    {
+        let mut printer = slang_ir::ast_printer::ASTPrinter::new();
+        printer.print(&statements);
+    }
+    type_checker::execute(&statements)?;
+    compiler::compile(&statements)
+        .map_err(|err| vec![slang_frontend::error::CompilerError::new(err, 0, 0)])
+}
+
+//------------------------------------------------------------------------------
+// File Operations
+//------------------------------------------------------------------------------
+
+/// Determine the output path for a compiled file
+fn determine_output_path(input: &str, output: Option<String>) -> String {
+    match output {
+        Some(path) => path,
         None => {
             let path = Path::new(input);
             let stem = path
@@ -114,27 +226,6 @@ pub fn comp(input: &str, output: Option<String>) {
                 .unwrap_or("output");
             format!("{}.{}", stem, SLANG_BYTECODE_EXTENSION)
         }
-    };
-
-    println!("Compiling {} to {}", input, output_path);
-
-    match read_source_file(input) {
-        Ok(source) => match compile_source(&source) {
-            Ok(chunk) => {
-                if let Err((code, message)) = write_bytecode(&chunk, &output_path) {
-                    exit::with_code(code, &message)
-                } else {
-                    println!("Successfully compiled to {}", output_path);
-                }
-            }
-            Err(e) => {
-                exit::with_code(
-                    exit::Code::Software,
-                    &format!("{}: {}", "Compilation Error".red(), e),
-                );
-            }
-        },
-        Err((code, message)) => exit::with_code(code, &message),
     }
 }
 
@@ -159,40 +250,6 @@ fn read_source_file(path: &str) -> Result<String, (exit::Code, String)> {
             Err((exit_code, format!("Error reading file '{}': {}", path, e)))
         }
     }
-}
-
-/// Compile source code to bytecode
-///
-/// # Arguments
-///
-/// * `source` - The source code to compile
-///
-/// # Returns
-///
-/// The compiled bytecode chunk or an error message
-fn compile_source(source: &str) -> Result<Chunk, String> {
-    let lexer_result = lexer::tokenize(source);
-
-    let mut error_collector = ErrorCollector::new();
-    let ast = parse(
-        &lexer_result.tokens,
-        &lexer_result.line_info,
-        &mut error_collector,
-    )?;
-
-    if error_collector.has_errors() {
-        error_collector.report_errors();
-        exit::with_code(
-            exit::Code::Dataerr,
-            "Compilation failed due to previous errors",
-        );
-    }
-
-    type_checker::execute(&ast)?;
-
-    let chunk = compiler::compile(&ast)?;
-
-    Ok(chunk)
 }
 
 /// Write a bytecode chunk to a file
@@ -268,7 +325,7 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> Result<(), (exit::Code, S
 /// # Returns
 ///
 /// The bytecode chunk or an error message
-fn read_bytecode(input_path: &str) -> Result<Chunk, (exit::Code, String)> {
+fn read_bytecode_file(input_path: &str) -> Result<Chunk, (exit::Code, String)> {
     let file = File::open(input_path).map_err(|e| {
         (
             exit::Code::NoInput,
@@ -310,6 +367,10 @@ fn read_bytecode(input_path: &str) -> Result<Chunk, (exit::Code, String)> {
     }
 }
 
+//------------------------------------------------------------------------------
+// VM Operations
+//------------------------------------------------------------------------------
+
 /// Execute a bytecode chunk in the VM
 ///
 /// # Arguments
@@ -322,90 +383,4 @@ fn read_bytecode(input_path: &str) -> Result<Chunk, (exit::Code, String)> {
 fn run_bytecode(chunk: &Chunk) -> Result<(), String> {
     let mut vm = VM::new();
     vm.interpret(chunk)
-}
-
-/// Run the interactive REPL
-pub fn repl() {
-    let mut vm = VM::new();
-    let mut type_checker = TypeChecker::new();
-    println!("Slang REPL - Type 'exit' to exit");
-    let mut error_collector = ErrorCollector::new();
-    loop {
-        let mut input = String::new();
-        print!(">>> ");
-        std::io::stdout().flush().unwrap();
-        let trimmed;
-        if std::io::stdin().read_line(&mut input).is_ok() {
-            trimmed = input.trim();
-            if trimmed == "exit" {
-                break;
-            }
-        } else {
-            println!("Error reading input. Try again.");
-            continue;
-        }
-
-        let lexer_result = slang_frontend::lexer::tokenize(&input);
-        if lexer_result.tokens.len() <= 1 {
-            // Just EOF token
-            continue;
-        }
-
-        let parse_result = parse(
-            &lexer_result.tokens,
-            &lexer_result.line_info,
-            &mut error_collector,
-        );
-        if error_collector.has_errors() {
-            error_collector.report_errors();
-            error_collector.clear();
-            continue;
-        }
-        match parse_result {
-            Ok(ast) => {
-                #[cfg(feature = "print-ast")]
-                {
-                    println!("\n=== AST ===");
-                    let mut printer = slang_frontend::ast_printer::ASTPrinter::new();
-                    printer.print(&ast);
-                }
-                match type_checker.check(&ast) {
-                    Ok(_) => {
-                        match compiler::compile(&ast) {
-                            Ok(chunk) => {
-                                #[cfg(feature = "print-byte_code")]
-                                {
-                                    println!("\n=== Bytecode ===");
-                                    chunk.disassemble("REPL");
-                                }
-                                // Execute the bytecode
-                                if let Err(e) = vm.interpret(&chunk) {
-                                    eprintln!("{}: {}", "Runtime error".red(), e);
-                                }
-                            }
-                            Err(e) => {
-                                eprintln!(
-                                    "{}\n{}:could not compile due to previous error",
-                                    e,
-                                    "error".red(),
-                                );
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!(
-                            "{}\n{}: Unable to compile due to previous error",
-                            "Type error".red(),
-                            e
-                        );
-                    }
-                }
-            }
-            Err(e) => eprintln!(
-                "{}\n{}: Unable to parse input due to previous error",
-                e,
-                "Parse error".red()
-            ),
-        }
-    }
 }

@@ -1,7 +1,7 @@
 [package]
 name = "slang_backend"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 slang_ir = { path = "../ir" }
@@ -10,6 +10,7 @@ slang_frontend = { path = "../frontend" }
 [features]
 default = []
 trace-execution = []
+print-byte_code = []
 
 [lib]
 name = "slang_backend"

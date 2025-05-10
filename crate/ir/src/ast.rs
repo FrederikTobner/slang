@@ -1,6 +1,72 @@
-use crate::token::Tokentype;
 use crate::visitor::Visitor;
-use crate::types::TypeId;
+use slang_types::types::TypeId;
+use std::fmt::Display;
+
+#[derive(Debug, PartialEq)]
+pub enum BinaryOperator {
+    /// Addition operator
+    Add,
+    /// Subtraction operator
+    Subtract,
+    /// Multiplication operator
+    Multiply,
+    /// Division operator
+    Divide,
+    /// Greater than operator
+    GreaterThan,
+    /// Less than operator
+    LessThan,
+    /// Greater than or equal to operator
+    GreaterThanOrEqual,
+    /// Less than or equal to operator
+    LessThanOrEqual,
+    /// Equality operator
+    Equal,
+    /// Not equal operator
+    NotEqual,
+    /// Logical AND operator
+    And,
+    /// Logical OR operator
+    Or,
+}
+
+impl Display for BinaryOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let op_str = match self {
+            BinaryOperator::Add => "+",
+            BinaryOperator::Subtract => "-",
+            BinaryOperator::Multiply => "*",
+            BinaryOperator::Divide => "/",
+            BinaryOperator::GreaterThan => ">",
+            BinaryOperator::LessThan => "<",
+            BinaryOperator::GreaterThanOrEqual => ">=",
+            BinaryOperator::LessThanOrEqual => "<=",
+            BinaryOperator::Equal => "==",
+            BinaryOperator::NotEqual => "!=",
+            BinaryOperator::And => "&&",
+            BinaryOperator::Or => "||",
+        };
+        write!(f, "{}", op_str)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum UnaryOperator {
+    /// Negation operator
+    Negate,
+    /// Logical NOT operator
+    Not,
+}
+
+impl Display for UnaryOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let op_str = match self {
+            UnaryOperator::Negate => "-",
+            UnaryOperator::Not => "!",
+        };
+        write!(f, "{}", op_str)
+    }
+}
 
 /// Expression nodes in the AST
 #[derive(Debug)]
@@ -91,7 +157,7 @@ pub struct LiteralExpr {
 #[derive(Debug)]
 pub struct UnaryExpr {
     /// The operator (e.g., -)
-    pub operator: Tokentype,
+    pub operator: UnaryOperator,
     /// The operand
     pub right: Box<Expression>,
     /// Type of the unary expression
@@ -130,7 +196,7 @@ pub struct BinaryExpr {
     /// Left operand
     pub left: Box<Expression>,
     /// Operator
-    pub operator: Tokentype,
+    pub operator: BinaryOperator,
     /// Right operand
     pub right: Box<Expression>,
     /// Type of the binary expression

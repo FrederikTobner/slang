@@ -1,15 +1,15 @@
-use crate::ast::{
+use slang_ir::ast::{
     BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr,
-    LiteralValue, Parameter, Statement, TypeDefinitionStmt, UnaryExpr,
+    LiteralValue, Parameter, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator, BinaryOperator,
 };
 use crate::token::LineInfo;
 use crate::token::{Token, Tokentype};
-use crate::types::{TYPE_REGISTRY, TypeId};
-use crate::types::{
+use slang_types::types::{TYPE_REGISTRY, TypeId};
+use slang_types::types::{
     bool_type, f32_type, f64_type, i32_type, i64_type, string_type, u32_type, u64_type,
     unknown_type, unspecified_float_type, unspecified_int_type,
 };
-use crate::error::{ErrorCollector, CompilerError};
+use crate::error::{CompilerError, CompileResult};
 
 /// Error that occurs during parsing
 #[derive(Debug)]
@@ -67,11 +67,13 @@ pub struct Parser<'a> {
     current: usize,
     /// Line information for error reporting
     line_info: &'a LineInfo<'a>,
+    /// Errors collected during parsing
+    errors: Vec<CompilerError>,
 }
 
-pub fn parse(tokens: &[Token], line_info: &LineInfo, error_collector: &mut ErrorCollector) -> Result<Vec<Statement>, String> {
+pub fn parse(tokens: &[Token], line_info: &LineInfo) -> CompileResult<Vec<Statement>> {
     let mut parser = Parser::new(tokens, line_info);
-    parser.parse(error_collector)
+    parser.parse()
 }
 
 impl<'a> Parser<'a> {
@@ -86,6 +88,7 @@ impl<'a> Parser<'a> {
             tokens,
             current: 0,
             line_info,
+            errors: Vec::new(),
         }
     }
 
@@ -94,20 +97,24 @@ impl<'a> Parser<'a> {
     /// # Returns
     ///
     /// The parsed statements or an error message
-    fn parse(&mut self, error_collector: &mut ErrorCollector) -> Result<Vec<Statement>, String> {
+    fn parse(&mut self) -> CompileResult<Vec<Statement>> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
-            match self.statement(error_collector) {
-                Some(stmt) => statements.push(stmt),
-                None => {
-                    // Error handling is done in the statement method
-                    // No need to add to statements
+            match self.statement() {
+                Ok(stmt) => statements.push(stmt),
+                Err(e) => {
+                    self.errors.push(e.to_compiler_error(self.line_info));
+                    self.synchronize(); // Skip to next valid statement boundary
                 }
             }
         }
 
-        Ok(statements)
+        if !self.errors.is_empty() {
+            Err(std::mem::take(&mut self.errors))
+        } else {
+            Ok(statements)
+        }
     }
 
     /// Creates an error at the current token position
@@ -119,15 +126,9 @@ impl<'a> Parser<'a> {
     fn error_previous(&self, message: &str) -> ParseError {
         ParseError::new(message, self.previous().pos, self.previous().lexeme.len())
     }
-    fn statement(&mut self, errors: &mut ErrorCollector) -> Option<Statement> {
-        match self.try_parse_statement() {
-            Ok(stmt) => Some(stmt),
-            Err(e) => {
-                errors.add_error(e.to_compiler_error(self.line_info));
-                self.synchronize(); // Skip to next valid statement boundary
-                None
-            }
-        }
+
+    fn statement(&mut self) -> Result<Statement, ParseError> {
+        self.try_parse_statement()
     }
 
     // Skip until a safe synchronization point (e.g., semicolon or statement start)
@@ -488,11 +489,10 @@ impl<'a> Parser<'a> {
         let mut expr = self.logical_and()?;
 
         while self.match_token(Tokentype::Or) {
-            let operator = self.previous().token_type;
             let right = self.logical_and()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
-                operator,
+                operator: BinaryOperator::Or,
                 right: Box::new(right),
                 expr_type: bool_type(),
             });
@@ -510,11 +510,10 @@ impl<'a> Parser<'a> {
         let mut expr = self.equality()?;
 
         while self.match_token(Tokentype::And) {
-            let operator = self.previous().token_type;
             let right = self.equality()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
-                operator,
+                operator: BinaryOperator::And,
                 right: Box::new(right),
                 expr_type: bool_type(),
             });
@@ -532,7 +531,12 @@ impl<'a> Parser<'a> {
         let mut expr = self.comparison()?;
 
         while self.match_any(&[Tokentype::EqualEqual, Tokentype::NotEqual]) {
-            let operator = self.previous().token_type;
+            let operator =  match self.previous().token_type {
+                Tokentype::EqualEqual => BinaryOperator::Equal,
+                Tokentype::NotEqual => BinaryOperator::NotEqual,
+                _ => unreachable!(),
+                
+            };
             let right = self.comparison()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
@@ -559,7 +563,13 @@ impl<'a> Parser<'a> {
             Tokentype::Less,
             Tokentype::LessEqual,
         ]) {
-            let operator = self.previous().token_type;
+            let operator = match self.previous().token_type {
+                Tokentype::Greater => BinaryOperator::GreaterThan,
+                Tokentype::GreaterEqual => BinaryOperator::GreaterThanOrEqual,
+                Tokentype::Less => BinaryOperator::LessThan,
+                Tokentype::LessEqual => BinaryOperator::LessThanOrEqual,
+                _ => unreachable!(),
+            };
             let right = self.term()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
@@ -581,7 +591,11 @@ impl<'a> Parser<'a> {
         let mut expr = self.factor()?;
 
         while self.match_any(&[Tokentype::Plus, Tokentype::Minus]) {
-            let operator = self.previous().token_type;
+        let operator = match self.previous().token_type {
+                Tokentype::Plus => BinaryOperator::Add,
+                Tokentype::Minus => BinaryOperator::Subtract,
+                _ => unreachable!(),
+            };
             let right = self.factor()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
@@ -603,7 +617,11 @@ impl<'a> Parser<'a> {
         let mut expr = self.unary()?;
 
         while self.match_any(&[Tokentype::Multiply, Tokentype::Divide]) {
-            let operator = self.previous().token_type;
+            let operator = match self.previous().token_type {
+                Tokentype::Multiply => BinaryOperator::Multiply,
+                Tokentype::Divide => BinaryOperator::Divide,
+                _ => unreachable!(),
+            };
             let right = self.unary()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
@@ -623,20 +641,18 @@ impl<'a> Parser<'a> {
     /// The parsed unary expression or an error message
     fn unary(&mut self) -> Result<Expression, ParseError> {
         if self.match_token(Tokentype::Minus) {
-            let operator = self.previous().token_type;
             let right = self.primary()?;
             return Ok(Expression::Unary(UnaryExpr {
-                operator,
+                operator: UnaryOperator::Negate,
                 right: Box::new(right),
                 expr_type: unknown_type(),
             }));
         }
 
         if self.match_token(Tokentype::Not) {
-            let operator = self.previous().token_type;
             let right = self.primary()?;
             return Ok(Expression::Unary(UnaryExpr {
-                operator,
+                operator: UnaryOperator::Not,
                 right: Box::new(right),
                 expr_type: bool_type(),
             }));
