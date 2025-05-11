@@ -16,11 +16,25 @@ Slang is designed as an educational project to demonstrate language implementati
 
 ## Project Structure
 
-The project is organized into three main crates:
+The project is organized into the following crates:
 
 - `frontend`: Handles lexing, parsing, AST construction, and type checking
-- `ir`: Defines the intermediate representation and bytecode format
-- `backend`: Implements the virtual machine for executing bytecode
+- `ir`: Defines the intermediate representation (AST) and visitor pattern
+- `types`: Contains type system definitions and utilities
+- `backend`: Implements the compiler and virtual machine for executing bytecode
+
+The codebase follows a modular architecture with clear separation of concerns:
+
+```
+slang/
+├── crate/
+│   ├── backend/    # Compilation to bytecode and VM execution
+│   ├── frontend/   # Lexer, parser, and type checker
+│   ├── ir/         # AST definitions and visitors
+│   └── types/      # Type system
+├── src/            # CLI application
+└── tests/          # End-to-end and integration tests
+```
 
 ## Usage
 
@@ -40,7 +54,20 @@ slang execute input.sl
 slang run input.sip
 ```
 
+## Design Principles
+
+The project follows common software engineering principles:
+
+- **Modularity**: Clear separation between components
+- **Single Responsibility**: Each module has a focused purpose
+- **Command Pattern**: CLI operations are encapsulated in command objects
+- **Visitor Pattern**: AST traversal uses the visitor design pattern
+
 ## Language Syntax
 
 For details about the language grammar, see [GRAMMER.md](GRAMMER.md).
+
+## Development
+
+See [TODO.md](TODO.md) for planned improvements and future features.
 

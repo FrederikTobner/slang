@@ -2,7 +2,7 @@ use slang_ir::ast::{
     BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr,
     LiteralValue, Parameter, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator, BinaryOperator,
 };
-use crate::token::LineInfo;
+use crate::error::LineInfo;
 use crate::token::{Token, Tokentype};
 use slang_types::types::{TYPE_REGISTRY, TypeId};
 use slang_types::types::{

@@ -6,7 +6,7 @@ use slang_backend::compiler;
 use slang_frontend::error::{CompileResult, report_errors};
 use slang_frontend::lexer;
 use slang_frontend::parser;
-use slang_frontend::type_checker;
+use slang_frontend::type_guard;
 use slang_backend::bytecode::Chunk;
 use std::fs::{self, File};
 use std::io::Write;
@@ -133,7 +133,7 @@ pub fn compile_file(input: &str, output: Option<String>) {
                 report_errors(&errors);
                 exit::with_code(
                     exit::Code::Software,
-                    &format!("{}: Compilation failed due to errors", "Error".red()),
+                    &format!("{}: Compilation failed due to errors", "error".red()),
                 );
             }
         },
@@ -159,7 +159,7 @@ pub fn execute_file(input: &str) {
                 report_errors(&errors);
                 exit::with_code(
                     exit::Code::Software,
-                    &format!("{}: Compilation failed due to errors", "Error".red()),
+                    &format!("{}: Compilation failed due to errors", "error".red()),
                 );
             }
         },
@@ -205,7 +205,7 @@ fn compile_source(source: &str) -> CompileResult<Chunk> {
         let mut printer = slang_ir::ast_printer::ASTPrinter::new();
         printer.print(&statements);
     }
-    type_checker::execute(&statements)?;
+    type_guard::execute(&statements)?;
     compiler::compile(&statements)
         .map_err(|err| vec![slang_frontend::error::CompilerError::new(err, 0, 0)])
 }
