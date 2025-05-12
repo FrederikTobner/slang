@@ -29,6 +29,7 @@ The IR consists of several key components:
 ## Usage
 
 The IR is used:
+
 - By the frontend during parsing to build AST representations
 - By the type checker for semantic analysis
 - By the backend compiler to generate bytecode
@@ -38,6 +39,7 @@ The IR is used:
 ## Integration
 
 The IR crate serves as a central component in the Slang architecture:
+
 - It defines structures used by the frontend parser
 - It provides interfaces used by the type checker
 - Its AST is consumed by the backend compiler

@@ -133,7 +133,7 @@ pub fn compile_file(input: &str, output: Option<String>) {
                 report_errors(&errors);
                 exit::with_code(
                     exit::Code::Software,
-                    &format!("{}: Compilation failed due to errors", "error".red()),
+                    &format!("{}: Compilation failed due to previous error(s)", "error".red()),
                 );
             }
         },
@@ -159,7 +159,7 @@ pub fn execute_file(input: &str) {
                 report_errors(&errors);
                 exit::with_code(
                     exit::Code::Software,
-                    &format!("{}: Compilation failed due to errors", "error".red()),
+                    &format!("{}: Compilation failed due to previous error(s)", "error".red()),
                 );
             }
         },

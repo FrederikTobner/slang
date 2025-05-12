@@ -159,15 +159,15 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed statement or an error message
     fn try_parse_statement(&mut self) -> Result<Statement, ParseError> {
-        if self.match_token(Tokentype::Let) {
+        if self.match_token(&Tokentype::Let) {
             self.let_statement()
-        } else if self.match_token(Tokentype::Struct) {
+        } else if self.match_token(&Tokentype::Struct) {
             self.type_definition_statement()
-        } else if self.match_token(Tokentype::Fn) {
+        } else if self.match_token(&Tokentype::Fn) {
             self.function_declaration_statement()
-        } else if self.match_token(Tokentype::Return) {
+        } else if self.match_token(&Tokentype::Return) {
             self.return_statement()
-        } else if self.match_token(Tokentype::LeftBrace) {
+        } else if self.match_token(&Tokentype::LeftBrace) {
             self.block_statement()
         } else {
             self.expression_statement()
@@ -182,11 +182,11 @@ impl<'a> Parser<'a> {
     fn block_statement(&mut self) -> Result<Statement, ParseError> {
         let mut statements = Vec::new();
 
-        while !self.check(Tokentype::RightBrace) && !self.is_at_end() {
+        while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
             statements.push(self.try_parse_statement()?);
         }
 
-        if !self.match_token(Tokentype::RightBrace) {
+        if !self.match_token(&Tokentype::RightBrace) {
             return Err(self.error("Expected '}' after block"));
         }
 
@@ -199,13 +199,13 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed return statement or an error message
     fn return_statement(&mut self) -> Result<Statement, ParseError> {
-        let value = if !self.check(Tokentype::Semicolon) {
+        let value = if !self.check(&Tokentype::Semicolon) {
             Some(self.expression()?)
         } else {
             None
         };
 
-        if !self.match_token(Tokentype::Semicolon) {
+        if !self.match_token(&Tokentype::Semicolon) {
             return Err(self.error("Expected ';' after return value"));
         }
 
@@ -219,7 +219,7 @@ impl<'a> Parser<'a> {
     /// The parsed function declaration or an error message
     fn function_declaration_statement(&mut self) -> Result<Statement, ParseError> {
         // Parse function name
-        if !self.check(Tokentype::Identifier) {
+        if !self.check(&Tokentype::Identifier) {
             return Err(self.error(&format!(
                 "Expected function name found {}",
                 self.peek().token_type
@@ -228,7 +228,7 @@ impl<'a> Parser<'a> {
         let name = self.advance().lexeme.clone();
 
         // Parse parameter list
-        if !self.match_token(Tokentype::LeftParen) {
+        if !self.match_token(&Tokentype::LeftParen) {
             return Err(self.error(&format!(
                 "Expected '(' after function name, found {}",
                 self.peek().token_type
@@ -236,12 +236,12 @@ impl<'a> Parser<'a> {
         }
 
         let mut parameters = Vec::new();
-        if !self.check(Tokentype::RightParen) {
+        if !self.check(&Tokentype::RightParen) {
             // Parse first parameter
             parameters.push(self.parameter()?);
 
             // Parse the rest of the parameters
-            while self.match_token(Tokentype::Comma) {
+            while self.match_token(&Tokentype::Comma) {
                 if parameters.len() >= 255 {
                     return Err(self.error("Cannot have more than 255 parameters"));
                 }
@@ -249,7 +249,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if !self.match_token(Tokentype::RightParen) {
+        if !self.match_token(&Tokentype::RightParen) {
             return Err(self.error(&format!(
                 "Expected ')' after parameters found {}",
                 self.peek().token_type
@@ -257,8 +257,8 @@ impl<'a> Parser<'a> {
         }
 
         // Parse return type
-        let return_type = if self.match_token(Tokentype::Arrow) {
-            if !self.check(Tokentype::Identifier) {
+        let return_type = if self.match_token(&Tokentype::Arrow) {
+            if !self.check(&Tokentype::Identifier) {
                 return Err(self.error("Expected return type after '->'"));
             }
 
@@ -285,16 +285,16 @@ impl<'a> Parser<'a> {
             unknown_type()
         };
 
-        if !self.match_token(Tokentype::LeftBrace) {
+        if !self.match_token(&Tokentype::LeftBrace) {
             return Err(self.error("Expected '{' before function body"));
         }
 
         let mut body = Vec::new();
-        while !self.check(Tokentype::RightBrace) && !self.is_at_end() {
+        while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
             body.push(self.try_parse_statement()?);
         }
 
-        if !self.match_token(Tokentype::RightBrace) {
+        if !self.match_token(&Tokentype::RightBrace) {
             return Err(self.error("Expected '}' after function body"));
         }
 
@@ -312,17 +312,17 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed parameter or an error message
     fn parameter(&mut self) -> Result<Parameter, ParseError> {
-        if !self.check(Tokentype::Identifier) {
+        if !self.check(&Tokentype::Identifier) {
             return Err(self.error("Expected parameter name"));
         }
 
         let name = self.advance().lexeme.clone();
 
-        if !self.match_token(Tokentype::Colon) {
+        if !self.match_token(&Tokentype::Colon) {
             return Err(self.error("Expected ':' after parameter name"));
         }
 
-        if !self.check(Tokentype::Identifier) {
+        if !self.check(&Tokentype::Identifier) {
             return Err(self.error("Expected parameter type"));
         }
 
@@ -349,26 +349,26 @@ impl<'a> Parser<'a> {
     /// The parsed type definition or an error message
     fn type_definition_statement(&mut self) -> Result<Statement, ParseError> {
         // Expect struct name
-        if !self.check(Tokentype::Identifier) {
+        if !self.check(&Tokentype::Identifier) {
             return Err(self.error("Expected struct name after 'struct' keyword"));
         }
 
         let name = self.advance().lexeme.clone();
 
         // Expect opening brace
-        if !self.match_token(Tokentype::LeftBrace) {
+        if !self.match_token(&Tokentype::LeftBrace) {
             return Err(self.error("Expected '{' after struct name"));
         }
 
         let mut fields = Vec::new();
 
-        while !self.check(Tokentype::RightBrace) && !self.is_at_end() {
-            if !self.check(Tokentype::Identifier) {
+        while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
+            if !self.check(&Tokentype::Identifier) {
                 return Err(self.error("Expected field name"));
             }
             let field_name = self.advance().lexeme.clone();
 
-            if !self.match_token(Tokentype::Colon) {
+            if !self.match_token(&Tokentype::Colon) {
                 return Err(self.error("Expected ':' after field name"));
             }
 
@@ -376,16 +376,16 @@ impl<'a> Parser<'a> {
 
             fields.push((field_name, field_type));
 
-            if !self.match_token(Tokentype::Comma) && !self.check(Tokentype::RightBrace) {
+            if !self.match_token(&Tokentype::Comma) && !self.check(&Tokentype::RightBrace) {
                 return Err(self.error("Expected ',' after field or '}'"));
             }
         }
 
-        if !self.match_token(Tokentype::RightBrace) {
+        if !self.match_token(&Tokentype::RightBrace) {
             return Err(self.error("Expected '}' after struct fields"));
         }
 
-        if !self.match_token(Tokentype::Semicolon) {
+        if !self.match_token(&Tokentype::Semicolon) {
             return Err(self.error("Expected ';' after struct definition"));
         }
 
@@ -401,7 +401,7 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed variable declaration or an error message
     fn let_statement(&mut self) -> Result<Statement, ParseError> {
-        if !self.check(Tokentype::Identifier) {
+        if !self.check(&Tokentype::Identifier) {
             return Err(self.error("Expected identifier after 'let'"));
         }
 
@@ -409,8 +409,8 @@ impl<'a> Parser<'a> {
         let name = token.lexeme.clone();
         let mut var_type = unknown_type();
 
-        if self.match_token(Tokentype::Colon) {
-            if !self.check(Tokentype::Identifier) {
+        if self.match_token(&Tokentype::Colon) {
+            if !self.check(&Tokentype::Identifier) {
                 return Err(self.error("Expected type name after colon"));
             }
 
@@ -438,14 +438,14 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if !self.match_token(Tokentype::Equal) {
+        if !self.match_token(&Tokentype::Equal) {
             return Err(self.error("Expected '=' after variable name"));
         }
 
         let expr = self.expression()?;
 
         // Expect semicolon
-        if !self.match_token(Tokentype::Semicolon) {
+        if !self.match_token(&Tokentype::Semicolon) {
             return Err(self.error("Expected ';' after let statement"));
         }
 
@@ -464,7 +464,7 @@ impl<'a> Parser<'a> {
     fn expression_statement(&mut self) -> Result<Statement, ParseError> {
         let expr = self.expression()?;
 
-        if !self.match_token(Tokentype::Semicolon) {
+        if !self.match_token(&Tokentype::Semicolon) {
             return Err(self.error("Expected ';' after expression"));
         }
 
@@ -488,7 +488,7 @@ impl<'a> Parser<'a> {
     fn logical_or(&mut self) -> Result<Expression, ParseError> {
         let mut expr = self.logical_and()?;
 
-        while self.match_token(Tokentype::Or) {
+        while self.match_token(&Tokentype::Or) {
             let right = self.logical_and()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
@@ -509,7 +509,7 @@ impl<'a> Parser<'a> {
     fn logical_and(&mut self) -> Result<Expression, ParseError> {
         let mut expr = self.equality()?;
 
-        while self.match_token(Tokentype::And) {
+        while self.match_token(&Tokentype::And) {
             let right = self.equality()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
@@ -640,7 +640,7 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed unary expression or an error message
     fn unary(&mut self) -> Result<Expression, ParseError> {
-        if self.match_token(Tokentype::Minus) {
+        if self.match_token(&Tokentype::Minus) {
             let right = self.primary()?;
             return Ok(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Negate,
@@ -649,7 +649,7 @@ impl<'a> Parser<'a> {
             }));
         }
 
-        if self.match_token(Tokentype::Not) {
+        if self.match_token(&Tokentype::Not) {
             let right = self.primary()?;
             return Ok(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Not,
@@ -667,15 +667,15 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed primary expression or an error message
     fn primary(&mut self) -> Result<Expression, ParseError> {
-        if self.match_token(Tokentype::IntegerLiteral) {
+        if self.match_token(&Tokentype::IntegerLiteral) {
             return self.parse_integer();
         }
 
-        if self.match_token(Tokentype::FloatLiteral) {
+        if self.match_token(&Tokentype::FloatLiteral) {
             return self.parse_float();
         }
 
-        if self.match_token(Tokentype::StringLiteral) {
+        if self.match_token(&Tokentype::StringLiteral) {
             let value = self.previous().lexeme.clone();
             return Ok(Expression::Literal(LiteralExpr {
                 value: LiteralValue::String(value),
@@ -683,7 +683,7 @@ impl<'a> Parser<'a> {
             }));
         }
 
-        if self.match_token(Tokentype::BooleanLiteral) {
+        if self.match_token(&Tokentype::BooleanLiteral) {
             let lexeme = self.previous().lexeme.clone();
             let bool_value = lexeme == "true";
             return Ok(Expression::Literal(LiteralExpr {
@@ -692,18 +692,18 @@ impl<'a> Parser<'a> {
             }));
         }
 
-        if self.match_token(Tokentype::LeftParen) {
+        if self.match_token(&Tokentype::LeftParen) {
             let expr = self.expression()?;
-            if !self.match_token(Tokentype::RightParen) {
+            if !self.match_token(&Tokentype::RightParen) {
                 return Err(self.error("Expected ')' after expression"));
             }
             return Ok(expr);
         }
 
-        if self.match_token(Tokentype::Identifier) {
+        if self.match_token(&Tokentype::Identifier) {
             let name = self.previous().lexeme.clone();
 
-            if self.match_token(Tokentype::LeftParen) {
+            if self.match_token(&Tokentype::LeftParen) {
                 return self.finish_call(name);
             }
 
@@ -724,7 +724,7 @@ impl<'a> Parser<'a> {
             .parse::<f64>()
             .map_err(|_| self.error_previous(&format!("Invalid float: {}", value_str)))?;
 
-        if self.check(Tokentype::Identifier) {
+        if self.check(&Tokentype::Identifier) {
             let type_name = self.peek().lexeme.clone();
 
             match type_name.as_str() {
@@ -765,12 +765,12 @@ impl<'a> Parser<'a> {
     fn finish_call(&mut self, name: String) -> Result<Expression, ParseError> {
         let mut arguments = Vec::new();
 
-        if !self.check(Tokentype::RightParen) {
+        if !self.check(&Tokentype::RightParen) {
             // Parse first argument
             arguments.push(self.expression()?);
 
             // Parse rest of the arguments
-            while self.match_token(Tokentype::Comma) {
+            while self.match_token(&Tokentype::Comma) {
                 if arguments.len() >= 255 {
                     return Err(self.error("Cannot have more than 255 arguments"));
                 }
@@ -778,7 +778,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if !self.match_token(Tokentype::RightParen) {
+        if !self.match_token(&Tokentype::RightParen) {
             return Err(self.error("Expected ')' after function arguments"));
         }
 
@@ -800,7 +800,7 @@ impl<'a> Parser<'a> {
             .parse::<i64>()
             .map_err(|_| self.error_previous(&format!("Invalid integer: {}", value_str)))?;
 
-        if self.check(Tokentype::Identifier) {
+        if self.check(&Tokentype::Identifier) {
             let type_name = self.peek().lexeme.clone();
 
             match type_name.as_str() {
@@ -881,7 +881,7 @@ impl<'a> Parser<'a> {
     ///
     /// The type ID for the parsed type or an error
     fn parse_type(&mut self) -> Result<TypeId, ParseError> {
-        if !self.check(Tokentype::Identifier) {
+        if !self.check(&Tokentype::Identifier) {
             return Err(self.error("Expected type identifier"));
         }
 
@@ -919,7 +919,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     ///
     /// true if the token was consumed, false otherwise
-    fn match_token(&mut self, token_type: Tokentype) -> bool {
+    fn match_token(&mut self, token_type: &Tokentype) -> bool {
         if self.check(token_type) {
             self.advance();
             true
@@ -938,7 +938,7 @@ impl<'a> Parser<'a> {
     ///
     /// true if a token was consumed, false otherwise
     fn match_any(&mut self, types: &[Tokentype]) -> bool {
-        for &token_type in types {
+        for token_type in types.iter() {
             if self.check(token_type) {
                 self.advance();
                 return true;
@@ -956,11 +956,11 @@ impl<'a> Parser<'a> {
     /// # Returns
     ///
     /// true if the current token matches, false otherwise
-    fn check(&self, token_type: Tokentype) -> bool {
+    fn check(&self, token_type: &Tokentype) -> bool {
         if self.is_at_end() {
             return false;
         }
-        self.peek().token_type == token_type
+        self.peek().token_type == *token_type
     }
 
     /// Advances to the next token and returns the previous token

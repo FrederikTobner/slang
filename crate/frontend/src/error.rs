@@ -1,118 +1,47 @@
 use colored::Colorize;
 
-#[derive(Debug, Clone)]
+/// Represents a compiler error with a message, line number, and column number
+#[derive(Debug)]
 pub struct CompilerError {
+    /// The error message
     pub message: String,
+    /// The line number where the error occurred
     pub line: usize,
+    /// The column number where the error occurred
     pub column: usize,
-    pub position: Option<usize>,
-    pub length: Option<usize>,
-    pub formatted_message: Option<String>,
-    pub source_snippet: Option<String>,
 }
 
 impl CompilerError {
+    /// Creates a new CompilerError with the given message, line number, and column number
+    /// 
+    /// ### Arguments
+    /// * `message` - The error message
+    /// * `line` - The line number where the error occurred
+    /// * `column` - The column number where the error occurred
+    ///
+    /// ### Returns
+    /// A new CompilerError object
+    ///
+    /// ### Example
+    /// ```
+    /// let error = CompilerError::new("Syntax error".to_string(), 10, 5);
+    /// ```
     pub fn new(message: String, line: usize, column: usize) -> Self {
         Self {
             message,
             line,
             column,
-            position: None,
-            length: None,
-            formatted_message: None,
-            source_snippet: None,
         }
-    }
-    
-    pub fn with_position(message: String, line: usize, column: usize, position: usize, length: usize) -> Self {
-        Self {
-            message,
-            line,
-            column,
-            position: Some(position),
-            length: Some(length),
-            formatted_message: None,
-            source_snippet: None,
-        }
-    }
-    
-    pub fn with_formatted_message(mut self, formatted_message: String) -> Self {
-        self.formatted_message = Some(formatted_message);
-        self
-    }
-
-    pub fn with_source_snippet(mut self, source_snippet: String) -> Self {
-        self.source_snippet = Some(source_snippet);
-        self
-    }
-    
-    /// Creates a compiler error from line information
-    /// 
-    /// # Arguments
-    /// * `line_info` - Line information containing source code
-    /// * `message` - Error message
-    /// * `position` - Position of the error in source code
-    /// * `length` - Length of the token with the error
-    /// 
-    /// # Returns
-    /// A CompilerError with source context information
-    pub fn from_line_info(line_info: &LineInfo, message: String, position: usize, length: usize) -> Self {
-        let (line, column) = line_info.get_line_col(position);
-        let formatted_error = line_info.format_error(position, &message, length);
-        
-        Self {
-            message,
-            line,
-            column,
-            position: Some(position),
-            length: Some(length),
-            formatted_message: Some(formatted_error),
-            source_snippet: line_info.get_line_text(line).map(String::from),
-        }
-    }
-
-    pub fn format(&self) -> String {
-        if let Some(formatted) = &self.formatted_message {
-            return formatted.clone();
-        }
-        
-        // Format the line number as a string to determine indentation
-        let line_string = format!("{}", self.line);
-        
-        // Create indentation with 1 more whitespace than the line string length
-        let indent = " ".repeat(line_string.len() + 1);
-        let pipe = "|".yellow(); // Pipe character for formatting
-        let arrow = "-->".yellow();
-        // Create error marker with caret depending on if we know the token length
-        let mut error_display = format!(
-            "  {} line {}:{}\n{indent}{}\n",
-            arrow, self.line, self.column, pipe
-        );
-        
-        // Add source code snippet if available
-        if let Some(snippet) = &self.source_snippet {
-            error_display += &format!("{} {} {}\n", pipe, self.line, snippet);
-            
-            if let (Some(_), Some(len)) = (self.position, self.length) {
-                // If we have position and length, show error marker with carets
-                let marker = " ".repeat(self.column - 1) + &"^".repeat(len.max(1)).red().to_string();
-                error_display += &format!("{indent}{pipe} {}\n", marker);
-            }
-        }
-        
-        // Add the error message
-        error_display += &format!("{}", self.message);
-        
-        error_display
     }
 }
 
 impl std::fmt::Display for CompilerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.format())
+        write!(f, "{}", self.message)
     }
 }
 
+/// A type alias for a result that can either be a value of type T or a list of compiler errors
 pub type CompileResult<T> = Result<T, Vec<CompilerError>>;
 
 /// Reports a list of compiler errors to stderr
@@ -141,7 +70,7 @@ impl ErrorCollector {
 
     pub fn report_errors(&self) {
         for error in self.errors.iter() {
-            eprintln!("{}", error.format());
+            eprintln!("{}", error.message);
         }
     }
 
@@ -157,7 +86,7 @@ impl ErrorCollector {
 pub struct LineInfo<'a> {
     /// Number of tokens on each line (run-length encoded)
     /// (line_number, tokens_on_line)
-    pub per_line: Vec<(u16, u16)>, 
+    pub per_line: Vec<(u16, u16)>,
     /// Reference to the original source code
     source: &'a str,
     /// The starting position of each line in the source code
@@ -166,10 +95,10 @@ pub struct LineInfo<'a> {
 
 impl LineInfo<'_> {
     /// Creates a new LineInfo object
-    /// 
+    ///
     /// ### Arguments
     /// * `source` - The source code string
-    /// 
+    ///
     /// ### Returns
     /// A new LineInfo object with the line starts calculated
     pub fn new(source: &str) -> LineInfo {
@@ -180,19 +109,19 @@ impl LineInfo<'_> {
                 line_starts.push(i + 1);
             }
         }
-        
+
         LineInfo {
             per_line: Vec::new(),
             source,
             line_starts,
         }
     }
-    
+
     /// Get the line and column number for a token position
-    /// 
+    ///
     /// # Arguments
     /// * `pos` - The position of the token in the source code
-    /// 
+    ///
     /// # Returns
     /// A tuple containing the line number and column number
     pub fn get_line_col(&self, pos: usize) -> (usize, usize) {
@@ -205,38 +134,38 @@ impl LineInfo<'_> {
             }
         }
     }
-    
+
     /// Get the text for a specific line
-    /// 
+    ///
     /// ### Arguments
     /// * `line` - The line number to retrieve
-    /// 
+    ///
     /// ### Returns
     /// The text of the line, or None if the line number is invalid
     pub fn get_line_text(&self, line: usize) -> Option<&str> {
         if line == 0 || line > self.line_starts.len() {
             return None;
         }
-        
+
         let start = self.line_starts[line - 1];
         let end = if line < self.line_starts.len() {
             self.line_starts[line]
         } else {
             self.source.len()
         };
-        
-        let actual_end = if start < end && end > 0 && 
-                           self.source.as_bytes().get(end - 1) == Some(&b'\n') {
-            end - 1
-        } else {
-            end
-        };
-        
+
+        let actual_end =
+            if start < end && end > 0 && self.source.as_bytes().get(end - 1) == Some(&b'\n') {
+                end - 1
+            } else {
+                end
+            };
+
         Some(&self.source[start..actual_end])
     }
-    
+
     /// Format an error message with line information and source code snippet
-    /// 
+    ///
     /// This creates a nicely formatted error message similar to Rust's compiler errors,
     /// with line numbers, source code context, and arrows pointing to the error location.
     ///
@@ -249,25 +178,29 @@ impl LineInfo<'_> {
     /// A formatted error message string
     pub fn format_error(&self, pos: usize, message: &str, token_length: usize) -> String {
         let (line, col) = self.get_line_col(pos);
-        
+
         // Get line text for current line and previous line if available
         let current_line_text = self.get_line_text(line).unwrap_or("<line not available>");
-      
+
         // Format line numbers for consistent spacing
         let line_num = format!("{}", line);
-        
-        // Create indentation with 1 more whitespace than the line string length
-        let indent = " ".repeat(line_num.len() + 1);
-        
+
         // Create the error marker line with red carets
         let error_marker = " ".repeat(col - 1) + &"^".repeat(token_length.max(1)).red().to_string();
-        
+        // Format the line number as a string to determine indentation
+        let line_string = format!("{}", line);
+        // Create indentation with 1 more whitespace than the line string length
+        let indent = " ".repeat(line_string.len() + 1);
+        let arrow = "-->".yellow();
         // Build the nicely formatted error message
-        let pipe = "|".yellow(); 
-        let mut result = format!("{} {} {}\n", line_num.yellow(), pipe, current_line_text);
+        let pipe = "|".yellow();
+        let mut result = format!("  {} line {}:{}\n{indent}{}\n", arrow, line, col, pipe);
+        result += &format!("{} {} {}\n", line_num.yellow(), pipe, current_line_text);
         result += &format!("{indent}{} {}\n", pipe, error_marker);
-        result += &format!("{indent}{} {}\n",pipe,  message);
-        
+
+        // Create error marker with caret depending on if we know the token length
+        result += &format!("{indent}{} {}\n", pipe, message);
+
         result
     }
 }

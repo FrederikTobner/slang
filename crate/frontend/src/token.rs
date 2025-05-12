@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 /// Types of tokens in the language lexer
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Tokentype {
     Identifier,     // x, y, myVar
     IntegerLiteral, // 123

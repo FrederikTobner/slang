@@ -2,7 +2,7 @@ pub use std::io::{Read, Write};
 use crate::value::Value;
 
 /// Operation codes for the bytecode interpreter
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum OpCode {
     /// Push a constant onto the stack
     Constant = 0,
@@ -129,7 +129,7 @@ impl std::fmt::Debug for NativeFunction {
 }
 
 /// A chunk of bytecode representing a compiled program
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Chunk {
     /// The actual bytecode instructions
     pub code: Vec<u8>,

@@ -137,8 +137,8 @@ impl VM {
                 if constant_idx >= chunk.constants.len() {
                     return Err("Invalid constant index".to_string());
                 }
-                let constant = chunk.constants[constant_idx].clone();
-                self.stack.push(constant);
+                let constant = &chunk.constants[constant_idx];
+                self.stack.push(constant.clone());
             }
             OpCode::Add => {
                 self.binary_op(|a, b| a.add(b))?;
@@ -248,9 +248,9 @@ impl VM {
                 }
 
                 let var_name = chunk.identifiers[var_index].clone();
-                let value = chunk.constants[constant_index].clone();
+                let value = &chunk.constants[constant_index];
 
-                self.variables.insert(var_name, value);
+                self.variables.insert(var_name, value.clone());
             }
             OpCode::Call => {
                 let arg_count = self.read_byte(chunk) as usize;
@@ -260,7 +260,7 @@ impl VM {
                 }
 
                 let function_pos = self.stack.len() - 1;
-                let function_value = self.stack[function_pos].clone();
+                let function_value = &self.stack[function_pos];
 
                 match function_value {
                     Value::Function(func) => {
