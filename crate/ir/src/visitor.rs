@@ -1,4 +1,4 @@
-use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, TypeDefinitionStmt, UnaryExpr};
+use crate::ast::{Statement, BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, TypeDefinitionStmt, UnaryExpr};
 
 /// Trait implementing the visitor pattern for traversing the AST
 /// 
@@ -8,7 +8,7 @@ use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationSt
 /// The generic parameter T represents the return type of the visit methods.
 pub trait Visitor<T> {
     /// Visit a general statement
-    fn visit_statement(&mut self, stmt: &crate::ast::Statement) -> T;
+    fn visit_statement(&mut self, stmt: &Statement) -> T;
     
     /// Visit an expression statement
     fn visit_expression_statement(&mut self, expr: &Expression) -> T;
@@ -23,7 +23,7 @@ pub trait Visitor<T> {
     fn visit_function_declaration_statement(&mut self, stmt: &FunctionDeclarationStmt) -> T;
     
     /// Visit a block statement (multiple statements in braces)
-    fn visit_block_statement(&mut self, stmts: &[crate::ast::Statement]) -> T;
+    fn visit_block_statement(&mut self, stmts: &[Statement]) -> T;
     
     /// Visit a return statement
     fn visit_return_statement(&mut self, expr: &Option<Expression>) -> T;

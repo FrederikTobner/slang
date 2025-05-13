@@ -28,6 +28,12 @@ pub struct VM {
     current_frame: Option<usize>,
 }
 
+impl Default for VM {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VM {
     /// Creates a new virtual machine
     pub fn new() -> Self {

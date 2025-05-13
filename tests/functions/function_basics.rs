@@ -25,6 +25,19 @@ fn test_function_with_no_params() {
 }
 
 #[test]
+fn test_empty_return() {
+    let program = r#"
+        fn void_function() {
+            return;
+        }
+        
+        void_function();
+        print_value(42); // Just to verify program continues
+    "#;
+    execute_program_and_assert(program, "42");
+}
+
+#[test]
 fn test_function_with_different_return_types() {
     let program = r#"
         fn get_string() -> string {

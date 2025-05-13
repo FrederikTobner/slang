@@ -55,6 +55,12 @@ pub struct ErrorCollector {
     errors: Vec<CompilerError>,
 }
 
+impl Default for ErrorCollector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ErrorCollector {
     pub fn new() -> Self {
         Self { errors: Vec::new() }

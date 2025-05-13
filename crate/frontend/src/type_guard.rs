@@ -37,6 +37,12 @@ pub struct TypeGuard {
     errors: Vec<CompilerError>,
 }
 
+impl Default for TypeGuard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TypeGuard {
     /// Creates a new type checker with built-in functions registered
     pub fn new() -> Self {
@@ -231,9 +237,7 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                 if actual_type == unspecified_int_type() {
                     if let Expression::Literal(lit) = expr {
                         if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                            let value_in_range = TYPE_REGISTRY.with(|registry| {
-                                registry.borrow().check_value_in_range(n, &expected_type)
-                            });
+                            let value_in_range = TYPE_REGISTRY.read().unwrap().check_value_in_range(n, &expected_type);
 
                             if value_in_range {
                                 return Ok(expected_type.clone());
@@ -246,11 +250,8 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                 if actual_type == unspecified_float_type() {
                     if let Expression::Literal(lit) = expr {
                         if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
-                            let value_in_range = TYPE_REGISTRY.with(|registry| {
-                                registry
-                                    .borrow()
-                                    .check_float_value_in_range(f, &expected_type)
-                            });
+                            let value_in_range = TYPE_REGISTRY.read().unwrap()
+                                    .check_float_value_in_range(f, &expected_type);
 
                             if value_in_range {
                                 return Ok(expected_type.clone());
@@ -306,9 +307,7 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                     if arg_type == unspecified_int_type() {
                         if let Expression::Literal(lit) = arg {
                             if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                                let value_in_range = TYPE_REGISTRY.with(|registry| {
-                                    registry.borrow().check_value_in_range(n, param_type)
-                                });
+                                let value_in_range = TYPE_REGISTRY.read().unwrap().check_value_in_range(n, param_type);
 
                                 if value_in_range {
                                     continue; // This argument is valid
@@ -338,19 +337,14 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
         &mut self,
         type_def: &TypeDefinitionStmt,
     ) -> Result<TypeId, String> {
-        // Register the new struct type
-        TYPE_REGISTRY.with(|registry| {
-            let mut registry = registry.borrow_mut();
-
-            // Create a new struct type
-            let type_kind = TypeKind::Struct(StructType {
+        let type_id = TYPE_REGISTRY.write().unwrap().register_type(
+            &type_def.name,
+            TypeKind::Struct(StructType {
                 name: type_def.name.clone(),
                 fields: type_def.fields.clone(),
-            });
-
-            let type_id = registry.register_type(&type_def.name, type_kind);
-            Ok(type_id)
-        })
+            }),
+        );
+        Ok(type_id)
     }
 
     fn visit_expression_statement(&mut self, expr: &Expression) -> Result<TypeId, String> {
@@ -390,11 +384,8 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                         if self.is_integer_type(&let_stmt.expr_type) {
                             if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                                 // Check if the value is in range for the target type
-                                let value_in_range = TYPE_REGISTRY.with(|registry| {
-                                    registry
-                                        .borrow()
-                                        .check_value_in_range(n, &let_stmt.expr_type)
-                                });
+                                let value_in_range = TYPE_REGISTRY.read().unwrap()
+                                        .check_value_in_range(n, &let_stmt.expr_type);
 
                                 if value_in_range {
                                     let_stmt.expr_type.clone()
@@ -431,12 +422,10 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                                 if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                                     // For negation, we need to check the negative value
                                     let negated_value = -*n;
-                                    let value_in_range = TYPE_REGISTRY.with(|registry| {
-                                        registry.borrow().check_value_in_range(
+                                    let value_in_range = TYPE_REGISTRY.read().unwrap().check_value_in_range(
                                             &negated_value,
                                             &let_stmt.expr_type,
-                                        )
-                                    });
+                                        );
 
                                     if value_in_range {
                                         return Ok(let_stmt.expr_type.clone());
@@ -490,11 +479,8 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                         if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
                             if self.is_float_type(&let_stmt.expr_type) {
                                 // Check if the float is in range for the target type
-                                let value_in_range = TYPE_REGISTRY.with(|registry| {
-                                    registry
-                                        .borrow()
-                                        .check_float_value_in_range(f, &let_stmt.expr_type)
-                                });
+                                let value_in_range = TYPE_REGISTRY.read().unwrap()
+                                        .check_float_value_in_range(f, &let_stmt.expr_type);
 
                                 if value_in_range {
                                     let_stmt.expr_type.clone()
@@ -531,12 +517,10 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                                     if self.is_float_type(&let_stmt.expr_type) {
                                         // For negation, we need to check the negative value
                                         let negated_value = -*f;
-                                        let value_in_range = TYPE_REGISTRY.with(|registry| {
-                                            registry.borrow().check_float_value_in_range(
+                                        let value_in_range = TYPE_REGISTRY.read().unwrap().check_float_value_in_range(
                                                 &negated_value,
                                                 &let_stmt.expr_type,
-                                            )
-                                        });
+                                            );
 
                                         if value_in_range {
                                             return Ok(let_stmt.expr_type.clone());
@@ -700,9 +684,7 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                 if let Expression::Literal(lit) = &*bin_expr.left {
                     if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                         // Check if value is in valid range for the target type
-                        let value_in_range = TYPE_REGISTRY.with(|registry| {
-                            registry.borrow().check_value_in_range(n, &right_type)
-                        });
+                        let value_in_range = TYPE_REGISTRY.read().unwrap().check_value_in_range(n, &right_type);
 
                         if value_in_range {
                             return Ok(right_type);
@@ -723,9 +705,7 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                 // Similar check for right side
                 if let Expression::Literal(literal) = &*bin_expr.right {
                     if let LiteralValue::UnspecifiedInteger(num) = &literal.value {
-                        let value_in_range = TYPE_REGISTRY.with(|registry| {
-                            registry.borrow().check_value_in_range(num, &left_type)
-                        });
+                        let value_in_range = TYPE_REGISTRY.read().unwrap().check_value_in_range(num, &left_type);
 
                         if value_in_range {
                             return Ok(left_type);
@@ -748,9 +728,7 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                 if let Expression::Literal(lit) = &*bin_expr.left {
                     if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
                         // Check if value is in valid range for the target type
-                        let value_in_range = TYPE_REGISTRY.with(|registry| {
-                            registry.borrow().check_float_value_in_range(f, &right_type)
-                        });
+                        let value_in_range = TYPE_REGISTRY.read().unwrap().check_float_value_in_range(f, &right_type);
 
                         if value_in_range {
                             return Ok(right_type);
@@ -770,9 +748,7 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                 // Similar check for right side with float literals
                 if let Expression::Literal(lit) = &*bin_expr.right {
                     if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
-                        let value_in_range = TYPE_REGISTRY.with(|registry| {
-                            registry.borrow().check_float_value_in_range(f, &left_type)
-                        });
+                        let value_in_range = TYPE_REGISTRY.read().unwrap().check_float_value_in_range(f, &left_type);
 
                         if value_in_range {
                             return Ok(left_type);

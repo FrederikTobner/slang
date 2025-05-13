@@ -17,3 +17,18 @@ fn precedence() {
     "#;
     execute_program_and_assert(program, "7");
 }
+
+#[test]
+fn test_nested_blocks() {
+    let program = r#"
+        let x = 10;
+        {
+            let y = 20;
+            {
+                let z = 30;
+                print_value(x + y + z);
+            }
+        }
+    "#;
+    execute_program_and_assert(program, "60");
+}

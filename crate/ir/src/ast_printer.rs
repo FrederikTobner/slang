@@ -1,5 +1,6 @@
 use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, LiteralValue, UnaryOperator, BinaryOperator};
 use crate::visitor::Visitor;
+use slang_types::types::{TYPE_NAME_BOOL, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_STRING, TYPE_NAME_INT, TYPE_NAME_FLOAT, TYPE_NAME_U32, TYPE_NAME_U64};
 
 /// A visitor implementation that prints the AST in a human-readable format
 pub struct ASTPrinter {
@@ -9,7 +10,6 @@ pub struct ASTPrinter {
 
 impl ASTPrinter {
     /// Creates a new AST printer with no indentation
-    #[allow(dead_code)]
     pub fn new() -> Self {
         ASTPrinter { indent_level: 0 }
     }
@@ -19,7 +19,6 @@ impl ASTPrinter {
     /// ### Arguments
     /// 
     /// * `statements` - The statements to print
-    #[allow(dead_code)]
     pub fn print(&mut self, statements: &[Statement]) {
         println!("AST Root");
         for stmt in statements {
@@ -135,16 +134,16 @@ impl Visitor<()> for ASTPrinter {
 
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) {
         match &lit_expr.value {
-            LiteralValue::I32(i) => println!("{}I32: {}", self.indent(), i),
-            LiteralValue::I64(i) => println!("{}I64: {}", self.indent(), i),
-            LiteralValue::U32(u) => println!("{}U32: {}", self.indent(), u),
-            LiteralValue::U64(u) => println!("{}U64: {}", self.indent(), u),
-            LiteralValue::UnspecifiedInteger(i) => println!("{}UnspecifiedInteger: {}", self.indent(), i),
-            LiteralValue::F64(f) => println!("{}F64: {}", self.indent(), f),
-            LiteralValue::F32(f) => println!("{}F32: {}", self.indent(), f),
-            LiteralValue::UnspecifiedFloat(f) => println!("{}UnspecifiedFloat: {}", self.indent(), f),
-            LiteralValue::Boolean(b) => println!("{}Boolean: {}", self.indent(), b),
-            LiteralValue::String(s) => println!("{}String: \"{}\"", self.indent(), s),
+            LiteralValue::I32(i) => println!("{}{}: {}", self.indent(), TYPE_NAME_I32, i),
+            LiteralValue::I64(i) => println!("{}{}: {}", self.indent(),  TYPE_NAME_I64, i),
+            LiteralValue::U32(u) => println!("{}{}: {}", self.indent(),  TYPE_NAME_U32, u),
+            LiteralValue::U64(u) => println!("{}{}: {}", self.indent(),  TYPE_NAME_U64, u),
+            LiteralValue::UnspecifiedInteger(i) => println!("{}{}: {}", self.indent(), TYPE_NAME_INT, i),
+            LiteralValue::F64(f) => println!("{}{}: {}", self.indent(),  TYPE_NAME_F64, f),
+            LiteralValue::F32(f) => println!("{}{}: {}", self.indent(),  TYPE_NAME_F32, f),
+            LiteralValue::UnspecifiedFloat(f) => println!("{}{}: {}", self.indent(),  TYPE_NAME_FLOAT,f),
+            LiteralValue::Boolean(b) => println!("{}{}: {}",  self.indent(),  TYPE_NAME_BOOL, b),
+            LiteralValue::String(s) => println!("{}{}: \"{}\"", self.indent(),  TYPE_NAME_STRING, s),
         }
     }
 

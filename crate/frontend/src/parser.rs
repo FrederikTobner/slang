@@ -1,15 +1,17 @@
-use slang_ir::ast::{
-    BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr,
-    LiteralValue, Parameter, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator, BinaryOperator,
-};
 use crate::error::LineInfo;
+use crate::error::{CompileResult, CompilerError};
 use crate::token::{Token, Tokentype};
-use slang_types::types::{TYPE_REGISTRY, TypeId};
-use slang_types::types::{
-    bool_type, f32_type, f64_type, i32_type, i64_type, string_type, u32_type, u64_type,
-    unknown_type, unspecified_float_type, unspecified_int_type,
+use slang_ir::ast::{
+    BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    LetStatement, LiteralExpr, LiteralValue, Parameter, Statement, TypeDefinitionStmt, UnaryExpr,
+    UnaryOperator,
 };
-use crate::error::{CompilerError, CompileResult};
+use slang_types::types::{
+    TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_INT,
+    TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNKNOWN, TYPE_REGISTRY, TypeId, bool_type, f32_type,
+    f64_type, i32_type, i64_type, string_type, u32_type, u64_type, unknown_type,
+    unspecified_float_type, unspecified_int_type,
+};
 
 /// Error that occurs during parsing
 #[derive(Debug)]
@@ -37,18 +39,14 @@ impl ParseError {
         line_info.format_error(self.position, &self.message, self.underline_length)
     }
 
-    pub fn to_compiler_error(
-        &self,
-        line_info: &LineInfo,
-    ) -> CompilerError {
+    pub fn to_compiler_error(&self, line_info: &LineInfo) -> CompilerError {
         let line_pos = line_info.get_line_col(self.position);
         CompilerError::new(
             self.format_with_line_info(line_info),
-            line_pos.0, 
+            line_pos.0,
             line_pos.1,
         )
-    } 
-
+    }
 }
 
 impl std::fmt::Display for ParseError {
@@ -141,10 +139,7 @@ impl<'a> Parser<'a> {
             }
 
             match self.peek().token_type {
-                Tokentype::Let
-                | Tokentype::Fn
-                | Tokentype::Struct
-                | Tokentype::Return => {
+                Tokentype::Let | Tokentype::Fn | Tokentype::Struct | Tokentype::Return => {
                     return;
                 }
                 _ => {}
@@ -264,23 +259,22 @@ impl<'a> Parser<'a> {
 
             let type_name = self.advance().lexeme.clone();
 
-            if type_name == "int" {
+            if type_name == TYPE_NAME_INT {
                 return Err(self.error("'int' is not a valid type specifier. Use 'i32', 'i64', 'u32', or 'u64' instead"));
-            } else if type_name == "float" {
+            } else if type_name == TYPE_NAME_FLOAT {
                 return Err(
                     self.error("'float' is not a valid type specifier. Use 'f32' or 'f64' instead")
                 );
-            } else if type_name == "unknown" {
+            } else if type_name == TYPE_NAME_UNKNOWN {
                 return Err(self.error("'unknown' is not a valid type specifier"));
             }
 
-            TYPE_REGISTRY.with(|registry| {
-                let registry = registry.borrow();
-                registry
-                    .get_type_by_name(&type_name)
-                    .cloned()
-                    .unwrap_or_else(unknown_type)
-            })
+            TYPE_REGISTRY
+                .read()
+                .unwrap()
+                .get_type_by_name(&type_name)
+                .cloned()
+                .unwrap_or_else(unknown_type)
         } else {
             unknown_type()
         };
@@ -327,13 +321,12 @@ impl<'a> Parser<'a> {
         }
 
         let type_name = self.advance().lexeme.clone();
-        let param_type = TYPE_REGISTRY.with(|registry| {
-            let registry = registry.borrow();
-            registry
-                .get_type_by_name(&type_name)
-                .cloned()
-                .unwrap_or_else(unknown_type)
-        });
+        let param_type = TYPE_REGISTRY
+            .read()
+            .unwrap()
+            .get_type_by_name(&type_name)
+            .cloned()
+            .unwrap_or_else(unknown_type);
 
         if param_type == unknown_type() {
             return Err(self.error(&format!("Unknown type: {}", type_name)));
@@ -417,21 +410,20 @@ impl<'a> Parser<'a> {
             let type_name = self.advance().lexeme.clone();
 
             // Explicitly reject placeholder types as type specifiers
-            if type_name == "int" {
+            if type_name == TYPE_NAME_INT {
                 return Err(self.error("'int' is not a valid type specifier. Use 'i32', 'i64', 'u32', or 'u64' instead"));
-            } else if type_name == "float" {
+            } else if type_name == TYPE_NAME_FLOAT {
                 return Err(
                     self.error("'float' is not a valid type specifier. Use 'f32' or 'f64' instead")
                 );
             }
 
-            var_type = TYPE_REGISTRY.with(|registry| {
-                let registry = registry.borrow();
-                registry
-                    .get_type_by_name(&type_name)
-                    .cloned()
-                    .unwrap_or_else(unknown_type)
-            });
+            var_type = TYPE_REGISTRY
+                .read()
+                .unwrap()
+                .get_type_by_name(&type_name)
+                .cloned()
+                .unwrap_or_else(unknown_type);
 
             if var_type == unknown_type() {
                 return Err(self.error(&format!("Unknown type: {}", type_name)));
@@ -531,11 +523,10 @@ impl<'a> Parser<'a> {
         let mut expr = self.comparison()?;
 
         while self.match_any(&[Tokentype::EqualEqual, Tokentype::NotEqual]) {
-            let operator =  match self.previous().token_type {
+            let operator = match self.previous().token_type {
                 Tokentype::EqualEqual => BinaryOperator::Equal,
                 Tokentype::NotEqual => BinaryOperator::NotEqual,
                 _ => unreachable!(),
-                
             };
             let right = self.comparison()?;
             expr = Expression::Binary(BinaryExpr {
@@ -591,7 +582,7 @@ impl<'a> Parser<'a> {
         let mut expr = self.factor()?;
 
         while self.match_any(&[Tokentype::Plus, Tokentype::Minus]) {
-        let operator = match self.previous().token_type {
+            let operator = match self.previous().token_type {
                 Tokentype::Plus => BinaryOperator::Add,
                 Tokentype::Minus => BinaryOperator::Subtract,
                 _ => unreachable!(),
@@ -728,14 +719,14 @@ impl<'a> Parser<'a> {
             let type_name = self.peek().lexeme.clone();
 
             match type_name.as_str() {
-                "f32" => {
+                TYPE_NAME_F32 => {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F32(value as f32),
                         expr_type: f32_type(),
                     }));
                 }
-                "f64" => {
+                TYPE_NAME_F64 => {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F64(value),
@@ -804,7 +795,7 @@ impl<'a> Parser<'a> {
             let type_name = self.peek().lexeme.clone();
 
             match type_name.as_str() {
-                "i32" => {
+                TYPE_NAME_I32 => {
                     self.advance();
                     if base_value > i32::MAX as i64 || base_value < i32::MIN as i64 {
                         return Err(self.error_previous(&format!(
@@ -817,14 +808,14 @@ impl<'a> Parser<'a> {
                         expr_type: i32_type(),
                     }));
                 }
-                "i64" => {
+                TYPE_NAME_I64 => {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::I64(base_value),
                         expr_type: i64_type(),
                     }));
                 }
-                "u32" => {
+                TYPE_NAME_U32 => {
                     self.advance();
                     if base_value < 0 || base_value > u32::MAX as i64 {
                         return Err(self.error_previous(&format!(
@@ -837,7 +828,7 @@ impl<'a> Parser<'a> {
                         expr_type: u32_type(),
                     }));
                 }
-                "u64" => {
+                TYPE_NAME_U64 => {
                     self.advance();
                     if base_value < 0 {
                         return Err(self.error_previous(&format!(
@@ -850,14 +841,14 @@ impl<'a> Parser<'a> {
                         expr_type: u64_type(),
                     }));
                 }
-                "f32" => {
+                TYPE_NAME_F32 => {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F32(base_value as f32),
                         expr_type: f32_type(),
                     }));
                 }
-                "f64" => {
+                TYPE_NAME_F64 => {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F64(base_value as f64),
@@ -888,26 +879,22 @@ impl<'a> Parser<'a> {
         let type_name = self.advance().lexeme.clone();
 
         // Check for placeholder types
-        if type_name == "int" {
+        if type_name == TYPE_NAME_INT {
             return Err(self.error(
                 "'int' is not a valid type specifier. Use 'i32', 'i64', 'u32', or 'u64' instead",
             ));
-        } else if type_name == "float" {
+        } else if type_name == TYPE_NAME_FLOAT {
             return Err(
                 self.error("'float' is not a valid type specifier. Use 'f32' or 'f64' instead")
             );
-        } else if type_name == "unknown" {
+        } else if type_name == TYPE_NAME_UNKNOWN {
             return Err(self.error("'unknown' is not a valid type specifier"));
         }
-
-        TYPE_REGISTRY.with(|registry| {
-            let registry = registry.borrow();
-            if let Some(type_id) = registry.get_type_by_name(&type_name) {
-                Ok(type_id.clone())
-            } else {
-                Err(self.error(&format!("Unknown type: {}", type_name)))
-            }
-        })
+        if let Some(type_id) = TYPE_REGISTRY.read().unwrap().get_type_by_name(&type_name) {
+            Ok(type_id.clone())
+        } else {
+            Err(self.error(&format!("Unknown type: {}", type_name)))
+        }
     }
 
     /// Consumes the current token if it matches the expected type
@@ -981,6 +968,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     ///
     /// true if all tokens have been procesed, false otherwise
+    #[inline]
     fn is_at_end(&self) -> bool {
         self.peek().token_type == Tokentype::Eof
     }
@@ -990,6 +978,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     ///
     /// The current token
+    #[inline]
     fn peek(&self) -> &Token {
         &self.tokens[self.current]
     }
@@ -999,6 +988,7 @@ impl<'a> Parser<'a> {
     /// # Returns
     ///
     /// The previous token
+    #[inline]
     fn previous(&self) -> &Token {
         &self.tokens[self.current - 1]
     }

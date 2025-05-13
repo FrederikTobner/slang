@@ -2,10 +2,151 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{LazyLock, RwLock};
+
+// Type name constants
+pub const TYPE_NAME_I32: &str = "i32";
+pub const TYPE_NAME_I64: &str = "i64";
+pub const TYPE_NAME_U32: &str = "u32";
+pub const TYPE_NAME_U64: &str = "u64";
+pub const TYPE_NAME_F32: &str = "f32";
+pub const TYPE_NAME_F64: &str = "f64";
+pub const TYPE_NAME_BOOL: &str = "bool";
+pub const TYPE_NAME_STRING: &str = "string";
+pub const TYPE_NAME_INT: &str = "int";
+pub const TYPE_NAME_FLOAT: &str = "float";
+pub const TYPE_NAME_UNKNOWN: &str = "unknown";
+
+/// Represents all primitive types in the language
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PrimitiveType {
+    /// 32-bit signed integer
+    I32,
+    /// 64-bit signed integer
+    I64,
+    /// 32-bit unsigned integer
+    U32,
+    /// 64-bit unsigned integer
+    U64,
+    /// 32-bit floating point
+    F32,
+    /// 64-bit floating point
+    F64,
+    /// Boolean type
+    Bool,
+    /// String type
+    String,
+    /// Unspecified integer type (for literals)
+    UnspecifiedInt,
+    /// Unspecified float type (for literals)
+    UnspecifiedFloat,
+    /// Unknown type
+    Unknown,
+}
+
+impl PrimitiveType {
+    /// Get the string name of this primitive type
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            PrimitiveType::I32 => TYPE_NAME_I32,
+            PrimitiveType::I64 => TYPE_NAME_I64,
+            PrimitiveType::U32 => TYPE_NAME_U32,
+            PrimitiveType::U64 => TYPE_NAME_U64,
+            PrimitiveType::F32 => TYPE_NAME_F32,
+            PrimitiveType::F64 => TYPE_NAME_F64,
+            PrimitiveType::Bool => TYPE_NAME_BOOL,
+            PrimitiveType::String => TYPE_NAME_STRING,
+            PrimitiveType::UnspecifiedInt => TYPE_NAME_INT,
+            PrimitiveType::UnspecifiedFloat => TYPE_NAME_FLOAT,
+            PrimitiveType::Unknown => TYPE_NAME_UNKNOWN,
+        }
+    }
+
+    /// Get the TypeId for this primitive type
+    pub fn get_type_id(&self) -> TypeId {
+        TYPE_REGISTRY
+            .read()
+            .unwrap()
+            .get_type_by_name(self.type_name())
+            .unwrap()
+            .clone()
+    }
+
+    /// Try to create a PrimitiveType from a type name string
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            TYPE_NAME_I32 => Some(PrimitiveType::I32),
+            TYPE_NAME_I64 => Some(PrimitiveType::I64),
+            TYPE_NAME_U32 => Some(PrimitiveType::U32),
+            TYPE_NAME_U64 => Some(PrimitiveType::U64),
+            TYPE_NAME_F32 => Some(PrimitiveType::F32),
+            TYPE_NAME_F64 => Some(PrimitiveType::F64),
+            TYPE_NAME_BOOL => Some(PrimitiveType::Bool),
+            TYPE_NAME_STRING => Some(PrimitiveType::String),
+            TYPE_NAME_INT => Some(PrimitiveType::UnspecifiedInt),
+            TYPE_NAME_FLOAT => Some(PrimitiveType::UnspecifiedFloat),
+            TYPE_NAME_UNKNOWN => Some(PrimitiveType::Unknown),
+            _ => None,
+        }
+    }
+
+    /// Check if this is a numeric type (integer or float)
+    pub fn is_numeric(&self) -> bool {
+        self.is_integer() || self.is_float()
+    }
+
+    /// Check if this is an integer type
+    pub fn is_integer(&self) -> bool {
+        matches!(
+            self,
+            PrimitiveType::I32
+                | PrimitiveType::I64
+                | PrimitiveType::U32
+                | PrimitiveType::U64
+                | PrimitiveType::UnspecifiedInt
+        )
+    }
+
+    /// Check if this is a float type
+    pub fn is_float(&self) -> bool {
+        matches!(
+            self,
+            PrimitiveType::F32 | PrimitiveType::F64 | PrimitiveType::UnspecifiedFloat
+        )
+    }
+
+    /// Check if this is a signed integer type
+    pub fn is_signed_integer(&self) -> bool {
+        matches!(
+            self,
+            PrimitiveType::I32 | PrimitiveType::I64 | PrimitiveType::UnspecifiedInt
+        )
+    }
+
+    /// Check if this is an unsigned integer type
+    pub fn is_unsigned_integer(&self) -> bool {
+        matches!(self, PrimitiveType::U32 | PrimitiveType::U64)
+    }
+
+    /// Get the bit width of this type (0 for unspecified types)
+    pub fn bit_width(&self) -> u8 {
+        match self {
+            PrimitiveType::I32 | PrimitiveType::U32 | PrimitiveType::F32 => 32,
+            PrimitiveType::I64 | PrimitiveType::U64 | PrimitiveType::F64 => 64,
+            _ => 0,
+        }
+    }
+}
 
 /// A unique identifier for a type in the type system
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeId(usize);
+
+impl Default for TypeId {
+    fn default() -> Self {
+        TypeId::new()
+    }
+}
 
 impl TypeId {
     /// Creates a new unique type identifier
@@ -16,82 +157,142 @@ impl TypeId {
 }
 
 pub fn get_type_name(type_id: &TypeId) -> String {
-    TYPE_REGISTRY.with(|registry| {
-        registry
-            .borrow()
-            .get_type_info(type_id)
-            .map(|t| t.name.clone())
-            .unwrap_or_else(|| format!("{:?}", type_id))
-    })
+    TYPE_REGISTRY
+        .read()
+        .unwrap()
+        .get_type_info(type_id)
+        .map(|t| t.name.clone())
+        .unwrap_or_else(|| format!("{:?}", type_id))
 }
+
 pub fn type_fullfills<F>(type_id: &TypeId, predicate: F) -> bool
 where
     F: Fn(&TypeInfo) -> bool,
 {
-    TYPE_REGISTRY.with(|registry| {
-        registry
-            .borrow()
-            .get_type_info(type_id)
-            .is_some_and(predicate)
-    })
+    TYPE_REGISTRY
+        .read()
+        .unwrap()
+        .get_type_info(type_id)
+        .is_some_and(predicate)
 }
+
+/// Returns the TypeId for a primitive type
+pub fn primitive_type(ptype: PrimitiveType) -> TypeId {
+    ptype.get_type_id()
+}
+
 /// Returns the TypeId for booleans
 pub fn bool_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("bool").unwrap().clone())
+    PrimitiveType::Bool.get_type_id()
 }
 
 /// Returns the TypeId for i32 integers
 pub fn i32_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("i32").unwrap().clone())
+    PrimitiveType::I32.get_type_id()
 }
 
 /// Returns the TypeId for i64 integers
 pub fn i64_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("i64").unwrap().clone())
+    PrimitiveType::I64.get_type_id()
 }
 
 /// Returns the TypeId for u32 integers
 pub fn u32_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("u32").unwrap().clone())
+    PrimitiveType::U32.get_type_id()
 }
 
 /// Returns the TypeId for u64 integers
 pub fn u64_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("u64").unwrap().clone())
+    PrimitiveType::U64.get_type_id()
 }
 
 /// Returns the TypeId for f32 floating points
 pub fn f32_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("f32").unwrap().clone())
+    PrimitiveType::F32.get_type_id()
 }
 
 /// Returns the TypeId for f64 floating points
 pub fn f64_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("f64").unwrap().clone())
+    PrimitiveType::F64.get_type_id()
 }
 
 /// Returns the TypeId for unspecified floats (used for float literals without suffix)
 pub fn unspecified_float_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("float").unwrap().clone())
+    PrimitiveType::UnspecifiedFloat.get_type_id()
 }
 
 /// Returns the TypeId for strings
 pub fn string_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("string").unwrap().clone())
+    PrimitiveType::String.get_type_id()
 }
 
 /// Returns the TypeId for unspecified integers (used for integer literals)
 pub fn unspecified_int_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("int").unwrap().clone())
+    PrimitiveType::UnspecifiedInt.get_type_id()
 }
 
 /// Returns the TypeId for unknown types
 pub fn unknown_type() -> TypeId {
-    TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("unknown").unwrap().clone())
+    PrimitiveType::Unknown.get_type_id()
+}
+
+/// Check if a type is a numeric type (integer or float)
+pub fn is_numeric_type(type_id: &TypeId) -> bool {
+    TYPE_REGISTRY
+        .read()
+        .unwrap()
+        .get_primitive_type(type_id)
+        .is_some_and(|pt| pt.is_numeric())
+}
+
+/// Check if a type is an integer type
+pub fn is_integer_type(type_id: &TypeId) -> bool {
+    TYPE_REGISTRY
+        .read()
+        .unwrap()
+        .get_primitive_type(type_id)
+        .is_some_and(|pt| pt.is_integer())
+}
+
+/// Check if a type is a float type
+pub fn is_float_type(type_id: &TypeId) -> bool {
+    TYPE_REGISTRY
+        .read()
+        .unwrap()
+        .get_primitive_type(type_id)
+        .is_some_and(|pt| pt.is_float())
+}
+
+/// Check if a type is a signed integer type
+pub fn is_signed_integer_type(type_id: &TypeId) -> bool {
+    TYPE_REGISTRY
+        .read()
+        .unwrap()
+        .get_primitive_type(type_id)
+        .is_some_and(|pt| pt.is_signed_integer())
+}
+
+/// Check if a type is an unsigned integer type
+pub fn is_unsigned_integer_type(type_id: &TypeId) -> bool {
+    TYPE_REGISTRY
+        .read()
+        .unwrap()
+        .get_primitive_type(type_id)
+        .is_some_and(|pt| pt.is_unsigned_integer())
+}
+
+/// Try to get the primitive type for a TypeId
+pub fn get_primitive_type(type_id: &TypeId) -> Option<PrimitiveType> {
+    TYPE_REGISTRY.read().unwrap().get_primitive_type(type_id)
+}
+
+/// Get the bit width of a type (0 for non-numeric or unspecified types)
+pub fn get_bit_width(type_id: &TypeId) -> u8 {
+    get_primitive_type(type_id).map_or(0, |pt| pt.bit_width())
 }
 
 /// Represents the different kinds of types in the language
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub enum TypeKind {
     /// Integer types (signed/unsigned, different bit widths)
@@ -109,7 +310,7 @@ pub enum TypeKind {
 }
 
 /// Represents an integer type with its properties
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct IntegerType {
     /// Whether the integer is signed or unsigned
@@ -121,7 +322,7 @@ pub struct IntegerType {
 }
 
 /// Represents a floating point type with its properties
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct FloatType {
     /// The number of bits (e.g., 64 for f64)
@@ -131,7 +332,7 @@ pub struct FloatType {
 }
 
 /// Represents a struct type with its fields
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct StructType {
     /// Name of the struct
@@ -152,33 +353,35 @@ pub struct TypeInfo {
     pub kind: TypeKind,
 }
 
+pub static TYPE_REGISTRY: LazyLock<RwLock<TypeRegistry>> = LazyLock::new(|| {
+    let registry = TypeRegistry::new();
+    RwLock::new(registry)
+});
+
 // Thread-local storage for the type registry and commonly used types
 thread_local! {
-    /// The global type registry
-    pub static TYPE_REGISTRY: RefCell<TypeRegistry> = RefCell::new(TypeRegistry::new());
-
     /// Pre-defined type for booleans
-    pub static BOOL_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("bool").unwrap().clone()));
+    pub static BOOL_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.read().unwrap().get_type_by_name(TYPE_NAME_BOOL).unwrap().clone());
     /// Pre-defined type for i32 integers
-    pub static I32_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("i32").unwrap().clone()));
+    pub static I32_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.read().unwrap().get_type_by_name(TYPE_NAME_I32).unwrap().clone());
     /// Pre-defined type for i64 integers
-    pub static I64_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("i64").unwrap().clone()));
+    pub static I64_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.read().unwrap().get_type_by_name(TYPE_NAME_I64).unwrap().clone());
     /// Pre-defined type for u32 integers
-    pub static U32_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("u32").unwrap().clone()));
+    pub static U32_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.read().unwrap().get_type_by_name(TYPE_NAME_U32).unwrap().clone());
     /// Pre-defined type for u64 integers
-    pub static U64_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("u64").unwrap().clone()));
+    pub static U64_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.read().unwrap().get_type_by_name(TYPE_NAME_U64).unwrap().clone());
     /// Pre-defined type for f32 floating points
-    pub static F32_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("f32").unwrap().clone()));
+    pub static F32_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.read().unwrap().get_type_by_name(TYPE_NAME_F32).unwrap().clone());
     /// Pre-defined type for f64 floating points
-    pub static F64_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("f64").unwrap().clone()));
+    pub static F64_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.read().unwrap().get_type_by_name(TYPE_NAME_F64).unwrap().clone());
     /// Pre-defined type for strings
-    pub static STRING_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("string").unwrap().clone()));
+    pub static STRING_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.read().unwrap().get_type_by_name(TYPE_NAME_STRING).unwrap().clone());
     /// Pre-defined type for unspecified integers (used for integer literals)
-    pub static UNSPECIFIED_INT_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("int").unwrap().clone()));
+    pub static UNSPECIFIED_INT_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.read().unwrap().get_type_by_name(TYPE_NAME_INT).unwrap().clone());
     /// Pre-defined type for unspecified floats (used for float literals without suffix)
-    pub static UNSPECIFIED_FLOAT_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("float").unwrap().clone()));
+    pub static UNSPECIFIED_FLOAT_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.read().unwrap().get_type_by_name(TYPE_NAME_FLOAT).unwrap().clone());
     /// Pre-defined type for unknown types
-    pub static UNKNOWN_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.with(|r| r.borrow().get_type_by_name("unknown").unwrap().clone()));
+    pub static UNKNOWN_TYPE: RefCell<TypeId> = RefCell::new(TYPE_REGISTRY.read().unwrap().get_type_by_name(TYPE_NAME_UNKNOWN).unwrap().clone());
 }
 
 /// Registry that stores all available types in the language
@@ -187,6 +390,12 @@ pub struct TypeRegistry {
     types: HashMap<TypeId, TypeInfo>,
     /// Map from type names to TypeId for quick lookup
     type_names: HashMap<String, TypeId>,
+}
+
+impl Default for TypeRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TypeRegistry {
@@ -204,73 +413,79 @@ impl TypeRegistry {
 
     /// Registers all built-in types in the type registry
     fn register_built_in_types(&mut self) {
-        self.register_type(
-            "i32",
-            TypeKind::Integer(IntegerType {
-                signed: true,
-                bits: 32,
-                is_unspecified: false,
-            }),
-        );
-        self.register_type(
-            "i64",
-            TypeKind::Integer(IntegerType {
-                signed: true,
-                bits: 64,
-                is_unspecified: false,
-            }),
-        );
-        self.register_type(
-            "u32",
-            TypeKind::Integer(IntegerType {
-                signed: false,
-                bits: 32,
-                is_unspecified: false,
-            }),
-        );
-        self.register_type(
-            "u64",
-            TypeKind::Integer(IntegerType {
-                signed: false,
-                bits: 64,
-                is_unspecified: false,
-            }),
-        );
-        self.register_type(
-            "int",
-            TypeKind::Integer(IntegerType {
-                signed: true,
-                bits: 0,
-                is_unspecified: true,
-            }),
-        );
+        let types_to_register: &[(PrimitiveType, TypeKind)] = &[
+            // Integer types
+            (
+                PrimitiveType::I32,
+                TypeKind::Integer(IntegerType {
+                    signed: true,
+                    bits: 32,
+                    is_unspecified: false,
+                }),
+            ),
+            (
+                PrimitiveType::I64,
+                TypeKind::Integer(IntegerType {
+                    signed: true,
+                    bits: 64,
+                    is_unspecified: false,
+                }),
+            ),
+            (
+                PrimitiveType::U32,
+                TypeKind::Integer(IntegerType {
+                    signed: false,
+                    bits: 32,
+                    is_unspecified: false,
+                }),
+            ),
+            (
+                PrimitiveType::U64,
+                TypeKind::Integer(IntegerType {
+                    signed: false,
+                    bits: 64,
+                    is_unspecified: false,
+                }),
+            ),
+            (
+                PrimitiveType::UnspecifiedInt,
+                TypeKind::Integer(IntegerType {
+                    signed: true,
+                    bits: 0,
+                    is_unspecified: true,
+                }),
+            ),
+            // Float types
+            (
+                PrimitiveType::F32,
+                TypeKind::Float(FloatType {
+                    bits: 32,
+                    is_unspecified: false,
+                }),
+            ),
+            (
+                PrimitiveType::F64,
+                TypeKind::Float(FloatType {
+                    bits: 64,
+                    is_unspecified: false,
+                }),
+            ),
+            (
+                PrimitiveType::UnspecifiedFloat,
+                TypeKind::Float(FloatType {
+                    bits: 0,
+                    is_unspecified: true,
+                }),
+            ),
+            // Other types
+            (PrimitiveType::String, TypeKind::String),
+            (PrimitiveType::Bool, TypeKind::Boolean),
+            (PrimitiveType::Unknown, TypeKind::Unknown),
+        ];
 
-        self.register_type(
-            "f32",
-            TypeKind::Float(FloatType {
-                bits: 32,
-                is_unspecified: false,
-            }),
-        );
-        self.register_type(
-            "f64",
-            TypeKind::Float(FloatType {
-                bits: 64,
-                is_unspecified: false,
-            }),
-        );
-        self.register_type(
-            "float",
-            TypeKind::Float(FloatType {
-                bits: 0,
-                is_unspecified: true,
-            }),
-        );
-
-        self.register_type("string", TypeKind::String);
-        self.register_type("bool", TypeKind::Boolean);
-
-        self.register_type("unknown", TypeKind::Unknown);
+        for (ptype, kind) in types_to_register {
+            self.register_type(ptype.type_name(), kind.clone());
+        }
     }
 
     /// Registers a new type in the registry
@@ -323,6 +538,33 @@ impl TypeRegistry {
         self.types.get(id)
     }
 
+    /// Try to get the primitive type for a given TypeId
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The TypeId to look up
+    ///
+    /// # Returns
+    ///
+    /// Some(PrimitiveType) if it's a primitive type, None otherwise
+    pub fn get_primitive_type(&self, id: &TypeId) -> Option<PrimitiveType> {
+        self.get_type_info(id)
+            .and_then(|info| PrimitiveType::from_str(&info.name))
+    }
+
+    /// Check if a type is a primitive type
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The TypeId to check
+    ///
+    /// # Returns
+    ///
+    /// true if the type is a primitive type, false otherwise
+    pub fn is_primitive_type(&self, id: &TypeId) -> bool {
+        self.get_primitive_type(id).is_some()
+    }
+
     /// Checks if a value is within the valid range for a given type
     ///
     /// # Arguments
@@ -352,7 +594,7 @@ impl TypeRegistry {
             TypeKind::Float(float_type) => match float_type.bits {
                 32 => *value >= f32::MIN as i64 && *value <= f32::MAX as i64,
                 64 => true,
-               _ => *value >= f64::MIN as i64 && *value <= f64::MAX as i64,
+                _ => *value >= f64::MIN as i64 && *value <= f64::MAX as i64,
             },
             _ => false,
         }
@@ -384,4 +626,3 @@ impl TypeRegistry {
         }
     }
 }
-

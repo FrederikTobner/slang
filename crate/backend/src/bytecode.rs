@@ -141,6 +141,12 @@ pub struct Chunk {
     pub identifiers: Vec<String>,
 }
 
+impl Default for Chunk {
+    fn default() -> Self {
+        Chunk::new()
+    }
+}
+
 impl Chunk {
     /// Creates a new, empty bytecode chunk
     pub fn new() -> Self {
@@ -151,6 +157,8 @@ impl Chunk {
             identifiers: Vec::new(),
         }
     }
+
+
 
     /// Writes a byte to the chunk
     /// 
