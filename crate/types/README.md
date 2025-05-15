@@ -32,6 +32,7 @@ The types crate consists of these key components:
 ## Usage
 
 The types crate is used:
+
 - By the frontend type checker for semantic analysis
 - By the parser for early type recognition
 - By the backend compiler for code generation
@@ -40,6 +41,7 @@ The types crate is used:
 ## Integration
 
 The types crate is utilized by multiple components:
+
 - Frontend relies on it for type checking
 - IR references it for type information in the AST
 - Backend uses it during compilation for type-aware code generation

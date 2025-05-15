@@ -1,9 +1,12 @@
 mod cli;
+mod error;
 mod exit;
+
+use clap::Parser;
 
 /// Application entry point
 fn main() {
-    let input = cli::parse_args();
+    let input = cli::Parser::parse();
     #[cfg(windows)]
     colored::control::set_virtual_terminal(true);
     

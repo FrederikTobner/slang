@@ -3,22 +3,23 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{LazyLock, RwLock};
+use slang_derive::NamedEnum;
 
 // Type name constants
-pub const TYPE_NAME_I32: &str = "i32";
-pub const TYPE_NAME_I64: &str = "i64";
-pub const TYPE_NAME_U32: &str = "u32";
-pub const TYPE_NAME_U64: &str = "u64";
-pub const TYPE_NAME_F32: &str = "f32";
-pub const TYPE_NAME_F64: &str = "f64";
-pub const TYPE_NAME_BOOL: &str = "bool";
-pub const TYPE_NAME_STRING: &str = "string";
-pub const TYPE_NAME_INT: &str = "int";
-pub const TYPE_NAME_FLOAT: &str = "float";
-pub const TYPE_NAME_UNKNOWN: &str = "unknown";
+pub const TYPE_NAME_I32: &str = PrimitiveType::I32.name();
+pub const TYPE_NAME_I64: &str = PrimitiveType::I64.name();
+pub const TYPE_NAME_U32: &str = PrimitiveType::U32.name();
+pub const TYPE_NAME_U64: &str = PrimitiveType::U64.name();
+pub const TYPE_NAME_F32: &str = PrimitiveType::F32.name();
+pub const TYPE_NAME_F64: &str = PrimitiveType::F64.name();
+pub const TYPE_NAME_BOOL: &str = PrimitiveType::Bool.name();
+pub const TYPE_NAME_STRING: &str = PrimitiveType::String.name();
+pub const TYPE_NAME_INT: &str = PrimitiveType::UnspecifiedInt.name();
+pub const TYPE_NAME_FLOAT: &str = PrimitiveType::UnspecifiedFloat.name();
+pub const TYPE_NAME_UNKNOWN: &str = PrimitiveType::Unknown.name();
 
 /// Represents all primitive types in the language
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, NamedEnum)]
 pub enum PrimitiveType {
     /// 32-bit signed integer
     I32,
@@ -37,57 +38,26 @@ pub enum PrimitiveType {
     /// String type
     String,
     /// Unspecified integer type (for literals)
+    #[name = "int"]
     UnspecifiedInt,
     /// Unspecified float type (for literals)
+    #[name = "float"]
     UnspecifiedFloat,
     /// Unknown type
+    #[name = "unknown"]
     Unknown,
 }
 
 impl PrimitiveType {
-    /// Get the string name of this primitive type
-    pub fn type_name(&self) -> &'static str {
-        match self {
-            PrimitiveType::I32 => TYPE_NAME_I32,
-            PrimitiveType::I64 => TYPE_NAME_I64,
-            PrimitiveType::U32 => TYPE_NAME_U32,
-            PrimitiveType::U64 => TYPE_NAME_U64,
-            PrimitiveType::F32 => TYPE_NAME_F32,
-            PrimitiveType::F64 => TYPE_NAME_F64,
-            PrimitiveType::Bool => TYPE_NAME_BOOL,
-            PrimitiveType::String => TYPE_NAME_STRING,
-            PrimitiveType::UnspecifiedInt => TYPE_NAME_INT,
-            PrimitiveType::UnspecifiedFloat => TYPE_NAME_FLOAT,
-            PrimitiveType::Unknown => TYPE_NAME_UNKNOWN,
-        }
-    }
 
     /// Get the TypeId for this primitive type
     pub fn get_type_id(&self) -> TypeId {
         TYPE_REGISTRY
             .read()
             .unwrap()
-            .get_type_by_name(self.type_name())
+            .get_type_by_name(self.name())
             .unwrap()
             .clone()
-    }
-
-    /// Try to create a PrimitiveType from a type name string
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s {
-            TYPE_NAME_I32 => Some(PrimitiveType::I32),
-            TYPE_NAME_I64 => Some(PrimitiveType::I64),
-            TYPE_NAME_U32 => Some(PrimitiveType::U32),
-            TYPE_NAME_U64 => Some(PrimitiveType::U64),
-            TYPE_NAME_F32 => Some(PrimitiveType::F32),
-            TYPE_NAME_F64 => Some(PrimitiveType::F64),
-            TYPE_NAME_BOOL => Some(PrimitiveType::Bool),
-            TYPE_NAME_STRING => Some(PrimitiveType::String),
-            TYPE_NAME_INT => Some(PrimitiveType::UnspecifiedInt),
-            TYPE_NAME_FLOAT => Some(PrimitiveType::UnspecifiedFloat),
-            TYPE_NAME_UNKNOWN => Some(PrimitiveType::Unknown),
-            _ => None,
-        }
     }
 
     /// Check if this is a numeric type (integer or float)
@@ -484,7 +454,7 @@ impl TypeRegistry {
         ];
 
         for (ptype, kind) in types_to_register {
-            self.register_type(ptype.type_name(), kind.clone());
+            self.register_type(ptype.name(), kind.clone());
         }
     }
 

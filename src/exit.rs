@@ -6,6 +6,7 @@ pub fn with_code(code: Code, message: &str) -> ! {
 
 /// Based on unix exit codes
 #[allow(dead_code)]
+#[derive(Debug, Copy, Clone)]
 pub enum Code {
     Usage = 64,       /* command line usage error */
     Dataerr = 65,     /* data format error */

@@ -2,7 +2,7 @@
 
 Grammar of the slang language in the extended backus naur format:
 
-```
+```ebnf
 /* Program structure */
 program = { statement } ;
 
