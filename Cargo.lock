@@ -940,6 +940,7 @@ dependencies = [
 name = "slang_backend"
 version = "0.1.0"
 dependencies = [
+ "slang-derive",
  "slang_frontend",
  "slang_ir",
 ]

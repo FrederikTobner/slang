@@ -1,4 +1,5 @@
 use std::fmt;
+
 use crate::bytecode::Function;
 use crate::bytecode::NativeFunction;
 use std::io::Read;

@@ -4,30 +4,61 @@ This crate provides procedural macros for the Slang language compiler, offering 
 
 ## Available Macros
 
-### `TypeName` Derive Macro
+### `NamedEnum` Derive Macro
 
-The `TypeName` derive macro automatically generates `type_name()` and `from_str()` methods for enums based on attributes.
+The `NamedEnum` derive macro automatically generates `name()` and `from_str()` methods for enums based on attributes.
 
 ```rust
-use slang_derive::TypeName;
+use slang_derive::NamedEnum;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, TypeName)]
+#[derive(NamedEnum)]
 pub enum PrimitiveType {
-    #[type_name = "i32"]
+    #[name = "i32"]
     I32,
-    #[type_name = "i64"]
+    #[name = "i64"]
     I64,
-    #[type_name = "bool"]
+    #[name = "bool"]
     Bool,
     // Variants without attributes use their lowercase name
-    String, // type_name = "string"
+    String, // name = "string"
 }
 ```
 
 #### Generated Methods
 
-1. `type_name(&self) -> &'static str`: Returns the string representation of the enum variant
+1. `name(&self) -> &'static str`: Returns the string representation of the enum variant
 2. `from_str(s: &str) -> Option<Self>`: Converts a string into the corresponding enum variant
+
+### `NumericEnum` Derive Macro
+
+The `NumericEnum` derive macro automatically generates bidirectional conversion methods between enum variants and their numeric values.
+
+```rust
+use slang_derive::NumericEnum;
+
+#[derive(NumericEnum)]
+pub enum OpCode {
+    Constant = 0,     // Explicit value
+    Add = 1,          // Explicit value
+    Subtract = 2,     // Explicit value
+    Multiply,         // Implicit value: 3
+    Divide,           // Implicit value: 4
+    // No need to manually implement numeric conversion!
+}
+```
+
+#### Generated Methods
+
+1. `from_int<T: Into<usize>>(value: T) -> Option<Self>`: Converts any numeric value into the corresponding enum variant
+
+#### Key Advantages
+
+- Bidirectional conversion between numeric values and enum variants
+- No need to manually update conversion code when adding new enum variants
+- Automatically handles both explicit and implicit discriminant values
+- Ensures the conversion implementation always stays in sync with the enum definition
+- Eliminates a common source of bugs when forgetting to update conversion code
+- Works with any numeric type that can be converted to `usize` (u8, u16, i32, etc.)
 
 ## Usage
 
@@ -41,20 +72,20 @@ slang-derive = { path = "../derive" }
 Then import and use the macros in your Rust code:
 
 ```rust
-use slang_derive::TypeName;
+use slang_derive::NamedEnum;
 
-#[derive(TypeName)]
+#[derive(NamedEnum)]
 pub enum DataType {
-    #[type_name = "int"]
+    #[name = "int"]
     Integer,
-    #[type_name = "float"]
+    #[name = "float"]
     Float,
-    #[type_name = "string"]
+    #[name = "string"]
     Text,
 }
 
 fn main() {
-    assert_eq!(DataType::Integer.type_name(), "int");
+    assert_eq!(DataType::Integer.name(), "int");
     assert_eq!(DataType::from_str("float"), Some(DataType::Float));
     assert_eq!(DataType::from_str("unknown"), None);
 }
@@ -72,11 +103,11 @@ fn main() {
 The `TypeName` derive macro:
 
 - Works only on enums
-- Uses the `#[type_name = "..."]` attribute to define custom string representations
+- Uses the `#[name = "..."]` attribute to define custom string representations
 - Falls back to lowercase variant name if no attribute is provided
 - Generates both forward (enum → string) and reverse (string → enum) conversions
 
 ## Requirements
 
-- Rust 2021 edition or later
+- Rust 2024 edition or later
 - Dependencies: `syn`, `quote`, and `proc-macro2`

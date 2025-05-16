@@ -134,7 +134,7 @@ impl VM {
     /// Ok(()) on success, or an error message on failure
     fn execute_instruction(&mut self, chunk: &Chunk) -> Result<(), String> {
         let instruction = self.read_byte(chunk);
-        let op = OpCode::from_u8(instruction)
+        let op = OpCode::from_int(instruction)
             .ok_or_else(|| format!("Unknown opcode: {}", instruction))?;
 
         match op {

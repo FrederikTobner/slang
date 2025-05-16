@@ -1,8 +1,9 @@
 pub use std::io::{Read, Write};
 use crate::value::Value;
+use slang_derive::NumericEnum;
 
 /// Operation codes for the bytecode interpreter
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, NumericEnum)]
 pub enum OpCode {
     /// Push a constant onto the stack
     Constant = 0,
@@ -52,47 +53,6 @@ pub enum OpCode {
     Equal = 22,
     /// Not equal comparison
     NotEqual = 23,
-}
-
-impl OpCode {
-    /// Convert a byte to an OpCode
-    /// 
-    /// ### Arguments
-    /// 
-    /// * `value` - The byte to convert
-    /// 
-    /// ### Returns
-    /// 
-    /// Some(OpCode) if the byte represents a valid OpCode, None otherwise
-    pub fn from_u8(value: u8) -> Option<OpCode> {
-        match value {
-            0 => Some(OpCode::Constant),
-            1 => Some(OpCode::Add),
-            2 => Some(OpCode::Subtract),
-            3 => Some(OpCode::Multiply),
-            4 => Some(OpCode::Divide),
-            5 => Some(OpCode::Negate),
-            6 => Some(OpCode::Return),
-            7 => Some(OpCode::Print),
-            8 => Some(OpCode::GetVariable),
-            9 => Some(OpCode::SetVariable),
-            10 => Some(OpCode::Pop),
-            11 => Some(OpCode::DefineFunction),
-            12 => Some(OpCode::Call),
-            13 => Some(OpCode::JumpIfFalse),
-            14 => Some(OpCode::Jump),
-            15 => Some(OpCode::BoolNot),
-            16 => Some(OpCode::BoolAnd),
-            17 => Some(OpCode::BoolOr),
-            18 => Some(OpCode::Greater),
-            19 => Some(OpCode::Less),
-            20 => Some(OpCode::GreaterEqual),
-            21 => Some(OpCode::LessEqual),
-            22 => Some(OpCode::Equal),
-            23 => Some(OpCode::NotEqual),
-            _ => None,
-        }
-    }
 }
 
 /// Function representation in bytecode
