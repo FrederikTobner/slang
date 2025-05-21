@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 slang_ir = { path = "../ir" }
 slang_frontend = { path = "../frontend" }
-slang-derive = { path = "../derive" }
+slang_derive = { path = "../derive" }
 
 [features]
 default = []

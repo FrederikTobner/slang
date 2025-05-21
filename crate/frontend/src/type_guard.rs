@@ -1,18 +1,28 @@
+use crate::error::{CompileResult, CompilerError};
 use slang_ir::ast::{
-    BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr,
-    LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator, BinaryOperator,
+    BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
+    UnaryOperator,
 };
-use slang_types::types::*;
-use slang_types::types::{StructType, TYPE_REGISTRY, TypeId, TypeKind, get_type_name, type_fullfills};
 use slang_ir::visitor::Visitor;
+use slang_types::types::*;
+use slang_types::types::{
+    StructType, TYPE_REGISTRY, TypeId, TypeKind, get_type_name, type_fullfills,
+};
 use std::collections::HashMap;
-use crate::error::{CompilerError, CompileResult};
 
+/// A scope represents a lexical scope for variables in the program.
+/// Each scope contains a mapping of variable names to their types.
 struct Scope {
+    /// Map of variable names to their type IDs in this scope
     variables: HashMap<String, TypeId>,
 }
 
 impl Scope {
+    /// Creates a new empty scope.
+    ///
+    /// ### Returns
+    /// A new Scope with no variables defined
     fn new() -> Self {
         Scope {
             variables: HashMap::new(),
@@ -20,6 +30,14 @@ impl Scope {
     }
 }
 
+/// Performs static type checking on a list of statements.
+/// This is the main entry point for the type checking system.
+///
+/// ### Arguments
+/// * `statements` - The AST statements to type check
+///
+/// ### Returns
+/// * `CompileResult<()>` - Ok if no type errors were found, otherwise Err with the list of errors
 pub fn execute(statements: &[Statement]) -> CompileResult<()> {
     let mut type_checker = TypeGuard::new();
     type_checker.check(statements)
@@ -56,25 +74,39 @@ impl TypeGuard {
         tc
     }
 
-    // Add an error to the collection
+    /// Adds a compiler error to the collection with source location information.
+    ///
+    /// ### Arguments
+    /// * `message` - The error message
+    /// * `line` - The line number where the error occurred (1-based)
+    /// * `column` - The column number where the error occurred (1-based)
     fn add_error(&mut self, message: String, line: usize, column: usize) {
         self.errors.push(CompilerError::new(message, line, column));
     }
 
-    // Convert a String error to a CompilerError and add it to the collection
+    /// Converts a String error to a CompilerError and adds it to the collection.
+    /// Currently uses placeholder location information since we don't track source locations
+    /// for type errors yet.
+    ///
+    /// ### Arguments
+    /// * `message` - The error message
     fn add_string_error(&mut self, message: String) {
         // Since we don't have line/column info in the current error handling,
         // temporarily use 0,0 - this will be improved in a future update
         self.add_error(message, 0, 0);
     }
 
-    /// Begins a new scope
+    /// Begins a new scope by pushing a new scope onto the stack.
+    /// Used when entering a block or function body.
     fn begin_scope(&mut self) {
         self.scopes.push(Scope::new());
     }
 
-    /// Ends the current scope
-    /// Panics if trying to end the global scope
+    /// Ends the current scope by popping it from the stack.
+    /// Used when exiting a block or function body.
+    ///
+    /// ### Panics
+    /// Panics if trying to end the global scope (i.e., if there's only one scope on the stack)
     fn end_scope(&mut self) {
         if self.scopes.len() > 1 {
             self.scopes.pop();
@@ -102,7 +134,6 @@ impl TypeGuard {
     /// ### Returns
     /// The type ID of the variable if found, or None if not found
     fn resolve_variable(&self, name: &str) -> Option<TypeId> {
-        // Search from innermost (last) to outermost (first) scope
         for scope in self.scopes.iter().rev() {
             if let Some(type_id) = scope.variables.get(name) {
                 return Some(type_id.clone());
@@ -113,10 +144,10 @@ impl TypeGuard {
 
     /// Checks if a type is an integer type
     ///
-    /// ## Arguments
+    /// ### Arguments
     /// type_id - The type ID to check
     ///
-    /// ## Returns
+    /// ### Returns
     /// True if the type is an integer type, false otherwise
     ///
     fn is_integer_type(&self, type_id: &TypeId) -> bool {
@@ -125,17 +156,19 @@ impl TypeGuard {
 
     /// Checks if a type is a float type
     ///
-    /// ## Arguments
+    /// ### Arguments
     /// type_id - The type ID to check
     ///
-    /// ## Returns
+    /// ### Returns
     /// True if the type is a float type, false otherwise
     ///
     fn is_float_type(&self, type_id: &TypeId) -> bool {
         type_fullfills(type_id, |info| matches!(info.kind, TypeKind::Float(_)))
     }
 
-    /// Registers the built-in native functions
+    /// Registers the built-in native functions that are available to all programs.
+    /// Currently only registers the `print_value` function that accepts any type
+    /// and returns an i32.
     fn register_native_functions(&mut self) {
         self.functions.insert(
             "print_value".to_string(),
@@ -143,15 +176,652 @@ impl TypeGuard {
         );
     }
 
-    /// Checks the type safety of a list of statements
+    /// Checks if types are compatible for logical operations (AND, OR).
+    /// Both operands must be boolean types.
     ///
-    /// # Arguments
+    /// ### Arguments
+    /// * `left_type` - The type of the left operand
+    /// * `right_type` - The type of the right operand
+    /// * `operator` - The logical operator (either And or Or)
     ///
-    /// * `statements` - The statements to check
+    /// ### Returns
+    /// * `Ok(bool_type())` if both operands are boolean
+    /// * `Err` with a descriptive error message otherwise
+    fn check_logical_operation(
+        &mut self,
+        left_type: &TypeId,
+        right_type: &TypeId,
+        operator: &BinaryOperator,
+    ) -> Result<TypeId, String> {
+        if *left_type == bool_type() && *right_type == bool_type() {
+            Ok(bool_type())
+        } else {
+            Err(format!(
+                "Logical operator '{}' requires boolean operands, got {} and {}",
+                operator,
+                get_type_name(left_type),
+                get_type_name(right_type)
+            ))
+        }
+    }
+
+    /// Checks if types are compatible for relational operations (>, <, >=, <=, ==, !=).
+    /// Types must be comparable with each other, which means they're either:
+    /// - Exactly the same type
+    /// - Unspecified integer literal and an integer type
+    /// - Unspecified float literal and a float type
     ///
-    /// # Returns
+    /// ### Arguments
+    /// * `left_type` - The type of the left operand
+    /// * `right_type` - The type of the right operand
+    /// * `operator` - The relational operator
     ///
-    /// CompileResult with () if type-safe, or a list of errors
+    /// ### Returns
+    /// * `Ok(bool_type())` if the types are comparable
+    /// * `Err` with a descriptive error message otherwise
+    fn check_relational_operation(
+        &mut self,
+        left_type: &TypeId,
+        right_type: &TypeId,
+        operator: &BinaryOperator,
+    ) -> Result<TypeId, String> {
+        if left_type == right_type
+            || (left_type == &unspecified_int_type() && self.is_integer_type(right_type))
+            || (right_type == &unspecified_int_type() && self.is_integer_type(left_type))
+            || (left_type == &unspecified_float_type() && self.is_float_type(right_type))
+            || (right_type == &unspecified_float_type() && self.is_float_type(left_type))
+        {
+            Ok(bool_type())
+        } else {
+            Err(format!(
+                "Cannot compare different types with {}: {} and {}",
+                operator,
+                get_type_name(left_type),
+                get_type_name(right_type)
+            ))
+        }
+    }
+
+    /// Checks if a type is compatible with an arithmetic operation when both operands have the same type.
+    /// Boolean types are not allowed for any arithmetic operation.
+    /// String types are only allowed for the Add operator (concatenation).
+    ///
+    /// ### Arguments
+    /// * `type_id` - The type of both operands
+    /// * `operator` - The arithmetic operator (+, -, *, /)
+    ///
+    /// ### Returns
+    /// * `Ok(type_id)` if the operation is allowed
+    /// * `Err` with a descriptive error message otherwise
+    fn check_same_type_arithmetic(
+        &mut self,
+        type_id: &TypeId,
+        operator: &BinaryOperator,
+    ) -> Result<TypeId, String> {
+        if *type_id == bool_type()
+            || (operator != &BinaryOperator::Add && *type_id == string_type())
+        {
+            Err(format!(
+                "Type mismatch: cannot apply '{}' operator on {} and {}",
+                operator,
+                get_type_name(type_id),
+                get_type_name(type_id)
+            ))
+        } else {
+            Ok(type_id.clone())
+        }
+    }
+
+    /// Checks if an unspecified integer literal is in the valid range for a target type.
+    /// This is used when coercing an integer literal to a specific integer type.
+    ///
+    /// ### Arguments
+    /// * `expr` - The expression that might contain an unspecified integer literal
+    /// * `target_type` - The specific integer type to check against
+    ///
+    /// ### Returns
+    /// * `Ok(target_type)` if the literal is in range for the target type
+    /// * `Err` with a descriptive error message if the literal is out of range
+    /// * `Ok(target_type)` if the expression isn't an unspecified integer literal
+    fn check_unspecified_int_for_type(
+        &self,
+        expr: &Expression,
+        target_type: &TypeId,
+    ) -> Result<TypeId, String> {
+        if let Expression::Literal(lit) = expr {
+            if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
+                let value_in_range = TYPE_REGISTRY
+                    .read()
+                    .unwrap()
+                    .check_value_in_range(n, target_type);
+
+                if value_in_range {
+                    return Ok(target_type.clone());
+                } else {
+                    let type_name = get_type_name(target_type);
+                    return Err(format!(
+                        "Integer literal {} is out of range for type {}",
+                        n, type_name
+                    ));
+                }
+            }
+        }
+        Ok(target_type.clone())
+    }
+
+    /// Checks if an unspecified float literal is in the valid range for a target type.
+    /// This is used when coercing a float literal to a specific floating-point type.
+    ///
+    /// ### Arguments
+    /// * `expr` - The expression that might contain an unspecified float literal
+    /// * `target_type` - The specific float type to check against (e.g., f32, f64)
+    ///
+    /// ### Returns
+    /// * `Ok(target_type)` if the literal is in range for the target type
+    /// * `Err` with a descriptive error message if the literal is out of range
+    /// * `Ok(target_type)` if the expression isn't an unspecified float literal
+    fn check_unspecified_float_for_type(
+        &self,
+        expr: &Expression,
+        target_type: &TypeId,
+    ) -> Result<TypeId, String> {
+        if let Expression::Literal(lit) = expr {
+            if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
+                let value_in_range = TYPE_REGISTRY
+                    .read()
+                    .unwrap()
+                    .check_float_value_in_range(f, target_type);
+
+                if value_in_range {
+                    return Ok(target_type.clone());
+                } else {
+                    return Err(format!(
+                        "Float literal {} is out of range for type {}",
+                        f,
+                        get_type_name(target_type)
+                    ));
+                }
+            }
+        }
+        Ok(target_type.clone())
+    }
+
+    /// Checks if mixed-type arithmetic operations are allowed, particularly handling
+    /// unspecified literals that can be coerced to match the other operand's type.
+    /// Handles the following cases:
+    /// - Unspecified integer literal + specific integer type
+    /// - Unspecified float literal + specific float type
+    /// - String concatenation with the + operator
+    ///
+    /// ### Arguments
+    /// * `left_type` - The type of the left operand
+    /// * `right_type` - The type of the right operand
+    /// * `bin_expr` - The binary expression containing both operands and the operator
+    ///
+    /// ### Returns
+    /// * `Ok(type_id)` with the resulting operation type if allowed
+    /// * `Err` with a descriptive error message if the operation is not allowed
+    fn check_mixed_arithmetic_operation(
+        &mut self,
+        left_type: &TypeId,
+        right_type: &TypeId,
+        bin_expr: &BinaryExpr,
+    ) -> Result<TypeId, String> {
+        if *left_type == unspecified_int_type() && self.is_integer_type(right_type) {
+            return self.check_unspecified_int_for_type(&bin_expr.left, right_type);
+        }
+
+        if *right_type == unspecified_int_type() && self.is_integer_type(left_type) {
+            return self.check_unspecified_int_for_type(&bin_expr.right, left_type);
+        }
+
+        if *left_type == unspecified_float_type() && self.is_float_type(right_type) {
+            return self.check_unspecified_float_for_type(&bin_expr.left, right_type);
+        }
+
+        if *right_type == unspecified_float_type() && self.is_float_type(left_type) {
+            return self.check_unspecified_float_for_type(&bin_expr.right, left_type);
+        }
+
+        if bin_expr.operator == BinaryOperator::Add
+            && *left_type == string_type()
+            && *right_type == string_type()
+        {
+            return Ok(string_type());
+        }
+
+        Err(format!(
+            "Type mismatch: cannot apply '{}' operator on {} and {}",
+            bin_expr.operator,
+            get_type_name(left_type),
+            get_type_name(right_type)
+        ))
+    }
+
+    /// Checks if a variable is already defined in the current scope.
+    /// Used to prevent variable redefinition errors.
+    ///
+    /// ### Arguments
+    /// * `name` - The name of the variable to check
+    ///
+    /// ### Returns
+    /// * `Ok(())` if the variable is not defined in the current scope
+    /// * `Err` with a descriptive error message if the variable is already defined
+    fn check_variable_redefinition(&self, name: &str) -> Result<(), String> {
+        if self.scopes.last().unwrap().variables.contains_key(name) {
+            return Err(format!("Variable '{}' already defined", name));
+        }
+        Ok(())
+    }
+
+    /// Converts unspecified literal types to concrete types.
+    /// This is used to assign a default concrete type when an unspecified literal
+    /// is used in a context where the type wasn't explicitly given.
+    ///
+    /// ### Arguments
+    /// * `type_id` - The type to finalize
+    ///
+    /// ### Returns
+    /// * The concrete type (i64 for unspecified integers, f64 for unspecified floats)
+    /// * The original type if it wasn't an unspecified literal type
+    fn finalize_inferred_type(&self, type_id: TypeId) -> TypeId {
+        if type_id == unspecified_int_type() {
+            i64_type()
+        } else if type_id == unspecified_float_type() {
+            f64_type()
+        } else {
+            type_id
+        }
+    }
+
+    /// Checks type compatibility for a literal integer expression against a target type
+    fn check_integer_literal_compatibility(
+        &self,
+        expr: &Expression,
+        target_type: &TypeId,
+        var_name: &str,
+    ) -> Result<TypeId, String> {
+        if let Expression::Literal(lit) = expr {
+            if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
+                if self.is_integer_type(target_type) {
+                    let value_in_range = TYPE_REGISTRY
+                        .read()
+                        .unwrap()
+                        .check_value_in_range(n, target_type);
+
+                    if value_in_range {
+                        return Ok(target_type.clone());
+                    } else {
+                        return Err(format!(
+                            "Integer literal {} is out of range for type {}",
+                            n,
+                            get_type_name(target_type)
+                        ));
+                    }
+                } else {
+                    return Err(format!(
+                        "Type mismatch: variable {} is {} but expression is int",
+                        var_name,
+                        get_type_name(target_type)
+                    ));
+                }
+            }
+        }
+        Err("Expected integer literal, got different expression type".to_string())
+    }
+
+    /// Checks if a literal float value is compatible with a target type.
+    /// Used when assigning float literals to typed variables to ensure the value
+    /// fits within the range of the target float type.
+    ///
+    /// ### Arguments
+    /// * `expr` - The expression containing a potential float literal
+    /// * `target_type` - The type to check compatibility with
+    /// * `var_name` - The name of the variable being assigned to (for error messages)
+    ///
+    /// ### Returns
+    /// * `Ok(target_type)` if the literal is compatible with the target type
+    /// * `Err` with a descriptive error message if the literal is out of range or the target type is not a float type
+    fn check_float_literal_compatibility(
+        &self,
+        expr: &Expression,
+        target_type: &TypeId,
+        var_name: &str,
+    ) -> Result<TypeId, String> {
+        if let Expression::Literal(lit) = expr {
+            if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
+                if self.is_float_type(target_type) {
+                    let value_in_range = TYPE_REGISTRY
+                        .read()
+                        .unwrap()
+                        .check_float_value_in_range(f, target_type);
+
+                    if value_in_range {
+                        return Ok(target_type.clone());
+                    } else {
+                        return Err(format!(
+                            "Float literal {} is out of range for type {}",
+                            f,
+                            get_type_name(target_type)
+                        ));
+                    }
+                } else {
+                    return Err(format!(
+                        "Type mismatch: variable {} is {} but expression is float",
+                        var_name,
+                        get_type_name(target_type)
+                    ));
+                }
+            }
+        }
+        Err("Expected float literal, got different expression type".to_string())
+    }
+
+    /// Checks if a negated literal value (like -42 or -3.14) is compatible with a target type.
+    /// This is particularly important because negation can affect the range checks
+    /// (e.g., negating the minimum value of a signed integer type could overflow).
+    ///
+    /// ### Arguments
+    /// * `unary_expr` - The unary expression containing the negation operation
+    /// * `target_type` - The type to check compatibility with
+    /// * `var_name` - The name of the variable being assigned to (for error messages)
+    ///
+    /// ### Returns
+    /// * `Ok(target_type)` if the negated literal is compatible with the target type
+    /// * `Err` with a descriptive error message if the literal is out of range or the target type is incompatible
+    fn check_negated_literal_compatibility(
+        &self,
+        unary_expr: &UnaryExpr,
+        target_type: &TypeId,
+        var_name: &str,
+    ) -> Result<TypeId, String> {
+        if unary_expr.operator == UnaryOperator::Negate {
+            if let Expression::Literal(lit) = &*unary_expr.right {
+                if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
+                    if self.is_integer_type(target_type) {
+                        let negated_value = -*n;
+                        let value_in_range = TYPE_REGISTRY
+                            .read()
+                            .unwrap()
+                            .check_value_in_range(&negated_value, target_type);
+
+                        if value_in_range {
+                            return Ok(target_type.clone());
+                        } else {
+                            return Err(format!(
+                                "Integer literal {} is out of range for type {}",
+                                negated_value,
+                                get_type_name(target_type)
+                            ));
+                        }
+                    } else {
+                        return Err(format!(
+                            "Type mismatch: variable {} is {} but expression is negated int",
+                            var_name,
+                            get_type_name(target_type)
+                        ));
+                    }
+                }
+
+                if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
+                    if self.is_float_type(target_type) {
+                        let negated_value = -*f;
+                        let value_in_range = TYPE_REGISTRY
+                            .read()
+                            .unwrap()
+                            .check_float_value_in_range(&negated_value, target_type);
+
+                        if value_in_range {
+                            return Ok(target_type.clone());
+                        } else {
+                            return Err(format!(
+                                "Float literal {} is out of range for type {}",
+                                negated_value,
+                                get_type_name(target_type)
+                            ));
+                        }
+                    } else {
+                        return Err(format!(
+                            "Type mismatch: variable {} is {} but expression is negated float",
+                            var_name,
+                            get_type_name(target_type)
+                        ));
+                    }
+                }
+            }
+        }
+
+        Err(format!(
+            "Type mismatch: variable {} is {} but expression is incompatible",
+            var_name,
+            get_type_name(target_type)
+        ))
+    }
+
+    /// Determines the final type of a variable in a let statement based on both the
+    /// declared type (if any) and the initialization expression's type.
+    /// Handles type inference and coercion of unspecified literals.
+    ///
+    /// ### Arguments
+    /// * `let_stmt` - The let statement being analyzed
+    /// * `expr_type` - The type of the initialization expression
+    ///
+    /// ### Returns
+    /// * `Ok(type_id)` with the final determined type if valid
+    /// * `Err` with a descriptive error message if there's a type mismatch
+    fn determine_let_statement_type(
+        &mut self,
+        let_stmt: &LetStatement,
+        expr_type: TypeId,
+    ) -> Result<TypeId, String> {
+        if let_stmt.expr_type == unknown_type() {
+            return Ok(expr_type);
+        }
+
+        if let_stmt.expr_type == expr_type {
+            return Ok(let_stmt.expr_type.clone());
+        }
+
+        if expr_type == unspecified_int_type() {
+            return self.handle_unspecified_int_assignment(let_stmt, &expr_type);
+        }
+
+        if expr_type == unspecified_float_type() {
+            return self.handle_unspecified_float_assignment(let_stmt, &expr_type);
+        }
+
+        self.type_mismatch_error(let_stmt, &expr_type)
+    }
+
+    /// Handles the type checking and coercion of unspecified integer literals in assignments.
+    /// Performs different checks based on the expression type (literal, negated literal, binary expr).
+    ///
+    /// ### Arguments
+    /// * `let_stmt` - The let statement containing the assignment
+    /// * `expr_type` - The type of the expression (should be unspecified_int_type)
+    ///
+    /// ### Returns
+    /// * `Ok(type_id)` with the target type if coercion is possible
+    /// * `Err` with a descriptive error message if coercion fails
+    fn handle_unspecified_int_assignment(
+        &mut self,
+        let_stmt: &LetStatement,
+        expr_type: &TypeId,
+    ) -> Result<TypeId, String> {
+        match &let_stmt.value {
+            Expression::Literal(_) => {
+                match self.check_integer_literal_compatibility(
+                    &let_stmt.value,
+                    &let_stmt.expr_type,
+                    &let_stmt.name,
+                ) {
+                    Ok(_) => Ok(let_stmt.expr_type.clone()),
+                    Err(msg) => Err(msg),
+                }
+            }
+            Expression::Unary(unary_expr) => {
+                if unary_expr.operator == UnaryOperator::Negate {
+                    self.check_negated_literal_compatibility(
+                        unary_expr,
+                        &let_stmt.expr_type,
+                        &let_stmt.name,
+                    )
+                    .map(|_| let_stmt.expr_type.clone())
+                } else {
+                    self.type_mismatch_error(let_stmt, expr_type)
+                }
+            }
+            Expression::Binary(_) => {
+                if self.is_integer_type(&let_stmt.expr_type) {
+                    Ok(let_stmt.expr_type.clone())
+                } else {
+                    self.type_mismatch_error(let_stmt, expr_type)
+                }
+            }
+            _ => self.type_mismatch_error(let_stmt, expr_type),
+        }
+    }
+
+    /// Handles the type checking and coercion of unspecified float literals in assignments.
+    /// Performs different checks based on the expression type (literal, negated literal, binary expr).
+    ///
+    /// ### Arguments
+    /// * `let_stmt` - The let statement containing the assignment
+    /// * `expr_type` - The type of the expression (should be unspecified_float_type)
+    ///
+    /// ### Returns
+    /// * `Ok(type_id)` with the target type if coercion is possible
+    /// * `Err` with a descriptive error message if coercion fails
+    fn handle_unspecified_float_assignment(
+        &mut self,
+        let_stmt: &LetStatement,
+        expr_type: &TypeId,
+    ) -> Result<TypeId, String> {
+        match &let_stmt.value {
+            Expression::Literal(_) => {
+                match self.check_float_literal_compatibility(
+                    &let_stmt.value,
+                    &let_stmt.expr_type,
+                    &let_stmt.name,
+                ) {
+                    Ok(_) => Ok(let_stmt.expr_type.clone()),
+                    Err(msg) => Err(msg),
+                }
+            }
+            Expression::Unary(unary_expr) => {
+                if unary_expr.operator == UnaryOperator::Negate {
+                    self.check_negated_literal_compatibility(
+                        unary_expr,
+                        &let_stmt.expr_type,
+                        &let_stmt.name,
+                    )
+                    .map(|_| let_stmt.expr_type.clone())
+                } else {
+                    self.type_mismatch_error(let_stmt, expr_type)
+                }
+            }
+            Expression::Binary(_) => {
+                if self.is_float_type(&let_stmt.expr_type) {
+                    Ok(let_stmt.expr_type.clone())
+                } else {
+                    self.type_mismatch_error(let_stmt, expr_type)
+                }
+            }
+            _ => self.type_mismatch_error(let_stmt, expr_type),
+        }
+    }
+
+    /// Generates a type mismatch error for a let statement.
+    /// Creates a standardized error message format for type mismatches in variable assignments.
+    ///
+    /// ### Arguments
+    /// * `let_stmt` - The let statement with the type mismatch
+    /// * `expr_type` - The type of the expression that doesn't match the variable's declared type
+    ///
+    /// ### Returns
+    /// * `Err` with a formatted error message describing the type mismatch
+    fn type_mismatch_error(
+        &self,
+        let_stmt: &LetStatement,
+        expr_type: &TypeId,
+    ) -> Result<TypeId, String> {
+        Err(format!(
+            "Type mismatch: variable {} is {} but expression is {}",
+            let_stmt.name,
+            get_type_name(&let_stmt.expr_type),
+            get_type_name(expr_type)
+        ))
+    }
+
+    /// Checks if a return expression's type matches the expected return type of the function.
+    /// Handles special cases for unspecified literals that can be coerced to the return type.
+    ///
+    /// ### Arguments
+    /// * `expr` - The expression being returned
+    /// * `expected_type` - The function's declared return type
+    ///
+    /// ### Returns
+    /// * `Ok(type_id)` if the expression type matches or can be coerced to the return type
+    /// * `Err` with a descriptive error message if there's a type mismatch
+    fn check_return_expr_type(
+        &mut self,
+        expr: &Expression,
+        expected_type: &TypeId,
+    ) -> Result<TypeId, String> {
+        let actual_type = self.visit_expression(expr)?;
+
+        if actual_type == *expected_type {
+            return Ok(actual_type);
+        }
+
+        if actual_type == unspecified_int_type() {
+            if let Expression::Literal(lit) = expr {
+                if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
+                    let value_in_range = TYPE_REGISTRY
+                        .read()
+                        .unwrap()
+                        .check_value_in_range(n, expected_type);
+
+                    if value_in_range {
+                        return Ok(expected_type.clone());
+                    }
+                }
+            }
+        }
+
+        if actual_type == unspecified_float_type() {
+            if let Expression::Literal(lit) = expr {
+                if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
+                    let value_in_range = TYPE_REGISTRY
+                        .read()
+                        .unwrap()
+                        .check_float_value_in_range(f, expected_type);
+
+                    if value_in_range {
+                        return Ok(expected_type.clone());
+                    }
+                }
+            }
+        }
+
+        Err(format!(
+            "Type mismatch: function returns {} but got {}",
+            get_type_name(expected_type),
+            get_type_name(&actual_type)
+        ))
+    }
+
+    /// Checks the type safety of a list of statements by recursively analyzing the AST.
+    /// This is the main entry point for type checking within the TypeGuard struct.
+    ///
+    /// ### Arguments
+    /// * `statements` - The AST statements to type check
+    ///
+    /// ### Returns
+    /// * `CompileResult<()>` - Ok if no type errors were found, otherwise Err with the list of errors
+    ///
+    /// This function performs static type analysis on the entire program, collecting all
+    /// type errors before returning them as a single result.
     pub fn check(&mut self, statements: &[Statement]) -> CompileResult<()> {
         for stmt in statements {
             match stmt.accept(self) {
@@ -159,7 +829,7 @@ impl TypeGuard {
                 Err(e) => self.add_string_error(e),
             }
         }
-        
+
         if !self.errors.is_empty() {
             Err(std::mem::take(&mut self.errors))
         } else {
@@ -221,51 +891,11 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
     }
 
     fn visit_return_statement(&mut self, expr: &Option<Expression>) -> Result<TypeId, String> {
-        // Check if we're inside a function
         if let Some(expected_type) = &self.current_return_type {
             let expected_type = expected_type.clone();
-            // Check return value
             if let Some(expr) = expr {
-                let actual_type = self.visit_expression(expr)?;
-
-                // Check if types match
-                if actual_type == expected_type {
-                    return Ok(actual_type);
-                }
-
-                // Handle special case for unspecified integers
-                if actual_type == unspecified_int_type() {
-                    if let Expression::Literal(lit) = expr {
-                        if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                            let value_in_range = TYPE_REGISTRY.read().unwrap().check_value_in_range(n, &expected_type);
-
-                            if value_in_range {
-                                return Ok(expected_type.clone());
-                            }
-                        }
-                    }
-                }
-
-                // Handle special case for unspecified floats
-                if actual_type == unspecified_float_type() {
-                    if let Expression::Literal(lit) = expr {
-                        if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
-                            let value_in_range = TYPE_REGISTRY.read().unwrap()
-                                    .check_float_value_in_range(f, &expected_type);
-
-                            if value_in_range {
-                                return Ok(expected_type.clone());
-                            }
-                        }
-                    }
-                }
-                return Err(format!(
-                    "Type mismatch: function returns {} but got {}",
-                    get_type_name(&expected_type),
-                    get_type_name(&actual_type)
-                ));
+                return self.check_return_expr_type(expr, &expected_type);
             } else if expected_type != unknown_type() {
-                // Missing return value when one is expected
                 return Err(format!(
                     "Type mismatch: function returns {} but no return value provided",
                     get_type_name(&expected_type)
@@ -279,9 +909,7 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
     }
 
     fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> Result<TypeId, String> {
-        // Check if function exists
         if let Some((param_types, return_type)) = self.functions.get(&call_expr.name).cloned() {
-            // Check argument count
             if param_types.len() != call_expr.arguments.len() {
                 return Err(format!(
                     "Function '{}' expects {} arguments, but got {}",
@@ -291,7 +919,6 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                 ));
             }
 
-            // Check each argument
             for (i, arg) in call_expr.arguments.iter().enumerate() {
                 let arg_type = self.visit_expression(arg)?;
                 let param_type = &param_types[i];
@@ -301,16 +928,17 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                     continue;
                 }
 
-                // Check if types match
                 if arg_type != *param_type {
-                    // Handle special case for unspecified integers
                     if arg_type == unspecified_int_type() {
                         if let Expression::Literal(lit) = arg {
                             if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                                let value_in_range = TYPE_REGISTRY.read().unwrap().check_value_in_range(n, param_type);
+                                let value_in_range = TYPE_REGISTRY
+                                    .read()
+                                    .unwrap()
+                                    .check_value_in_range(n, param_type);
 
                                 if value_in_range {
-                                    continue; // This argument is valid
+                                    continue;
                                 }
                             }
                         }
@@ -326,7 +954,6 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                 }
             }
 
-            // All arguments match, return the function's return type
             Ok(return_type)
         } else {
             Err(format!("Undefined function: {}", call_expr.name))
@@ -352,236 +979,17 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
     }
 
     fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> Result<TypeId, String> {
-        // Register the variable with a placeholder type first
+        self.check_variable_redefinition(&let_stmt.name)?;
+
         let placeholder_type = let_stmt.expr_type.clone();
-
-        if self
-            .scopes
-            .last()
-            .unwrap()
-            .variables
-            .contains_key(&let_stmt.name)
-        {
-            return Err(format!("Variable '{}' already defined", let_stmt.name));
-        }
-
-        // Add to symbol table with the placeholder type
         self.define_variable(let_stmt.name.clone(), placeholder_type);
 
-        // Now process the initialization expression
         let expr_type = self.visit_expression(&let_stmt.value)?;
 
-        // If type wasn't specified, infer it
-        let mut final_type = if let_stmt.expr_type == unknown_type() {
-            expr_type
-        } else if let_stmt.expr_type != expr_type {
-            // Only allow UnspecifiedInteger to be assigned to specific integer types
-            // with value range check
-            if expr_type == unspecified_int_type() {
-                // Check for both direct literals and literals inside unary expressions
-                match &let_stmt.value {
-                    Expression::Literal(lit) => {
-                        if self.is_integer_type(&let_stmt.expr_type) {
-                            if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                                // Check if the value is in range for the target type
-                                let value_in_range = TYPE_REGISTRY.read().unwrap()
-                                        .check_value_in_range(n, &let_stmt.expr_type);
+        let mut final_type = self.determine_let_statement_type(let_stmt, expr_type)?;
 
-                                if value_in_range {
-                                    let_stmt.expr_type.clone()
-                                } else {
-                                    return Err(format!(
-                                        "Integer literal {} is out of range for type {}",
-                                        n,
-                                        get_type_name(&let_stmt.expr_type)
-                                    ));
-                                }
-                            } else {
-                                // Non-integer literals can't be assigned to integer types
-                                return Err(format!(
-                                    "Type mismatch: variable {} is {} but expression is {}",
-                                    let_stmt.name,
-                                    get_type_name(&let_stmt.expr_type),
-                                    get_type_name(&expr_type)
-                                ));
-                            }
-                        } else {
-                            // integer literals can't be assigned to non-integer types
-                            return Err(format!(
-                                "Type mismatch: variable {} is {} but expression is {}",
-                                let_stmt.name,
-                                get_type_name(&let_stmt.expr_type),
-                                get_type_name(&expr_type)
-                            ));
-                        }
-                    }
-                    Expression::Unary(unary_expr) => {
-                        if unary_expr.operator == UnaryOperator::Negate {
-                            // Handle negated integer literals
-                            if let Expression::Literal(lit) = &*unary_expr.right {
-                                if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                                    // For negation, we need to check the negative value
-                                    let negated_value = -*n;
-                                    let value_in_range = TYPE_REGISTRY.read().unwrap().check_value_in_range(
-                                            &negated_value,
-                                            &let_stmt.expr_type,
-                                        );
+        final_type = self.finalize_inferred_type(final_type);
 
-                                    if value_in_range {
-                                        return Ok(let_stmt.expr_type.clone());
-                                    } else {
-                                        return Err(format!(
-                                            "Integer literal {} is out of range for type {}",
-                                            negated_value,
-                                            get_type_name(&let_stmt.expr_type)
-                                        ));
-                                    }
-                                }
-                            }
-                        }
-
-                        // Non-literal expressions can't be assigned if types don't match exactly
-                        return Err(format!(
-                            "Type mismatch: variable {} is {} but expression is {}",
-                            let_stmt.name,
-                            get_type_name(&let_stmt.expr_type),
-                            get_type_name(&expr_type)
-                        ));
-                    }
-                    Expression::Binary(_) => {
-                        // Handle binary expressions
-                        if self.is_integer_type(&let_stmt.expr_type) {
-                            return Ok(let_stmt.expr_type.clone());
-                        }
-
-                        // Non-literal expressions can't be assigned if types don't match exactly
-                        return Err(format!(
-                            "Type mismatch: variable {} is {} but expression is {}",
-                            let_stmt.name,
-                            get_type_name(&let_stmt.expr_type),
-                            get_type_name(&expr_type)
-                        ));
-                    }
-                    _ => {
-                        // Non-literal expressions can't be assigned if types don't match exactly
-                        return Err(format!(
-                            "Type mismatch: variable {} is {} but expression is {}",
-                            let_stmt.name,
-                            get_type_name(&let_stmt.expr_type),
-                            get_type_name(&expr_type)
-                        ));
-                    }
-                }
-            } else if expr_type == unspecified_float_type() {
-                // Handle unspecified float literals
-                match &let_stmt.value {
-                    Expression::Literal(lit) => {
-                        if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
-                            if self.is_float_type(&let_stmt.expr_type) {
-                                // Check if the float is in range for the target type
-                                let value_in_range = TYPE_REGISTRY.read().unwrap()
-                                        .check_float_value_in_range(f, &let_stmt.expr_type);
-
-                                if value_in_range {
-                                    let_stmt.expr_type.clone()
-                                } else {
-                                    return Err(format!(
-                                        "Float literal {} is out of range for type {}",
-                                        f,
-                                        get_type_name(&let_stmt.expr_type)
-                                    ));
-                                }
-                            } else {
-                                // Non-float types can't be assigned float literals
-                                return Err(format!(
-                                    "Type mismatch: variable {} is {} but expression is {}",
-                                    let_stmt.name,
-                                    get_type_name(&let_stmt.expr_type),
-                                    get_type_name(&expr_type)
-                                ));
-                            }
-                        } else {
-                            return Err(format!(
-                                "Type mismatch: variable {} is {} but expression is {}",
-                                let_stmt.name,
-                                get_type_name(&let_stmt.expr_type),
-                                get_type_name(&expr_type)
-                            ));
-                        }
-                    }
-                    Expression::Unary(unary_expr) => {
-                        if unary_expr.operator == UnaryOperator::Negate {
-                            // Handle negated float literals
-                            if let Expression::Literal(lit) = &*unary_expr.right {
-                                if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
-                                    if self.is_float_type(&let_stmt.expr_type) {
-                                        // For negation, we need to check the negative value
-                                        let negated_value = -*f;
-                                        let value_in_range = TYPE_REGISTRY.read().unwrap().check_float_value_in_range(
-                                                &negated_value,
-                                                &let_stmt.expr_type,
-                                            );
-
-                                        if value_in_range {
-                                            return Ok(let_stmt.expr_type.clone());
-                                        } else {
-                                            return Err(format!(
-                                                "Float literal {} is out of range for type {}",
-                                                negated_value,
-                                                get_type_name(&let_stmt.expr_type)
-                                            ));
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        return Err(format!(
-                            "Type mismatch: variable {} is {} but expression is {}",
-                            let_stmt.name,
-                            get_type_name(&let_stmt.expr_type),
-                            get_type_name(&expr_type)
-                        ));
-                    }
-                    Expression::Binary(_) => {
-                        // Handle binary expressions
-                        if self.is_float_type(&let_stmt.expr_type) {
-                            return Ok(let_stmt.expr_type.clone());
-                        }
-                        return Err(format!(
-                            "Type mismatch: variable {} is {} but expression is {}",
-                            let_stmt.name,
-                            get_type_name(&let_stmt.expr_type),
-                            get_type_name(&expr_type)
-                        ));
-                    }
-                    _ => {
-                        return Err(format!(
-                            "Type mismatch: variable {} is {} but expression is {}",
-                            let_stmt.name,
-                            get_type_name(&let_stmt.expr_type),
-                            get_type_name(&expr_type)
-                        ));
-                    }
-                }
-            } else {
-                // Types don't match and no coercion is allowed
-                let expr_type_name = get_type_name(&expr_type);
-                let target_type_name = get_type_name(&let_stmt.expr_type);
-
-                return Err(format!(
-                    "Type mismatch: variable {} is {} but expression is {}",
-                    let_stmt.name, target_type_name, expr_type_name
-                ));
-            }
-        } else {
-            let_stmt.expr_type.clone()
-        };
-        if final_type == unspecified_int_type() {
-            final_type = i64_type();
-        } else if final_type == unspecified_float_type() {
-            final_type = f64_type();
-        }
-        // Update symbol table with the final type
         self.define_variable(let_stmt.name.clone(), final_type.clone());
         Ok(final_type)
     }
@@ -597,7 +1005,6 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
     }
 
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> Result<TypeId, String> {
-        // Infer type from literal
         match lit_expr.value {
             LiteralValue::I32(_) => Ok(i32_type()),
             LiteralValue::I64(_) => Ok(i64_type()),
@@ -616,22 +1023,10 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
         let left_type = self.visit_expression(&bin_expr.left)?;
         let right_type = self.visit_expression(&bin_expr.right)?;
 
-        // Handle logical operators (AND, OR)
         if bin_expr.operator == BinaryOperator::And || bin_expr.operator == BinaryOperator::Or {
-            // Check that both operands are boolean
-            if left_type == bool_type() && right_type == bool_type() {
-                return Ok(bool_type());
-            } else {
-                return Err(format!(
-                    "Logical operator '{}' requires boolean operands, got {} and {}",
-                    bin_expr.operator,
-                    get_type_name(&left_type),
-                    get_type_name(&right_type)
-                ));
-            }
+            return self.check_logical_operation(&left_type, &right_type, &bin_expr.operator);
         }
 
-        // Handle relational operators (>, <, >=, <=, ==, !=)
         if matches!(
             bin_expr.operator,
             BinaryOperator::GreaterThan
@@ -641,137 +1036,23 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                 | BinaryOperator::Equal
                 | BinaryOperator::NotEqual
         ) {
-            // For now, only allow comparing same types (or unspecified literals with specific types)
-            if left_type == right_type
-                || (left_type == unspecified_int_type() && self.is_integer_type(&right_type))
-                || (right_type == unspecified_int_type() && self.is_integer_type(&left_type))
-                || (left_type == unspecified_float_type() && self.is_float_type(&right_type))
-                || (right_type == unspecified_float_type() && self.is_float_type(&left_type))
-            {
-                return Ok(bool_type());
-            }
-            return Err(format!(
-                "Cannot compare different types with {}: {} and {}",
-                bin_expr.operator,
-                get_type_name(&left_type),
-                get_type_name(&right_type)
-            ));
+            return self.check_relational_operation(&left_type, &right_type, &bin_expr.operator);
         }
 
-        // Handle arithmetic operations using the type registry
         if matches!(
             bin_expr.operator,
-            BinaryOperator::Add | BinaryOperator::Subtract | BinaryOperator::Multiply | BinaryOperator::Divide
+            BinaryOperator::Add
+                | BinaryOperator::Subtract
+                | BinaryOperator::Multiply
+                | BinaryOperator::Divide
         ) {
-            // Only allow operations between same types, with special handling for unspecified literals
             if left_type == right_type {
-                if left_type == bool_type()
-                    || (bin_expr.operator != BinaryOperator::Add && left_type == string_type())
-                {
-                    return Err(format!(
-                        "Type mismatch: cannot apply '{}' operator on {} and {}",
-                        bin_expr.operator,
-                        get_type_name(&left_type),
-                        get_type_name(&right_type)
-                    ));
-                }
-                return Ok(left_type);
+                return self.check_same_type_arithmetic(&left_type, &bin_expr.operator);
             }
 
-            // Special case for unspecified integers
-            if left_type == unspecified_int_type() && self.is_integer_type(&right_type) {
-                // Check if the unspecified integer literal value is in range
-                if let Expression::Literal(lit) = &*bin_expr.left {
-                    if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                        // Check if value is in valid range for the target type
-                        let value_in_range = TYPE_REGISTRY.read().unwrap().check_value_in_range(n, &right_type);
-
-                        if value_in_range {
-                            return Ok(right_type);
-                        } else {
-                            let right_type_name = get_type_name(&right_type);
-
-                            return Err(format!(
-                                "Integer literal {} is out of range for type {}",
-                                n, right_type_name
-                            ));
-                        }
-                    }
-                }
-                return Ok(right_type);
-            }
-
-            if right_type == unspecified_int_type() && self.is_integer_type(&left_type) {
-                // Similar check for right side
-                if let Expression::Literal(literal) = &*bin_expr.right {
-                    if let LiteralValue::UnspecifiedInteger(num) = &literal.value {
-                        let value_in_range = TYPE_REGISTRY.read().unwrap().check_value_in_range(num, &left_type);
-
-                        if value_in_range {
-                            return Ok(left_type);
-                        } else {
-                            let left_type_name = get_type_name(&left_type);
-
-                            return Err(format!(
-                                "Integer literal {} is out of range for type {}",
-                                num, left_type_name
-                            ));
-                        }
-                    }
-                }
-                return Ok(left_type);
-            }
-
-            // Special case for unspecified floats
-            if left_type == unspecified_float_type() && self.is_float_type(&right_type) {
-                // Check if the unspecified float literal value is in range
-                if let Expression::Literal(lit) = &*bin_expr.left {
-                    if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
-                        // Check if value is in valid range for the target type
-                        let value_in_range = TYPE_REGISTRY.read().unwrap().check_float_value_in_range(f, &right_type);
-
-                        if value_in_range {
-                            return Ok(right_type);
-                        } else {
-                            return Err(format!(
-                                "Float literal {} is out of range for type {}",
-                                f,
-                                get_type_name(&right_type)
-                            ));
-                        }
-                    }
-                }
-                return Ok(right_type);
-            }
-
-            if right_type == unspecified_float_type() && self.is_float_type(&left_type) {
-                // Similar check for right side with float literals
-                if let Expression::Literal(lit) = &*bin_expr.right {
-                    if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
-                        let value_in_range = TYPE_REGISTRY.read().unwrap().check_float_value_in_range(f, &left_type);
-
-                        if value_in_range {
-                            return Ok(left_type);
-                        } else {
-                            return Err(format!(
-                                "Float literal {} is out of range for type {}",
-                                f,
-                                get_type_name(&left_type)
-                            ));
-                        }
-                    }
-                }
-                return Ok(left_type);
-            }
+            return self.check_mixed_arithmetic_operation(&left_type, &right_type, bin_expr);
         }
 
-        // String concatenation - still allowed
-        if bin_expr.operator == BinaryOperator::Add
-            && left_type == string_type()
-            && right_type == string_type()
-        {
-            return Ok(string_type());
-        }
         Err(format!(
             "Type mismatch: cannot apply '{}' operator on {} and {}",
             bin_expr.operator,
@@ -785,21 +1066,17 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
 
         match unary_expr.operator {
             UnaryOperator::Negate => {
-                // Special case for unspecified integers - preserve unspecified_int_type
-                // This allows them to be later coerced to specific types like i32
                 if operand_type == unspecified_int_type() {
                     if let Expression::Literal(_) = &*unary_expr.right {
                         return Ok(unspecified_int_type());
                     }
                 }
 
-                // Check if the type is numeric using the registry
                 let is_numeric = type_fullfills(&operand_type, |typeinfo| {
                     matches!(typeinfo.kind, TypeKind::Integer(_) | TypeKind::Float(_))
                 });
 
                 if is_numeric {
-                    // Special case for unsigned integers
                     if operand_type == u32_type() || operand_type == u64_type() {
                         return Err("Cannot negate unsigned type".to_string());
                     }
@@ -809,12 +1086,10 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
                 Err(format!("Cannot negate non-numeric type '{}'", type_name))
             }
             UnaryOperator::Not => {
-                // Check if the operand is a boolean
                 if operand_type == bool_type() {
                     return Ok(bool_type());
                 }
 
-                // Get type name for better error message
                 let operand_type_name = get_type_name(&operand_type);
 
                 Err(format!(

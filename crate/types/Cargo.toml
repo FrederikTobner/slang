@@ -11,4 +11,4 @@ name = "slang_types"
 path = "src/lib.rs"
 
 [dependencies]
-slang-derive = { path = "../derive" }
+slang_derive = { path = "../derive" }

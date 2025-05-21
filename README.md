@@ -56,71 +56,7 @@ slang execute input.sl
 slang run input.sip
 ```
 
-## Design Principles
-
-The project follows common software engineering principles:
-
-- **Modularity**: Clear separation between components
-- **Single Responsibility**: Each module has a focused purpose
-- **Command Pattern**: CLI operations are encapsulated in command objects
-- **Visitor Pattern**: AST traversal uses the visitor design pattern
-- **Code Generation**: Procedural macros automate repetitive code patterns
-
-## Procedural Macros
-
-The `slang-derive` crate provides procedural macros that generate code for common patterns:
-
-### TypeName Derive Macro
-
-The `TypeName` derive macro automatically generates methods for converting between enum variants and their string representations:
-
-```rust
-use slang_derive::TypeName;
-
-#[derive(TypeName)]
-pub enum PrimitiveType {
-    #[type_name = "i32"]
-    I32,
-    #[type_name = "bool"]
-    Bool,
-    String, // Uses lowercase variant name: "string"
-}
-
-// Generated methods:
-// - type_name(&self) -> &'static str
-// - from_str(s: &str) -> Option<Self>
-
-const TYPE_NAME_I32: &str = PrimitiveType::I32.type_name(); // "i32"
-```
-
-### NumericEnum Derive Macro
-
-The `NumericEnum` derive macro automatically generates methods for converting between enum variants and their numeric values:
-
-```rust
-use slang_derive::NumericEnum;
-
-#[derive(NumericEnum)]
-enum OpCode {
-    Add = 1,         // Explicit value
-    Subtract = 2,    // Explicit value
-    Multiply,        // Implicit value: 3
-    Divide,          // Implicit value: 4
-}
-
-// Generated method:
-// - from_int<T: Into<usize>>(value: T) -> Option<Self>
-
-let op = OpCode::from_int(1u8); // Some(OpCode::Add)
-let op2 = OpCode::from_int(3); // Some(OpCode::Multiply)
-```
-
-See [crate/derive/README.md](crate/derive/README.md) for more details on available macros.
-
 ## Language Syntax
 
 For details about the language grammar, see [GRAMMER.md](GRAMMER.md).
 
-## Development
-
-See [TODO.md](TODO.md) for planned improvements and future features.

@@ -24,7 +24,7 @@ pub enum PrimitiveType {
 }
 ```
 
-#### Generated Methods
+The generated methods are:
 
 1. `name(&self) -> &'static str`: Returns the string representation of the enum variant
 2. `from_str(s: &str) -> Option<Self>`: Converts a string into the corresponding enum variant
@@ -47,7 +47,7 @@ pub enum OpCode {
 }
 ```
 
-#### Generated Methods
+The generated methods are:
 
 1. `from_int<T: Into<usize>>(value: T) -> Option<Self>`: Converts any numeric value into the corresponding enum variant
 
@@ -66,7 +66,7 @@ Add the derive crate to your dependencies:
 
 ```toml
 [dependencies]
-slang-derive = { path = "../derive" }
+slang-derive = 0.1.0
 ```
 
 Then import and use the macros in your Rust code:

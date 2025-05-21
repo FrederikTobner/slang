@@ -928,21 +928,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "slang-derive"
+name = "slang_backend"
+version = "0.1.0"
+dependencies = [
+ "slang_derive",
+ "slang_frontend",
+ "slang_ir",
+]
+
+[[package]]
+name = "slang_derive"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "slang_backend"
-version = "0.1.0"
-dependencies = [
- "slang-derive",
- "slang_frontend",
- "slang_ir",
 ]
 
 [[package]]
@@ -965,7 +965,7 @@ dependencies = [
 name = "slang_types"
 version = "0.1.0"
 dependencies = [
- "slang-derive",
+ "slang_derive",
 ]
 
 [[package]]

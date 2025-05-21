@@ -53,3 +53,13 @@ fn invalid_function_declaration() {
     "#;
     execute_program_expect_error(program, "Expected function name");
 }
+
+#[test]
+fn redefined_variable() {
+    let program = r#"
+        let a = 42;
+        let a = 43;
+        print_value(a);
+    "#;
+    execute_program_expect_error(program, "Variable \'a\' already defined");
+}

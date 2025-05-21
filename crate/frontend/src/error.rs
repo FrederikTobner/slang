@@ -24,6 +24,8 @@ impl CompilerError {
     ///
     /// ### Example
     /// ```
+    /// use slang_frontend::error::CompilerError;
+    /// 
     /// let error = CompilerError::new("Syntax error".to_string(), 10, 5);
     /// ```
     pub fn new(message: String, line: usize, column: usize) -> Self {

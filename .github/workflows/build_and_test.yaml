@@ -54,4 +54,6 @@ jobs:
     - name: Run end to end tests 
       run: cargo test --verbose
     - name: Run derive tests
-      run: cargo test --verbose --package slang-derive
+      run: cargo test --verbose --package slang_derive
+    - name: Run frontend tests
+      run: cargo test --verbose --package slang_frontend
