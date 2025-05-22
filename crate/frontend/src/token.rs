@@ -5,7 +5,7 @@ use std::fmt::Display;
 pub enum Tokentype {
     Identifier,     // x, y, myVar
     IntegerLiteral, // 123
-    FloatLiteral,    // 123.45
+    FloatLiteral,   // 123.45
     StringLiteral,  // "hello world"
     BooleanLiteral, // true, false
     Let,            // let
@@ -74,8 +74,6 @@ impl Display for Tokentype {
             Tokentype::RightParen => "')'",
             Tokentype::Arrow => "'->'",
             Tokentype::Return => "return keyword", 
-            
-            // End of file
             Tokentype::Eof  => "<EOF>",
         })
     }

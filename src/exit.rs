@@ -1,4 +1,10 @@
 /// Exit the program with an appropriate exit code
+/// 
+/// ### Arguments
+/// * `code` - The exit code to use
+/// 
+/// ### Returns
+/// This function does not return. It will terminate the program with the specified exit code.
 pub fn with_code(code: Code, message: &str) -> ! {
     eprintln!("{}", message);
     std::process::exit(code as i32);

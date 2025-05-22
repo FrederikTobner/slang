@@ -44,6 +44,13 @@ impl SlangError {
     }
     
     /// Convert from io::Error to SlangError with appropriate exit code and path
+    /// 
+    /// ### Arguments
+    /// * `error` - The io::Error to convert
+    /// * `path` - The path associated with the error
+    /// 
+    /// ### Returns
+    /// A SlangError with the appropriate exit code and path
     pub fn from_io_error(error: io::Error, path: &str) -> Self {
         let exit_code = match error.kind() {
             io::ErrorKind::NotFound => exit::Code::NoInput,

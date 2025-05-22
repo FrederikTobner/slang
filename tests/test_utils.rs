@@ -4,8 +4,12 @@ use assert_cmd::prelude::*;
 use predicates::prelude::*;
 use tempfile::tempdir;
 
-// Helper function to create test programs and assert their output
-// Runs the file directly, compiles it, and runs the compiled bytecode
+/// Helper function to create test programs and assert their output
+/// Runs the file directly, compiles it, and runs the compiled bytecode
+///
+/// ### Arguments
+/// * `program` - The source code of the program to be executed
+/// * `expected_output` - The expected output of the program
 pub fn execute_program_and_assert(program: &str, expected_output: &str) {
     let temp_dir = tempdir().unwrap();
     let source_path = temp_dir.path().join("test_program.sl");
@@ -41,7 +45,11 @@ pub fn execute_program_and_assert(program: &str, expected_output: &str) {
             .stdout(predicate::str::contains(expected_output));
 }
 
-// Helper function to test for error cases, checking stderr
+/// Helper function to test for error cases, checking stderr
+/// 
+/// ### Arguments
+/// * `program` - The source code of the program to be executed
+/// * `expected_error` - The expected error message
 pub fn execute_program_expect_error(program: &str, expected_error: &str) {
     let temp_dir = tempdir().unwrap();
     let source_path = temp_dir.path().join("test_program.sl");

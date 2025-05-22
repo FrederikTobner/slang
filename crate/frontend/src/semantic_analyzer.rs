@@ -1,13 +1,21 @@
 use crate::error::{CompileResult, CompilerError};
+use crate::semantic_error::SemanticAnalysisError;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
     LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator,
 };
+
+/// Type alias for result of semantic analysis operations
+/// Contains either a valid TypeId or a SemanticAnalysisError
+pub type SemanticResult = Result<TypeId, SemanticAnalysisError>;
+
+// For backwards compatibility during transition
+type TypeCheckResult = SemanticResult;
 use slang_ir::visitor::Visitor;
 use slang_types::types::*;
 use slang_types::types::{
-    StructType, TYPE_REGISTRY, TypeId, TypeKind, get_type_name, type_fullfills,
+    StructType, TYPE_REGISTRY, TypeId, TypeKind, type_fullfills,
 };
 use std::collections::HashMap;
 
@@ -30,48 +38,48 @@ impl Scope {
     }
 }
 
-/// Performs static type checking on a list of statements.
-/// This is the main entry point for the type checking system.
+/// Performs semantic analysis including type checking on a list of statements.
+/// This is the main entry point for the semantic analysis system.
 ///
 /// ### Arguments
-/// * `statements` - The AST statements to type check
+/// * `statements` - The AST statements to analyze
 ///
 /// ### Returns
-/// * `CompileResult<()>` - Ok if no type errors were found, otherwise Err with the list of errors
+/// * `CompileResult<()>` - Ok if no semantic errors were found, otherwise Err with the list of errors
 pub fn execute(statements: &[Statement]) -> CompileResult<()> {
-    let mut type_checker = TypeGuard::new();
-    type_checker.check(statements)
+    let mut analyzer = SemanticAnalyzer::new();
+    analyzer.analyze(statements)
 }
 
-/// Performs static type checking on the AST
-pub struct TypeGuard {
+/// Performs semantic analysis including static type checking on the AST
+pub struct SemanticAnalyzer {
     /// Map of variable names to their types
     scopes: Vec<Scope>,
     /// Map of function names to their parameter and return types
     functions: HashMap<String, (Vec<TypeId>, TypeId)>,
     /// Current function's return type for validating return statements
     current_return_type: Option<TypeId>,
-    /// Collected type errors
+    /// Collected semantic errors
     errors: Vec<CompilerError>,
 }
 
-impl Default for TypeGuard {
+impl Default for SemanticAnalyzer {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl TypeGuard {
-    /// Creates a new type checker with built-in functions registered
+impl SemanticAnalyzer {
+    /// Creates a new semantic analyzer with built-in functions registered
     pub fn new() -> Self {
-        let mut tc = TypeGuard {
+        let mut analyzer = SemanticAnalyzer {
             scopes: vec![Scope::new()],
             functions: HashMap::new(),
             current_return_type: None,
             errors: Vec::new(),
         };
-        tc.register_native_functions();
-        tc
+        analyzer.register_native_functions();
+        analyzer
     }
 
     /// Adds a compiler error to the collection with source location information.
@@ -84,16 +92,15 @@ impl TypeGuard {
         self.errors.push(CompilerError::new(message, line, column));
     }
 
-    /// Converts a String error to a CompilerError and adds it to the collection.
-    /// Currently uses placeholder location information since we don't track source locations
-    /// for type errors yet.
+    /// Adds a SemanticAnalysisError to the collection and converts it to a CompilerError.
+    /// Uses placeholder location information (0,0) since we don't track source locations yet.
     ///
     /// ### Arguments
-    /// * `message` - The error message
-    fn add_string_error(&mut self, message: String) {
+    /// * `error` - The SemanticAnalysisError to add
+    fn add_semantic_error(&mut self, error: SemanticAnalysisError) {
         // Since we don't have line/column info in the current error handling,
         // temporarily use 0,0 - this will be improved in a future update
-        self.add_error(message, 0, 0);
+        self.add_error(error.to_string(), 0, 0);
     }
 
     /// Begins a new scope by pushing a new scope onto the stack.
@@ -176,6 +183,7 @@ impl TypeGuard {
         );
     }
 
+
     /// Checks if types are compatible for logical operations (AND, OR).
     /// Both operands must be boolean types.
     ///
@@ -192,16 +200,15 @@ impl TypeGuard {
         left_type: &TypeId,
         right_type: &TypeId,
         operator: &BinaryOperator,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         if *left_type == bool_type() && *right_type == bool_type() {
             Ok(bool_type())
         } else {
-            Err(format!(
-                "Logical operator '{}' requires boolean operands, got {} and {}",
-                operator,
-                get_type_name(left_type),
-                get_type_name(right_type)
-            ))
+            Err(SemanticAnalysisError::LogicalOperatorTypeMismatch {
+                operator: operator.to_string(),
+                left_type: left_type.clone(),
+                right_type: right_type.clone(),
+            })
         }
     }
 
@@ -224,7 +231,7 @@ impl TypeGuard {
         left_type: &TypeId,
         right_type: &TypeId,
         operator: &BinaryOperator,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         if left_type == right_type
             || (left_type == &unspecified_int_type() && self.is_integer_type(right_type))
             || (right_type == &unspecified_int_type() && self.is_integer_type(left_type))
@@ -233,12 +240,11 @@ impl TypeGuard {
         {
             Ok(bool_type())
         } else {
-            Err(format!(
-                "Cannot compare different types with {}: {} and {}",
-                operator,
-                get_type_name(left_type),
-                get_type_name(right_type)
-            ))
+            Err(SemanticAnalysisError::OperationTypeMismatch {
+                operator: operator.to_string(),
+                left_type: left_type.clone(),
+                right_type: right_type.clone(),
+            })
         }
     }
 
@@ -257,16 +263,15 @@ impl TypeGuard {
         &mut self,
         type_id: &TypeId,
         operator: &BinaryOperator,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         if *type_id == bool_type()
             || (operator != &BinaryOperator::Add && *type_id == string_type())
         {
-            Err(format!(
-                "Type mismatch: cannot apply '{}' operator on {} and {}",
-                operator,
-                get_type_name(type_id),
-                get_type_name(type_id)
-            ))
+            Err(SemanticAnalysisError::OperationTypeMismatch {
+                operator: operator.to_string(),
+                left_type: type_id.clone(),
+                right_type: type_id.clone(),
+            })
         } else {
             Ok(type_id.clone())
         }
@@ -287,7 +292,7 @@ impl TypeGuard {
         &self,
         expr: &Expression,
         target_type: &TypeId,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         if let Expression::Literal(lit) = expr {
             if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                 let value_in_range = TYPE_REGISTRY
@@ -298,11 +303,11 @@ impl TypeGuard {
                 if value_in_range {
                     return Ok(target_type.clone());
                 } else {
-                    let type_name = get_type_name(target_type);
-                    return Err(format!(
-                        "Integer literal {} is out of range for type {}",
-                        n, type_name
-                    ));
+                    return Err(SemanticAnalysisError::ValueOutOfRange {
+                        value: n.to_string(),
+                        target_type: target_type.clone(),
+                        is_float: false,
+                    });
                 }
             }
         }
@@ -324,7 +329,7 @@ impl TypeGuard {
         &self,
         expr: &Expression,
         target_type: &TypeId,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         if let Expression::Literal(lit) = expr {
             if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
                 let value_in_range = TYPE_REGISTRY
@@ -335,11 +340,11 @@ impl TypeGuard {
                 if value_in_range {
                     return Ok(target_type.clone());
                 } else {
-                    return Err(format!(
-                        "Float literal {} is out of range for type {}",
-                        f,
-                        get_type_name(target_type)
-                    ));
+                    return Err(SemanticAnalysisError::ValueOutOfRange {
+                        value: f.to_string(),
+                        target_type: target_type.clone(),
+                        is_float: true,
+                    });
                 }
             }
         }
@@ -366,7 +371,7 @@ impl TypeGuard {
         left_type: &TypeId,
         right_type: &TypeId,
         bin_expr: &BinaryExpr,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         if *left_type == unspecified_int_type() && self.is_integer_type(right_type) {
             return self.check_unspecified_int_for_type(&bin_expr.left, right_type);
         }
@@ -390,12 +395,11 @@ impl TypeGuard {
             return Ok(string_type());
         }
 
-        Err(format!(
-            "Type mismatch: cannot apply '{}' operator on {} and {}",
-            bin_expr.operator,
-            get_type_name(left_type),
-            get_type_name(right_type)
-        ))
+        Err(SemanticAnalysisError::OperationTypeMismatch {
+            operator: bin_expr.operator.to_string(),
+            left_type: left_type.clone(),
+            right_type: right_type.clone(),
+        })
     }
 
     /// Checks if a variable is already defined in the current scope.
@@ -406,10 +410,12 @@ impl TypeGuard {
     ///
     /// ### Returns
     /// * `Ok(())` if the variable is not defined in the current scope
-    /// * `Err` with a descriptive error message if the variable is already defined
-    fn check_variable_redefinition(&self, name: &str) -> Result<(), String> {
+    /// * `Err(SemanticAnalysisError)` if the variable is already defined
+    fn check_variable_redefinition(&self, name: &str) -> Result<(), SemanticAnalysisError> {
         if self.scopes.last().unwrap().variables.contains_key(name) {
-            return Err(format!("Variable '{}' already defined", name));
+            return Err(SemanticAnalysisError::VariableRedefinition {
+                name: name.to_string(),
+            });
         }
         Ok(())
     }
@@ -440,7 +446,7 @@ impl TypeGuard {
         expr: &Expression,
         target_type: &TypeId,
         var_name: &str,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         if let Expression::Literal(lit) = expr {
             if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                 if self.is_integer_type(target_type) {
@@ -452,22 +458,24 @@ impl TypeGuard {
                     if value_in_range {
                         return Ok(target_type.clone());
                     } else {
-                        return Err(format!(
-                            "Integer literal {} is out of range for type {}",
-                            n,
-                            get_type_name(target_type)
-                        ));
+                        return Err(SemanticAnalysisError::ValueOutOfRange {
+                            value: n.to_string(),
+                            target_type: target_type.clone(),
+                            is_float: false,
+                        });
                     }
                 } else {
-                    return Err(format!(
-                        "Type mismatch: variable {} is {} but expression is int",
-                        var_name,
-                        get_type_name(target_type)
-                    ));
+                    return Err(SemanticAnalysisError::TypeMismatch {
+                        expected: target_type.clone(),
+                        actual: unspecified_int_type(),
+                        context: Some(var_name.to_string()),
+                    });
                 }
             }
         }
-        Err("Expected integer literal, got different expression type".to_string())
+        Err(SemanticAnalysisError::InvalidExpression { 
+            message: "Expected integer literal, got different expression type".to_string() 
+        })
     }
 
     /// Checks if a literal float value is compatible with a target type.
@@ -481,13 +489,13 @@ impl TypeGuard {
     ///
     /// ### Returns
     /// * `Ok(target_type)` if the literal is compatible with the target type
-    /// * `Err` with a descriptive error message if the literal is out of range or the target type is not a float type
+    /// * `Err` with a SemanticAnalysisError if the literal is out of range or the target type is not a float type
     fn check_float_literal_compatibility(
         &self,
         expr: &Expression,
         target_type: &TypeId,
         var_name: &str,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         if let Expression::Literal(lit) = expr {
             if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
                 if self.is_float_type(target_type) {
@@ -499,22 +507,24 @@ impl TypeGuard {
                     if value_in_range {
                         return Ok(target_type.clone());
                     } else {
-                        return Err(format!(
-                            "Float literal {} is out of range for type {}",
-                            f,
-                            get_type_name(target_type)
-                        ));
+                        return Err(SemanticAnalysisError::ValueOutOfRange {
+                            value: f.to_string(),
+                            target_type: target_type.clone(),
+                            is_float: true,
+                        });
                     }
                 } else {
-                    return Err(format!(
-                        "Type mismatch: variable {} is {} but expression is float",
-                        var_name,
-                        get_type_name(target_type)
-                    ));
+                    return Err(SemanticAnalysisError::TypeMismatch {
+                        expected: target_type.clone(),
+                        actual: unspecified_float_type(),
+                        context: Some(var_name.to_string()),
+                    });
                 }
             }
         }
-        Err("Expected float literal, got different expression type".to_string())
+        Err(SemanticAnalysisError::InvalidExpression { 
+            message: "Expected float literal, got different expression type".to_string() 
+        })
     }
 
     /// Checks if a negated literal value (like -42 or -3.14) is compatible with a target type.
@@ -528,13 +538,13 @@ impl TypeGuard {
     ///
     /// ### Returns
     /// * `Ok(target_type)` if the negated literal is compatible with the target type
-    /// * `Err` with a descriptive error message if the literal is out of range or the target type is incompatible
+    /// * `Err` with a SemanticAnalysisError if the literal is out of range or the target type is incompatible
     fn check_negated_literal_compatibility(
         &self,
         unary_expr: &UnaryExpr,
         target_type: &TypeId,
         var_name: &str,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         if unary_expr.operator == UnaryOperator::Negate {
             if let Expression::Literal(lit) = &*unary_expr.right {
                 if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
@@ -548,18 +558,18 @@ impl TypeGuard {
                         if value_in_range {
                             return Ok(target_type.clone());
                         } else {
-                            return Err(format!(
-                                "Integer literal {} is out of range for type {}",
-                                negated_value,
-                                get_type_name(target_type)
-                            ));
+                            return Err(SemanticAnalysisError::ValueOutOfRange {
+                                value: negated_value.to_string(),
+                                target_type: target_type.clone(),
+                                is_float: false,
+                            });
                         }
                     } else {
-                        return Err(format!(
-                            "Type mismatch: variable {} is {} but expression is negated int",
-                            var_name,
-                            get_type_name(target_type)
-                        ));
+                        return Err(SemanticAnalysisError::TypeMismatch {
+                            expected: target_type.clone(),
+                            actual: unspecified_int_type(),
+                            context: Some(var_name.to_string()),
+                        });
                     }
                 }
 
@@ -574,28 +584,28 @@ impl TypeGuard {
                         if value_in_range {
                             return Ok(target_type.clone());
                         } else {
-                            return Err(format!(
-                                "Float literal {} is out of range for type {}",
-                                negated_value,
-                                get_type_name(target_type)
-                            ));
+                            return Err(SemanticAnalysisError::ValueOutOfRange {
+                                value: negated_value.to_string(),
+                                target_type: target_type.clone(),
+                                is_float: true,
+                            });
                         }
                     } else {
-                        return Err(format!(
-                            "Type mismatch: variable {} is {} but expression is negated float",
-                            var_name,
-                            get_type_name(target_type)
-                        ));
+                        return Err(SemanticAnalysisError::TypeMismatch {
+                            expected: target_type.clone(),
+                            actual: unspecified_float_type(),
+                            context: Some(var_name.to_string()),
+                        });
                     }
                 }
             }
         }
 
-        Err(format!(
-            "Type mismatch: variable {} is {} but expression is incompatible",
-            var_name,
-            get_type_name(target_type)
-        ))
+        Err(SemanticAnalysisError::TypeMismatch {
+            expected: target_type.clone(),
+            actual: unknown_type(), // We don't know the exact type here, so use unknown
+            context: Some(var_name.to_string()),
+        })
     }
 
     /// Determines the final type of a variable in a let statement based on both the
@@ -608,12 +618,12 @@ impl TypeGuard {
     ///
     /// ### Returns
     /// * `Ok(type_id)` with the final determined type if valid
-    /// * `Err` with a descriptive error message if there's a type mismatch
+    /// * `Err` with a SemanticAnalysisError if there's a type mismatch
     fn determine_let_statement_type(
         &mut self,
         let_stmt: &LetStatement,
         expr_type: TypeId,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         if let_stmt.expr_type == unknown_type() {
             return Ok(expr_type);
         }
@@ -623,14 +633,20 @@ impl TypeGuard {
         }
 
         if expr_type == unspecified_int_type() {
+            // Now handle_unspecified_int_assignment returns TypeCheckResult directly
             return self.handle_unspecified_int_assignment(let_stmt, &expr_type);
         }
 
         if expr_type == unspecified_float_type() {
+            // Now handle_unspecified_float_assignment returns TypeCheckResult directly
             return self.handle_unspecified_float_assignment(let_stmt, &expr_type);
         }
 
-        self.type_mismatch_error(let_stmt, &expr_type)
+        Err(SemanticAnalysisError::TypeMismatch {
+            expected: let_stmt.expr_type.clone(),
+            actual: expr_type,
+            context: Some(let_stmt.name.clone()),
+        })
     }
 
     /// Handles the type checking and coercion of unspecified integer literals in assignments.
@@ -642,25 +658,27 @@ impl TypeGuard {
     ///
     /// ### Returns
     /// * `Ok(type_id)` with the target type if coercion is possible
-    /// * `Err` with a descriptive error message if coercion fails
+    /// * `Err` with a SemanticAnalysisError if coercion fails
     fn handle_unspecified_int_assignment(
         &mut self,
         let_stmt: &LetStatement,
         expr_type: &TypeId,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         match &let_stmt.value {
             Expression::Literal(_) => {
+                // This now returns TypeCheckResult directly
                 match self.check_integer_literal_compatibility(
                     &let_stmt.value,
                     &let_stmt.expr_type,
                     &let_stmt.name,
                 ) {
                     Ok(_) => Ok(let_stmt.expr_type.clone()),
-                    Err(msg) => Err(msg),
+                    Err(err) => Err(err),
                 }
             }
             Expression::Unary(unary_expr) => {
                 if unary_expr.operator == UnaryOperator::Negate {
+                    // This now returns TypeCheckResult directly
                     self.check_negated_literal_compatibility(
                         unary_expr,
                         &let_stmt.expr_type,
@@ -696,7 +714,7 @@ impl TypeGuard {
         &mut self,
         let_stmt: &LetStatement,
         expr_type: &TypeId,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         match &let_stmt.value {
             Expression::Literal(_) => {
                 match self.check_float_literal_compatibility(
@@ -705,7 +723,7 @@ impl TypeGuard {
                     &let_stmt.name,
                 ) {
                     Ok(_) => Ok(let_stmt.expr_type.clone()),
-                    Err(msg) => Err(msg),
+                    Err(err) => Err(err),
                 }
             }
             Expression::Unary(unary_expr) => {
@@ -739,22 +757,21 @@ impl TypeGuard {
     /// * `expr_type` - The type of the expression that doesn't match the variable's declared type
     ///
     /// ### Returns
-    /// * `Err` with a formatted error message describing the type mismatch
+    /// * `Err(SemanticAnalysisError)` with a typed error describing the type mismatch
     fn type_mismatch_error(
         &self,
         let_stmt: &LetStatement,
         expr_type: &TypeId,
-    ) -> Result<TypeId, String> {
-        Err(format!(
-            "Type mismatch: variable {} is {} but expression is {}",
-            let_stmt.name,
-            get_type_name(&let_stmt.expr_type),
-            get_type_name(expr_type)
-        ))
+    ) -> TypeCheckResult {
+        Err(SemanticAnalysisError::TypeMismatch {
+            expected: let_stmt.expr_type.clone(),
+            actual: expr_type.clone(),
+            context: Some(let_stmt.name.clone()),
+        })
     }
 
-    /// Checks if a return expression's type matches the expected return type of the function.
-    /// Handles special cases for unspecified literals that can be coerced to the return type.
+    /// Internal version of analyze_return_expr_type that returns TypeCheckResult
+    /// This allows us to gradually migrate the codebase to use SemanticAnalysisError directly
     ///
     /// ### Arguments
     /// * `expr` - The expression being returned
@@ -762,12 +779,12 @@ impl TypeGuard {
     ///
     /// ### Returns
     /// * `Ok(type_id)` if the expression type matches or can be coerced to the return type
-    /// * `Err` with a descriptive error message if there's a type mismatch
-    fn check_return_expr_type(
+    /// * `Err` with a SemanticAnalysisError if there's a type mismatch
+    fn check_return_expr_type_internal(
         &mut self,
         expr: &Expression,
         expected_type: &TypeId,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         let actual_type = self.visit_expression(expr)?;
 
         if actual_type == *expected_type {
@@ -804,29 +821,30 @@ impl TypeGuard {
             }
         }
 
-        Err(format!(
-            "Type mismatch: function returns {} but got {}",
-            get_type_name(expected_type),
-            get_type_name(&actual_type)
-        ))
+        Err(SemanticAnalysisError::ReturnTypeMismatch {
+            expected: expected_type.clone(),
+            actual: actual_type,
+        })
     }
-
-    /// Checks the type safety of a list of statements by recursively analyzing the AST.
-    /// This is the main entry point for type checking within the TypeGuard struct.
+    
+    /// Performs semantic analysis on a list of statements by recursively analyzing the AST.
+    /// This is the main entry point for semantic analysis within the SemanticAnalyzer struct.
     ///
     /// ### Arguments
-    /// * `statements` - The AST statements to type check
+    /// * `statements` - The AST statements to analyze
     ///
     /// ### Returns
-    /// * `CompileResult<()>` - Ok if no type errors were found, otherwise Err with the list of errors
+    /// * `CompileResult<()>` - Ok if no semantic errors were found, otherwise Err with the list of errors
     ///
-    /// This function performs static type analysis on the entire program, collecting all
-    /// type errors before returning them as a single result.
-    pub fn check(&mut self, statements: &[Statement]) -> CompileResult<()> {
+    /// This function performs static semantic analysis on the entire program, collecting all
+    /// semantic errors before returning them as a single result.
+    pub fn analyze(&mut self, statements: &[Statement]) -> CompileResult<()> {
         for stmt in statements {
             match stmt.accept(self) {
                 Ok(_) => continue,
-                Err(e) => self.add_string_error(e),
+                Err(error) => {
+                    self.add_semantic_error(error);
+                },
             }
         }
 
@@ -838,8 +856,8 @@ impl TypeGuard {
     }
 }
 
-impl Visitor<Result<TypeId, String>> for TypeGuard {
-    fn visit_statement(&mut self, stmt: &Statement) -> Result<TypeId, String> {
+impl Visitor<SemanticResult> for SemanticAnalyzer {
+    fn visit_statement(&mut self, stmt: &Statement) -> TypeCheckResult {
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
@@ -856,7 +874,7 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
     fn visit_function_declaration_statement(
         &mut self,
         fn_decl: &FunctionDeclarationStmt,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         let mut param_types = Vec::new();
         for param in &fn_decl.parameters {
             param_types.push(param.param_type.clone());
@@ -880,7 +898,7 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
         result.and(Ok(fn_decl.return_type.clone()))
     }
 
-    fn visit_block_statement(&mut self, stmts: &[Statement]) -> Result<TypeId, String> {
+    fn visit_block_statement(&mut self, stmts: &[Statement]) -> TypeCheckResult {
         self.begin_scope();
         for stmt in stmts {
             stmt.accept(self)?;
@@ -890,33 +908,31 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
         Ok(unknown_type())
     }
 
-    fn visit_return_statement(&mut self, expr: &Option<Expression>) -> Result<TypeId, String> {
+    fn visit_return_statement(&mut self, expr: &Option<Expression>) -> TypeCheckResult {
         if let Some(expected_type) = &self.current_return_type {
             let expected_type = expected_type.clone();
             if let Some(expr) = expr {
-                return self.check_return_expr_type(expr, &expected_type);
+                return self.check_return_expr_type_internal(expr, &expected_type);
             } else if expected_type != unknown_type() {
-                return Err(format!(
-                    "Type mismatch: function returns {} but no return value provided",
-                    get_type_name(&expected_type)
-                ));
+                return Err(SemanticAnalysisError::MissingReturnValue {
+                    expected: expected_type.clone(),
+                });
             }
 
             Ok(expected_type)
         } else {
-            Err("Return statement outside of function".to_string())
+            Err(SemanticAnalysisError::ReturnOutsideFunction)
         }
     }
 
-    fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> Result<TypeId, String> {
+    fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> TypeCheckResult {
         if let Some((param_types, return_type)) = self.functions.get(&call_expr.name).cloned() {
             if param_types.len() != call_expr.arguments.len() {
-                return Err(format!(
-                    "Function '{}' expects {} arguments, but got {}",
-                    call_expr.name,
-                    param_types.len(),
-                    call_expr.arguments.len()
-                ));
+                return Err(SemanticAnalysisError::ArgumentCountMismatch {
+                    function_name: call_expr.name.clone(),
+                    expected: param_types.len(),
+                    actual: call_expr.arguments.len(),
+                });
             }
 
             for (i, arg) in call_expr.arguments.iter().enumerate() {
@@ -930,40 +946,38 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
 
                 if arg_type != *param_type {
                     if arg_type == unspecified_int_type() {
-                        if let Expression::Literal(lit) = arg {
-                            if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                                let value_in_range = TYPE_REGISTRY
-                                    .read()
-                                    .unwrap()
-                                    .check_value_in_range(n, param_type);
-
-                                if value_in_range {
-                                    continue;
-                                }
-                            }
+                        if let Err(_) = self.check_unspecified_int_for_type(arg, param_type) {
+                            return Err(SemanticAnalysisError::ArgumentTypeMismatch {
+                                function_name: call_expr.name.clone(),
+                                argument_position: i + 1,
+                                expected: param_type.clone(),
+                                actual: arg_type,
+                            });
                         }
+                        continue;
                     }
 
-                    return Err(format!(
-                        "Type mismatch: function '{}' expects argument {} to be {}, but got {}",
-                        call_expr.name,
-                        i + 1,
-                        get_type_name(param_type),
-                        get_type_name(&arg_type)
-                    ));
+                    return Err(SemanticAnalysisError::ArgumentTypeMismatch {
+                        function_name: call_expr.name.clone(),
+                        argument_position: i + 1,
+                        expected: param_type.clone(),
+                        actual: arg_type,
+                    });
                 }
             }
 
             Ok(return_type)
         } else {
-            Err(format!("Undefined function: {}", call_expr.name))
+            Err(SemanticAnalysisError::UndefinedFunction { 
+                name: call_expr.name.clone() 
+            })
         }
     }
 
     fn visit_type_definition_statement(
         &mut self,
         type_def: &TypeDefinitionStmt,
-    ) -> Result<TypeId, String> {
+    ) -> TypeCheckResult {
         let type_id = TYPE_REGISTRY.write().unwrap().register_type(
             &type_def.name,
             TypeKind::Struct(StructType {
@@ -974,12 +988,14 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
         Ok(type_id)
     }
 
-    fn visit_expression_statement(&mut self, expr: &Expression) -> Result<TypeId, String> {
+    fn visit_expression_statement(&mut self, expr: &Expression) -> TypeCheckResult {
         self.visit_expression(expr)
     }
 
-    fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> Result<TypeId, String> {
-        self.check_variable_redefinition(&let_stmt.name)?;
+    fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> TypeCheckResult {
+        if let Err(err) = self.check_variable_redefinition(&let_stmt.name) {
+            return Err(err);
+        }
 
         let placeholder_type = let_stmt.expr_type.clone();
         self.define_variable(let_stmt.name.clone(), placeholder_type);
@@ -994,7 +1010,7 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
         Ok(final_type)
     }
 
-    fn visit_expression(&mut self, expr: &Expression) -> Result<TypeId, String> {
+    fn visit_expression(&mut self, expr: &Expression) -> TypeCheckResult {
         match expr {
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
             Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
@@ -1004,7 +1020,7 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
         }
     }
 
-    fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> Result<TypeId, String> {
+    fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> TypeCheckResult {
         match lit_expr.value {
             LiteralValue::I32(_) => Ok(i32_type()),
             LiteralValue::I64(_) => Ok(i64_type()),
@@ -1019,7 +1035,7 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
         }
     }
 
-    fn visit_binary_expression(&mut self, bin_expr: &BinaryExpr) -> Result<TypeId, String> {
+    fn visit_binary_expression(&mut self, bin_expr: &BinaryExpr) -> TypeCheckResult {
         let left_type = self.visit_expression(&bin_expr.left)?;
         let right_type = self.visit_expression(&bin_expr.right)?;
 
@@ -1049,19 +1065,18 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
             if left_type == right_type {
                 return self.check_same_type_arithmetic(&left_type, &bin_expr.operator);
             }
-
+            
             return self.check_mixed_arithmetic_operation(&left_type, &right_type, bin_expr);
         }
 
-        Err(format!(
-            "Type mismatch: cannot apply '{}' operator on {} and {}",
-            bin_expr.operator,
-            get_type_name(&left_type),
-            get_type_name(&right_type)
-        ))
+        Err(SemanticAnalysisError::OperationTypeMismatch {
+            operator: bin_expr.operator.to_string(),
+            left_type: left_type.clone(),
+            right_type: right_type.clone(),
+        })
     }
 
-    fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> Result<TypeId, String> {
+    fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> TypeCheckResult {
         let operand_type = self.visit_expression(&unary_expr.right)?;
 
         match unary_expr.operator {
@@ -1078,33 +1093,38 @@ impl Visitor<Result<TypeId, String>> for TypeGuard {
 
                 if is_numeric {
                     if operand_type == u32_type() || operand_type == u64_type() {
-                        return Err("Cannot negate unsigned type".to_string());
+                        return Err(SemanticAnalysisError::InvalidUnaryOperation {
+                            operator: "-".to_string(),
+                            operand_type: operand_type.clone(),
+                        });
                     }
                     return Ok(operand_type);
                 }
-                let type_name = get_type_name(&operand_type);
-                Err(format!("Cannot negate non-numeric type '{}'", type_name))
+                Err(SemanticAnalysisError::InvalidUnaryOperation {
+                    operator: "-".to_string(),
+                    operand_type: operand_type.clone(),
+                })
             }
             UnaryOperator::Not => {
                 if operand_type == bool_type() {
                     return Ok(bool_type());
                 }
 
-                let operand_type_name = get_type_name(&operand_type);
-
-                Err(format!(
-                    "Boolean not operator '!' can only be applied to boolean types, but got {}",
-                    operand_type_name
-                ))
+                Err(SemanticAnalysisError::InvalidUnaryOperation {
+                    operator: "!".to_string(),
+                    operand_type: operand_type.clone(),
+                })
             }
         }
     }
 
-    fn visit_variable_expression(&mut self, name: &str) -> Result<TypeId, String> {
+    fn visit_variable_expression(&mut self, name: &str) -> TypeCheckResult {
         if let Some(var_type) = self.resolve_variable(name) {
             Ok(var_type.clone())
         } else {
-            Err(format!("Undefined variable: {}", name))
+            Err(SemanticAnalysisError::UndefinedVariable {
+                name: name.to_string(),
+            })
         }
     }
 }

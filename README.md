@@ -59,4 +59,3 @@ slang run input.sip
 ## Language Syntax
 
 For details about the language grammar, see [GRAMMER.md](GRAMMER.md).
-

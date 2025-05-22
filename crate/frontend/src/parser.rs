@@ -260,13 +260,15 @@ impl<'a> Parser<'a> {
             let type_name = self.advance().lexeme.clone();
 
             if type_name == TYPE_NAME_INT {
-                return Err(self.error("'int' is not a valid type specifier. Use 'i32', 'i64', 'u32', or 'u64' instead"));
+                return Err(self.error(&format!("'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead", 
+                    TYPE_NAME_INT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64)));
             } else if type_name == TYPE_NAME_FLOAT {
                 return Err(
-                    self.error("'float' is not a valid type specifier. Use 'f32' or 'f64' instead")
+                    self.error(&format!("'{}' is not a valid type specifier. Use '{}' or '{}' instead",
+                        TYPE_NAME_FLOAT, TYPE_NAME_F32, TYPE_NAME_F64))
                 );
             } else if type_name == TYPE_NAME_UNKNOWN {
-                return Err(self.error("'unknown' is not a valid type specifier"));
+                return Err(self.error(&format!("'{}' is not a valid type specifier", TYPE_NAME_UNKNOWN)));
             }
 
             TYPE_REGISTRY
@@ -411,10 +413,12 @@ impl<'a> Parser<'a> {
 
             // Explicitly reject placeholder types as type specifiers
             if type_name == TYPE_NAME_INT {
-                return Err(self.error("'int' is not a valid type specifier. Use 'i32', 'i64', 'u32', or 'u64' instead"));
+                return Err(self.error(&format!("'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead", 
+                    TYPE_NAME_INT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64)));
             } else if type_name == TYPE_NAME_FLOAT {
                 return Err(
-                    self.error("'float' is not a valid type specifier. Use 'f32' or 'f64' instead")
+                    self.error(&format!("'{}' is not a valid type specifier. Use '{}' or '{}' instead",
+                        TYPE_NAME_FLOAT, TYPE_NAME_F32, TYPE_NAME_F64))
                 );
             }
 
@@ -799,8 +803,8 @@ impl<'a> Parser<'a> {
                     self.advance();
                     if base_value > i32::MAX as i64 || base_value < i32::MIN as i64 {
                         return Err(self.error_previous(&format!(
-                            "Value {} is out of range for i32",
-                            base_value
+                            "Value {} is out of range for {}",
+                            base_value, TYPE_NAME_I32
                         )));
                     }
                     return Ok(Expression::Literal(LiteralExpr {
@@ -819,8 +823,8 @@ impl<'a> Parser<'a> {
                     self.advance();
                     if base_value < 0 || base_value > u32::MAX as i64 {
                         return Err(self.error_previous(&format!(
-                            "Value {} is out of range for u32",
-                            base_value
+                            "Value {} is out of range for {}",
+                            base_value, TYPE_NAME_U32
                         )));
                     }
                     return Ok(Expression::Literal(LiteralExpr {
@@ -832,8 +836,8 @@ impl<'a> Parser<'a> {
                     self.advance();
                     if base_value < 0 {
                         return Err(self.error_previous(&format!(
-                            "Value {} is out of range for u64",
-                            base_value
+                            "Value {} is out of range for {}",
+                            base_value, TYPE_NAME_U64
                         )));
                     }
                     return Ok(Expression::Literal(LiteralExpr {
@@ -881,14 +885,16 @@ impl<'a> Parser<'a> {
         // Check for placeholder types
         if type_name == TYPE_NAME_INT {
             return Err(self.error(
-                "'int' is not a valid type specifier. Use 'i32', 'i64', 'u32', or 'u64' instead",
+                &format!("'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead",
+                    TYPE_NAME_INT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64)
             ));
         } else if type_name == TYPE_NAME_FLOAT {
             return Err(
-                self.error("'float' is not a valid type specifier. Use 'f32' or 'f64' instead")
+                self.error(&format!("'{}' is not a valid type specifier. Use '{}' or '{}' instead",
+                    TYPE_NAME_FLOAT, TYPE_NAME_F32, TYPE_NAME_F64))
             );
         } else if type_name == TYPE_NAME_UNKNOWN {
-            return Err(self.error("'unknown' is not a valid type specifier"));
+            return Err(self.error(&format!("'{}' is not a valid type specifier", TYPE_NAME_UNKNOWN)));
         }
         if let Some(type_id) = TYPE_REGISTRY.read().unwrap().get_type_by_name(&type_name) {
             Ok(type_id.clone())

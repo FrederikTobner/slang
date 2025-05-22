@@ -8,15 +8,11 @@ use slang_backend::vm::VM;
 use slang_frontend::error::{CompileResult, report_errors};
 use slang_frontend::lexer;
 use slang_frontend::parser;
-use slang_frontend::type_guard;
+use slang_frontend::semantic_analyzer;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
 use zip::{ZipArchive, ZipWriter, write::FileOptions};
-
-//------------------------------------------------------------------------------
-// Public CLI Interface
-//------------------------------------------------------------------------------
 
 /// Command line interface for the Slang language
 #[derive(ClapParser)]
@@ -63,10 +59,6 @@ pub enum Commands {
 /// The extension for compiled Slang bytecode files
 const SLANG_BYTECODE_EXTENSION: &str = "sip";
 
-//------------------------------------------------------------------------------
-// Main Command Implementations
-//------------------------------------------------------------------------------
-
 /// Run the interactive REPL
 pub fn repl() {
     let mut vm = VM::new();
@@ -112,6 +104,10 @@ pub fn repl() {
 }
 
 /// Compile a Slang source file to bytecode
+/// 
+/// ### Arguments
+/// * `input` - The input source file
+/// * `output` - The output file path (if provided)
 pub fn compile_file(input: &str, output: Option<String>) {
     let output_path = resolve_output_path(input, output);
     println!("Compiling {} to {}", input, output_path);
@@ -141,6 +137,9 @@ pub fn compile_file(input: &str, output: Option<String>) {
 }
 
 /// Execute a Slang source file directly
+/// 
+/// ### Arguments
+/// * `input` - The input source file
 pub fn execute_file(input: &str) {
     println!("Executing source file: {}", input);
 
@@ -170,6 +169,9 @@ pub fn execute_file(input: &str) {
 }
 
 /// Run a compiled Slang bytecode file
+/// 
+/// ### Arguments
+/// * `input` - The input compiled bytecode file
 pub fn run_file(input: &str) {
     println!("Running compiled file: {}", input);
 
@@ -186,17 +188,13 @@ pub fn run_file(input: &str) {
     }
 }
 
-//------------------------------------------------------------------------------
-// Compilation
-//------------------------------------------------------------------------------
-
 /// Compile source code to bytecode
 ///
-/// # Arguments
+/// ### Arguments
 ///
 /// * `source` - The source code to compile
 ///
-/// # Returns
+/// ### Returns
 ///
 /// The compiled bytecode chunk or compilation errors
 fn compile_source_to_bytecode(source: &str) -> CompileResult<Chunk> {
@@ -207,16 +205,19 @@ fn compile_source_to_bytecode(source: &str) -> CompileResult<Chunk> {
         let mut printer = slang_ir::ast_printer::ASTPrinter::new();
         printer.print(&statements);
     }
-    type_guard::execute(&statements)?;
+    semantic_analyzer::execute(&statements)?;
     compiler::compile(&statements)
         .map_err(|err| vec![slang_frontend::error::CompilerError::new(err, 0, 0)])
 }
 
-//------------------------------------------------------------------------------
-// File Operations
-//------------------------------------------------------------------------------
-
 /// Determine the output path for a compiled file
+/// 
+/// ### Arguments
+/// * `input` - The input source file
+/// * `output` - The output file path (if provided)
+/// 
+/// ### Returns
+/// The resolved output path
 fn resolve_output_path(input: &str, output: Option<String>) -> String {
     match output {
         Some(path) => path,
@@ -233,11 +234,11 @@ fn resolve_output_path(input: &str, output: Option<String>) -> String {
 
 /// Read a source file into a string
 ///
-/// # Arguments
+/// ### Arguments
 ///
 /// * `path` - The path to the source file
 ///
-/// # Returns
+/// ### Returns
 ///
 /// The file contents or an error message
 fn read_source_file(path: &str) -> SlangResult<String> {
@@ -246,12 +247,12 @@ fn read_source_file(path: &str) -> SlangResult<String> {
 
 /// Write a bytecode chunk to a file
 ///
-/// # Arguments
+/// ### Arguments
 ///
 /// * `chunk` - The bytecode chunk to write
 /// * `output_path` - The path to write to
 ///
-/// # Returns
+/// ### Returns
 ///
 /// Ok(()) if successful, or an error message
 fn write_bytecode(chunk: &Chunk, output_path: &str) -> SlangResult<()> {
@@ -309,11 +310,11 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> SlangResult<()> {
 
 /// Read a bytecode chunk from a file
 ///
-/// # Arguments
+/// ### Arguments
 ///
 /// * `input_path` - The path to read from
 ///
-/// # Returns
+/// ### Returns
 ///
 /// The bytecode chunk or an error message
 fn read_bytecode_file(input_path: &str) -> SlangResult<Chunk> {
@@ -354,17 +355,13 @@ fn read_bytecode_file(input_path: &str) -> SlangResult<Chunk> {
     }
 }
 
-//------------------------------------------------------------------------------
-// VM Operations
-//------------------------------------------------------------------------------
-
 /// Execute a bytecode chunk in the VM
 ///
-/// # Arguments
+/// ### Arguments
 ///
 /// * `chunk` - The bytecode chunk to run
 ///
-/// # Returns
+/// ### Returns
 ///
 /// Ok(()) if successful, or an error message
 fn execute_bytecode(chunk: &Chunk) -> Result<(), String> {
