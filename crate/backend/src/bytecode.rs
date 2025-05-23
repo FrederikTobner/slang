@@ -345,7 +345,7 @@ impl Chunk {
         }
         
         let instruction = self.code[offset];
-        match OpCode::from_u8(instruction) {
+        match OpCode::from_int(instruction) {
             Some(OpCode::Constant) => {
                 self.simple_instruction_with_operand("CONSTANT", offset)
             },

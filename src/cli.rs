@@ -97,7 +97,7 @@ pub fn repl() {
             }
             Err(errors) => {
                 // In REPL mode, we just report errors and continue
-                report_errors(&errors);
+                report_errors(&errors, &input); // Pass the source input to report_errors
             }
         }
     }
@@ -122,7 +122,7 @@ pub fn compile_file(input: &str, output: Option<String>) {
                 }
             }
             Err(errors) => {
-                report_errors(&errors);
+                report_errors(&errors, &source); // Pass the source to report_errors
                 exit::with_code(
                     exit::Code::Software,
                     &format!(
@@ -154,7 +154,7 @@ pub fn execute_file(input: &str) {
                 }
             }
             Err(errors) => {
-                report_errors(&errors);
+                report_errors(&errors, &source); // Pass the source to report_errors
                 exit::with_code(
                     exit::Code::Software,
                     &format!(
@@ -207,7 +207,7 @@ fn compile_source_to_bytecode(source: &str) -> CompileResult<Chunk> {
     }
     semantic_analyzer::execute(&statements)?;
     compiler::compile(&statements)
-        .map_err(|err| vec![slang_frontend::error::CompilerError::new(err, 0, 0)])
+        .map_err(|err_msg| vec![slang_frontend::error::CompilerError::new(err_msg, 0, 0, 0, None)])
 }
 
 /// Determine the output path for a compiled file

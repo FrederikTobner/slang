@@ -3,3 +3,4 @@
 pub mod ast_printer;
 pub mod ast;
 pub mod visitor;
+pub mod source_location;

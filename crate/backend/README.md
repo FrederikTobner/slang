@@ -34,6 +34,7 @@ The backend consists of several key components:
 ## Usage
 
 The backend is used by the main Slang CLI for:
+
 - Compiling AST to bytecode files (`.sip`)
 - Running compiled bytecode files
 - Executing Slang programs directly from source
@@ -42,6 +43,7 @@ The backend is used by the main Slang CLI for:
 ## Integration
 
 The backend interfaces with:
+
 - The IR crate to process AST structures
 - The types crate for type information during compilation
 - The frontend indirectly through the AST

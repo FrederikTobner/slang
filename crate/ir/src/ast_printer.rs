@@ -112,7 +112,7 @@ impl Visitor<()> for ASTPrinter {
         match expr {
             Expression::Literal(lit) => self.visit_literal_expression(lit),
             Expression::Binary(bin) => self.visit_binary_expression(bin),
-            Expression::Variable(name) => self.visit_variable_expression(name),
+            Expression::Variable(name, location) => self.visit_variable_expression(name, location),
             Expression::Unary(unary) => self.visit_unary_expression(unary),
             Expression::Call(call) => self.visit_call_expression(call),
         }
@@ -141,7 +141,7 @@ impl Visitor<()> for ASTPrinter {
             LiteralValue::UnspecifiedInteger(i) => println!("{}{}: {}", self.indent(), TYPE_NAME_INT, i),
             LiteralValue::F64(f) => println!("{}{}: {}", self.indent(),  TYPE_NAME_F64, f),
             LiteralValue::F32(f) => println!("{}{}: {}", self.indent(),  TYPE_NAME_F32, f),
-            LiteralValue::UnspecifiedFloat(f) => println!("{}{}: {}", self.indent(),  TYPE_NAME_FLOAT,f),
+            LiteralValue::UnspecifiedFloat(f) => println!("{}{}: {}", self.indent(), TYPE_NAME_FLOAT,f),
             LiteralValue::Boolean(b) => println!("{}{}: {}",  self.indent(),  TYPE_NAME_BOOL, b),
             LiteralValue::String(s) => println!("{}{}: \"{}\"", self.indent(),  TYPE_NAME_STRING, s),
         }
@@ -177,7 +177,7 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level -= 1;
     }
 
-    fn visit_variable_expression(&mut self, name: &str) {
+    fn visit_variable_expression(&mut self, name: &str, _location: &crate::source_location::SourceLocation) {
         println!("{}Var: {}", self.indent(), name);
     }
 }

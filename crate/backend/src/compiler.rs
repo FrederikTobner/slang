@@ -240,7 +240,7 @@ impl Visitor<Result<(), String>> for Compiler {
         match expr {
             Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
-            Expression::Variable(name) => self.visit_variable_expression(name),
+            Expression::Variable(name, location) => self.visit_variable_expression(name, location),
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
         }
@@ -359,7 +359,7 @@ impl Visitor<Result<(), String>> for Compiler {
         Ok(())
     }
     
-    fn visit_variable_expression(&mut self, name: &str) -> Result<(), String> {
+    fn visit_variable_expression(&mut self, name: &str, _location: &slang_ir::source_location::SourceLocation) -> Result<(), String> {
         let var_index = self.chunk.add_identifier(name.to_string());
         if var_index > 255 {
             return Err("Too many variables".to_string());

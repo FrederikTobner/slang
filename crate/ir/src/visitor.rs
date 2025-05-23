@@ -41,7 +41,7 @@ pub trait Visitor<T> {
     fn visit_literal_expression(&mut self, expr: &LiteralExpr) -> T;
     
     /// Visit a variable reference expression
-    fn visit_variable_expression(&mut self, name: &str) -> T;
+    fn visit_variable_expression(&mut self, name: &str, location: &crate::source_location::SourceLocation) -> T;
     
     /// Visit a function call expression
     fn visit_call_expression(&mut self, expr: &FunctionCallExpr) -> T;

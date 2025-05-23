@@ -5,6 +5,7 @@ use slang_ir::ast::{
     LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator,
 };
+use slang_ir::source_location::SourceLocation;
 
 /// Type alias for result of semantic analysis operations
 /// Contains either a valid TypeId or a SemanticAnalysisError
@@ -15,7 +16,7 @@ type TypeCheckResult = SemanticResult;
 use slang_ir::visitor::Visitor;
 use slang_types::types::*;
 use slang_types::types::{
-    StructType, TYPE_REGISTRY, TypeId, TypeKind, type_fullfills,
+    StructType, TYPE_REGISTRY, TypeId, TypeKind, type_fullfills, 
 };
 use std::collections::HashMap;
 
@@ -80,27 +81,6 @@ impl SemanticAnalyzer {
         };
         analyzer.register_native_functions();
         analyzer
-    }
-
-    /// Adds a compiler error to the collection with source location information.
-    ///
-    /// ### Arguments
-    /// * `message` - The error message
-    /// * `line` - The line number where the error occurred (1-based)
-    /// * `column` - The column number where the error occurred (1-based)
-    fn add_error(&mut self, message: String, line: usize, column: usize) {
-        self.errors.push(CompilerError::new(message, line, column));
-    }
-
-    /// Adds a SemanticAnalysisError to the collection and converts it to a CompilerError.
-    /// Uses placeholder location information (0,0) since we don't track source locations yet.
-    ///
-    /// ### Arguments
-    /// * `error` - The SemanticAnalysisError to add
-    fn add_semantic_error(&mut self, error: SemanticAnalysisError) {
-        // Since we don't have line/column info in the current error handling,
-        // temporarily use 0,0 - this will be improved in a future update
-        self.add_error(error.to_string(), 0, 0);
     }
 
     /// Begins a new scope by pushing a new scope onto the stack.
@@ -183,7 +163,6 @@ impl SemanticAnalyzer {
         );
     }
 
-
     /// Checks if types are compatible for logical operations (AND, OR).
     /// Both operands must be boolean types.
     ///
@@ -191,6 +170,7 @@ impl SemanticAnalyzer {
     /// * `left_type` - The type of the left operand
     /// * `right_type` - The type of the right operand
     /// * `operator` - The logical operator (either And or Or)
+    /// * `location` - The source location of the operation
     ///
     /// ### Returns
     /// * `Ok(bool_type())` if both operands are boolean
@@ -200,6 +180,7 @@ impl SemanticAnalyzer {
         left_type: &TypeId,
         right_type: &TypeId,
         operator: &BinaryOperator,
+        location: &SourceLocation,
     ) -> TypeCheckResult {
         if *left_type == bool_type() && *right_type == bool_type() {
             Ok(bool_type())
@@ -208,6 +189,7 @@ impl SemanticAnalyzer {
                 operator: operator.to_string(),
                 left_type: left_type.clone(),
                 right_type: right_type.clone(),
+                location: location.clone(),
             })
         }
     }
@@ -222,6 +204,7 @@ impl SemanticAnalyzer {
     /// * `left_type` - The type of the left operand
     /// * `right_type` - The type of the right operand
     /// * `operator` - The relational operator
+    /// * `location` - The source location of the operation
     ///
     /// ### Returns
     /// * `Ok(bool_type())` if the types are comparable
@@ -231,6 +214,7 @@ impl SemanticAnalyzer {
         left_type: &TypeId,
         right_type: &TypeId,
         operator: &BinaryOperator,
+        location: &SourceLocation,
     ) -> TypeCheckResult {
         if left_type == right_type
             || (left_type == &unspecified_int_type() && self.is_integer_type(right_type))
@@ -244,6 +228,7 @@ impl SemanticAnalyzer {
                 operator: operator.to_string(),
                 left_type: left_type.clone(),
                 right_type: right_type.clone(),
+                location: location.clone(),
             })
         }
     }
@@ -255,6 +240,7 @@ impl SemanticAnalyzer {
     /// ### Arguments
     /// * `type_id` - The type of both operands
     /// * `operator` - The arithmetic operator (+, -, *, /)
+    /// * `location` - The source location of the operation
     ///
     /// ### Returns
     /// * `Ok(type_id)` if the operation is allowed
@@ -263,6 +249,7 @@ impl SemanticAnalyzer {
         &mut self,
         type_id: &TypeId,
         operator: &BinaryOperator,
+        location: &SourceLocation,
     ) -> TypeCheckResult {
         if *type_id == bool_type()
             || (operator != &BinaryOperator::Add && *type_id == string_type())
@@ -271,6 +258,7 @@ impl SemanticAnalyzer {
                 operator: operator.to_string(),
                 left_type: type_id.clone(),
                 right_type: type_id.clone(),
+                location: location.clone(),
             })
         } else {
             Ok(type_id.clone())
@@ -307,6 +295,7 @@ impl SemanticAnalyzer {
                         value: n.to_string(),
                         target_type: target_type.clone(),
                         is_float: false,
+                        location: expr.location(),
                     });
                 }
             }
@@ -344,6 +333,7 @@ impl SemanticAnalyzer {
                         value: f.to_string(),
                         target_type: target_type.clone(),
                         is_float: true,
+                        location: expr.location(),
                     });
                 }
             }
@@ -399,6 +389,7 @@ impl SemanticAnalyzer {
             operator: bin_expr.operator.to_string(),
             left_type: left_type.clone(),
             right_type: right_type.clone(),
+            location: bin_expr.location.clone(),
         })
     }
 
@@ -407,14 +398,16 @@ impl SemanticAnalyzer {
     ///
     /// ### Arguments
     /// * `name` - The name of the variable to check
+    /// * `location` - The source location of the variable
     ///
     /// ### Returns
     /// * `Ok(())` if the variable is not defined in the current scope
     /// * `Err(SemanticAnalysisError)` if the variable is already defined
-    fn check_variable_redefinition(&self, name: &str) -> Result<(), SemanticAnalysisError> {
+    fn check_variable_redefinition(&self, name: &str, location: &SourceLocation) -> Result<(), SemanticAnalysisError> {
         if self.scopes.last().unwrap().variables.contains_key(name) {
             return Err(SemanticAnalysisError::VariableRedefinition {
                 name: name.to_string(),
+                location: location.clone(),
             });
         }
         Ok(())
@@ -462,6 +455,7 @@ impl SemanticAnalyzer {
                             value: n.to_string(),
                             target_type: target_type.clone(),
                             is_float: false,
+                            location: expr.location(),
                         });
                     }
                 } else {
@@ -469,12 +463,14 @@ impl SemanticAnalyzer {
                         expected: target_type.clone(),
                         actual: unspecified_int_type(),
                         context: Some(var_name.to_string()),
+                        location: expr.location(),
                     });
                 }
             }
         }
         Err(SemanticAnalysisError::InvalidExpression { 
-            message: "Expected integer literal, got different expression type".to_string() 
+            message: "Expected integer literal, got different expression type".to_string(),
+            location: expr.location(),
         })
     }
 
@@ -511,6 +507,7 @@ impl SemanticAnalyzer {
                             value: f.to_string(),
                             target_type: target_type.clone(),
                             is_float: true,
+                            location: expr.location(),
                         });
                     }
                 } else {
@@ -518,12 +515,14 @@ impl SemanticAnalyzer {
                         expected: target_type.clone(),
                         actual: unspecified_float_type(),
                         context: Some(var_name.to_string()),
+                        location: expr.location(),
                     });
                 }
             }
         }
         Err(SemanticAnalysisError::InvalidExpression { 
-            message: "Expected float literal, got different expression type".to_string() 
+            message: "Expected float literal, got different expression type".to_string(),
+            location: expr.location(),
         })
     }
 
@@ -562,6 +561,7 @@ impl SemanticAnalyzer {
                                 value: negated_value.to_string(),
                                 target_type: target_type.clone(),
                                 is_float: false,
+                                location: unary_expr.location.clone(),
                             });
                         }
                     } else {
@@ -569,6 +569,7 @@ impl SemanticAnalyzer {
                             expected: target_type.clone(),
                             actual: unspecified_int_type(),
                             context: Some(var_name.to_string()),
+                            location: unary_expr.location.clone(),
                         });
                     }
                 }
@@ -588,6 +589,7 @@ impl SemanticAnalyzer {
                                 value: negated_value.to_string(),
                                 target_type: target_type.clone(),
                                 is_float: true,
+                                location: unary_expr.location.clone(),
                             });
                         }
                     } else {
@@ -595,6 +597,7 @@ impl SemanticAnalyzer {
                             expected: target_type.clone(),
                             actual: unspecified_float_type(),
                             context: Some(var_name.to_string()),
+                            location: unary_expr.location.clone(),
                         });
                     }
                 }
@@ -605,6 +608,7 @@ impl SemanticAnalyzer {
             expected: target_type.clone(),
             actual: unknown_type(), // We don't know the exact type here, so use unknown
             context: Some(var_name.to_string()),
+            location: unary_expr.location.clone(),
         })
     }
 
@@ -633,12 +637,10 @@ impl SemanticAnalyzer {
         }
 
         if expr_type == unspecified_int_type() {
-            // Now handle_unspecified_int_assignment returns TypeCheckResult directly
             return self.handle_unspecified_int_assignment(let_stmt, &expr_type);
         }
 
         if expr_type == unspecified_float_type() {
-            // Now handle_unspecified_float_assignment returns TypeCheckResult directly
             return self.handle_unspecified_float_assignment(let_stmt, &expr_type);
         }
 
@@ -646,6 +648,7 @@ impl SemanticAnalyzer {
             expected: let_stmt.expr_type.clone(),
             actual: expr_type,
             context: Some(let_stmt.name.clone()),
+            location: let_stmt.location.clone(),
         })
     }
 
@@ -666,7 +669,6 @@ impl SemanticAnalyzer {
     ) -> TypeCheckResult {
         match &let_stmt.value {
             Expression::Literal(_) => {
-                // This now returns TypeCheckResult directly
                 match self.check_integer_literal_compatibility(
                     &let_stmt.value,
                     &let_stmt.expr_type,
@@ -678,7 +680,6 @@ impl SemanticAnalyzer {
             }
             Expression::Unary(unary_expr) => {
                 if unary_expr.operator == UnaryOperator::Negate {
-                    // This now returns TypeCheckResult directly
                     self.check_negated_literal_compatibility(
                         unary_expr,
                         &let_stmt.expr_type,
@@ -738,7 +739,7 @@ impl SemanticAnalyzer {
                     self.type_mismatch_error(let_stmt, expr_type)
                 }
             }
-            Expression::Binary(_) => {
+            Expression::Binary(_bin_expr) => {
                 if self.is_float_type(&let_stmt.expr_type) {
                     Ok(let_stmt.expr_type.clone())
                 } else {
@@ -767,6 +768,7 @@ impl SemanticAnalyzer {
             expected: let_stmt.expr_type.clone(),
             actual: expr_type.clone(),
             context: Some(let_stmt.name.clone()),
+            location: let_stmt.location.clone(),
         })
     }
 
@@ -776,6 +778,7 @@ impl SemanticAnalyzer {
     /// ### Arguments
     /// * `expr` - The expression being returned
     /// * `expected_type` - The function's declared return type
+    /// * `location` - The source location of the return statement
     ///
     /// ### Returns
     /// * `Ok(type_id)` if the expression type matches or can be coerced to the return type
@@ -784,6 +787,7 @@ impl SemanticAnalyzer {
         &mut self,
         expr: &Expression,
         expected_type: &TypeId,
+        location: &SourceLocation,
     ) -> TypeCheckResult {
         let actual_type = self.visit_expression(expr)?;
 
@@ -824,6 +828,7 @@ impl SemanticAnalyzer {
         Err(SemanticAnalysisError::ReturnTypeMismatch {
             expected: expected_type.clone(),
             actual: actual_type,
+            location: location.clone(),
         })
     }
     
@@ -840,11 +845,11 @@ impl SemanticAnalyzer {
     /// semantic errors before returning them as a single result.
     pub fn analyze(&mut self, statements: &[Statement]) -> CompileResult<()> {
         for stmt in statements {
-            match stmt.accept(self) {
-                Ok(_) => continue,
-                Err(error) => {
-                    self.add_semantic_error(error);
-                },
+            if let Err(error) = stmt.accept(self) {
+                let compiler_error = error.to_compiler_error();
+                if !self.errors.iter().any(|e| e.message == compiler_error.message && e.line == compiler_error.line && e.column == compiler_error.column) {
+                    self.errors.push(compiler_error);
+                }
             }
         }
 
@@ -865,9 +870,8 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
             Statement::FunctionDeclaration(fn_decl) => {
                 self.visit_function_declaration_statement(fn_decl)
             }
-
             Statement::Block(stmts) => self.visit_block_statement(stmts),
-            Statement::Return(expr) => self.visit_return_statement(expr),
+            Statement::Return(opt_expr) => self.visit_return_statement(opt_expr),
         }
     }
 
@@ -901,27 +905,37 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
     fn visit_block_statement(&mut self, stmts: &[Statement]) -> TypeCheckResult {
         self.begin_scope();
         for stmt in stmts {
-            stmt.accept(self)?;
+            if let Err(e) = stmt.accept(self) {
+                return Err(e);
+            }
         }
 
         self.end_scope();
         Ok(unknown_type())
     }
 
-    fn visit_return_statement(&mut self, expr: &Option<Expression>) -> TypeCheckResult {
+    fn visit_return_statement(&mut self, opt_expr: &Option<Expression>) -> TypeCheckResult {
+        let error_location = match opt_expr {
+            Some(expr) => expr.location(),
+            None => SourceLocation::default(),
+        };
+
         if let Some(expected_type) = &self.current_return_type {
             let expected_type = expected_type.clone();
-            if let Some(expr) = expr {
-                return self.check_return_expr_type_internal(expr, &expected_type);
+            if let Some(expr) = opt_expr {
+                return self.check_return_expr_type_internal(expr, &expected_type, &expr.location());
             } else if expected_type != unknown_type() {
                 return Err(SemanticAnalysisError::MissingReturnValue {
                     expected: expected_type.clone(),
+                    location: error_location,
                 });
             }
 
             Ok(expected_type)
         } else {
-            Err(SemanticAnalysisError::ReturnOutsideFunction)
+            Err(SemanticAnalysisError::ReturnOutsideFunction {
+                location: error_location,
+            })
         }
     }
 
@@ -932,6 +946,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
                     function_name: call_expr.name.clone(),
                     expected: param_types.len(),
                     actual: call_expr.arguments.len(),
+                    location: call_expr.location.clone(),
                 });
             }
 
@@ -939,7 +954,6 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
                 let arg_type = self.visit_expression(arg)?;
                 let param_type = &param_types[i];
 
-                // function that can accept any type(s)
                 if param_type == &unknown_type() {
                     continue;
                 }
@@ -952,6 +966,20 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
                                 argument_position: i + 1,
                                 expected: param_type.clone(),
                                 actual: arg_type,
+                                location: arg.location(),
+                            });
+                        }
+                        continue;
+                    }
+
+                    if arg_type == unspecified_float_type() {
+                        if let Err(_) = self.check_unspecified_float_for_type(arg, param_type) {
+                            return Err(SemanticAnalysisError::ArgumentTypeMismatch {
+                                function_name: call_expr.name.clone(),
+                                argument_position: i + 1,
+                                expected: param_type.clone(),
+                                actual: arg_type,
+                                location: arg.location(),
                             });
                         }
                         continue;
@@ -962,6 +990,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
                         argument_position: i + 1,
                         expected: param_type.clone(),
                         actual: arg_type,
+                        location: arg.location(),
                     });
                 }
             }
@@ -969,7 +998,8 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
             Ok(return_type)
         } else {
             Err(SemanticAnalysisError::UndefinedFunction { 
-                name: call_expr.name.clone() 
+                name: call_expr.name.clone(),
+                location: call_expr.location.clone(),
             })
         }
     }
@@ -993,46 +1023,52 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
     }
 
     fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> TypeCheckResult {
-        if let Err(err) = self.check_variable_redefinition(&let_stmt.name) {
-            return Err(err);
+        if let Err(e) = self.check_variable_redefinition(&let_stmt.name, &let_stmt.location) {
+            return Err(e);
         }
 
-        let placeholder_type = let_stmt.expr_type.clone();
-        self.define_variable(let_stmt.name.clone(), placeholder_type);
+        let expr_type = match self.visit_expression(&let_stmt.value) {
+            Ok(t) => t,
+            Err(e) => {
+                return Err(e);
+            }
+        };
 
-        let expr_type = self.visit_expression(&let_stmt.value)?;
+        let final_type = match self.determine_let_statement_type(let_stmt, expr_type.clone()) {
+            Ok(t) => t,
+            Err(e) => {
+                return Err(e);
+            }
+        };
 
-        let mut final_type = self.determine_let_statement_type(let_stmt, expr_type)?;
-
-        final_type = self.finalize_inferred_type(final_type);
-
-        self.define_variable(let_stmt.name.clone(), final_type.clone());
+        self.define_variable(let_stmt.name.clone(), self.finalize_inferred_type(final_type.clone()));
         Ok(final_type)
     }
 
-    fn visit_expression(&mut self, expr: &Expression) -> TypeCheckResult {
-        match expr {
-            Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
-            Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
-            Expression::Variable(name) => self.visit_variable_expression(name),
-            Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
-            Expression::Call(call_expr) => self.visit_call_expression(call_expr),
+    fn visit_variable_expression(&mut self, name: &str, location: &SourceLocation) -> TypeCheckResult {
+        if let Some(type_id) = self.resolve_variable(name) {
+            Ok(type_id)
+        } else {
+            Err(SemanticAnalysisError::UndefinedVariable {
+                name: name.to_string(),
+                location: location.clone(),
+            })
         }
     }
 
-    fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> TypeCheckResult {
-        match lit_expr.value {
-            LiteralValue::I32(_) => Ok(i32_type()),
-            LiteralValue::I64(_) => Ok(i64_type()),
-            LiteralValue::U32(_) => Ok(u32_type()),
-            LiteralValue::U64(_) => Ok(u64_type()),
-            LiteralValue::F32(_) => Ok(f32_type()),
-            LiteralValue::F64(_) => Ok(f64_type()),
-            LiteralValue::UnspecifiedInteger(_) => Ok(unspecified_int_type()),
-            LiteralValue::UnspecifiedFloat(_) => Ok(unspecified_float_type()),
-            LiteralValue::String(_) => Ok(string_type()),
-            LiteralValue::Boolean(_) => Ok(bool_type()),
-        }
+    fn visit_literal_expression(&mut self, literal: &LiteralExpr) -> TypeCheckResult {
+        Ok(match &literal.value {
+            LiteralValue::I32(_) => i32_type(),
+            LiteralValue::I64(_) => i64_type(),
+            LiteralValue::U32(_) => u32_type(),
+            LiteralValue::U64(_) => u64_type(),
+            LiteralValue::F32(_) => f32_type(),
+            LiteralValue::F64(_) => f64_type(),
+            LiteralValue::UnspecifiedInteger(_) => unspecified_int_type(),
+            LiteralValue::UnspecifiedFloat(_) => unspecified_float_type(),
+            LiteralValue::String(_) => string_type(),
+            LiteralValue::Boolean(_) => bool_type(),
+        })
     }
 
     fn visit_binary_expression(&mut self, bin_expr: &BinaryExpr) -> TypeCheckResult {
@@ -1040,7 +1076,8 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
         let right_type = self.visit_expression(&bin_expr.right)?;
 
         if bin_expr.operator == BinaryOperator::And || bin_expr.operator == BinaryOperator::Or {
-            return self.check_logical_operation(&left_type, &right_type, &bin_expr.operator);
+            let result = self.check_logical_operation(&left_type, &right_type, &bin_expr.operator, &bin_expr.location);
+            return result;
         }
 
         if matches!(
@@ -1052,7 +1089,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
                 | BinaryOperator::Equal
                 | BinaryOperator::NotEqual
         ) {
-            return self.check_relational_operation(&left_type, &right_type, &bin_expr.operator);
+            return self.check_relational_operation(&left_type, &right_type, &bin_expr.operator, &bin_expr.location);
         }
 
         if matches!(
@@ -1063,7 +1100,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
                 | BinaryOperator::Divide
         ) {
             if left_type == right_type {
-                return self.check_same_type_arithmetic(&left_type, &bin_expr.operator);
+                return self.check_same_type_arithmetic(&left_type, &bin_expr.operator, &bin_expr.location);
             }
             
             return self.check_mixed_arithmetic_operation(&left_type, &right_type, bin_expr);
@@ -1073,6 +1110,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
             operator: bin_expr.operator.to_string(),
             left_type: left_type.clone(),
             right_type: right_type.clone(),
+            location: bin_expr.location.clone(),
         })
     }
 
@@ -1096,6 +1134,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
                         return Err(SemanticAnalysisError::InvalidUnaryOperation {
                             operator: "-".to_string(),
                             operand_type: operand_type.clone(),
+                            location: unary_expr.location.clone(),
                         });
                     }
                     return Ok(operand_type);
@@ -1103,6 +1142,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
                 Err(SemanticAnalysisError::InvalidUnaryOperation {
                     operator: "-".to_string(),
                     operand_type: operand_type.clone(),
+                    location: unary_expr.location.clone(),
                 })
             }
             UnaryOperator::Not => {
@@ -1113,18 +1153,19 @@ impl Visitor<SemanticResult> for SemanticAnalyzer {
                 Err(SemanticAnalysisError::InvalidUnaryOperation {
                     operator: "!".to_string(),
                     operand_type: operand_type.clone(),
+                    location: unary_expr.location.clone(),
                 })
             }
         }
     }
 
-    fn visit_variable_expression(&mut self, name: &str) -> TypeCheckResult {
-        if let Some(var_type) = self.resolve_variable(name) {
-            Ok(var_type.clone())
-        } else {
-            Err(SemanticAnalysisError::UndefinedVariable {
-                name: name.to_string(),
-            })
+    fn visit_expression(&mut self, expr: &Expression) -> TypeCheckResult {
+        match expr {
+            Expression::Literal(lit) => self.visit_literal_expression(lit),
+            Expression::Variable(name, location) => self.visit_variable_expression(name, location),
+            Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
+            Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
+            Expression::Call(call_expr) => self.visit_call_expression(call_expr),
         }
     }
 }

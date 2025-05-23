@@ -34,17 +34,14 @@ impl ParseError {
         }
     }
 
-    /// Format this error using line information
-    pub fn format_with_line_info(&self, line_info: &LineInfo) -> String {
-        line_info.format_error(self.position, &self.message, self.underline_length)
-    }
-
     pub fn to_compiler_error(&self, line_info: &LineInfo) -> CompilerError {
         let line_pos = line_info.get_line_col(self.position);
         CompilerError::new(
-            self.format_with_line_info(line_info),
+            self.message.clone(), // Pass the raw message
             line_pos.0,
             line_pos.1,
+            self.position,         // Pass the position
+            Some(self.underline_length) // Pass the token length
         )
     }
 }
@@ -53,6 +50,7 @@ impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.message)
     }
+
 }
 
 impl std::error::Error for ParseError {}
@@ -171,7 +169,7 @@ impl<'a> Parser<'a> {
 
     /// Parses a block statement (a group of statements in braces)
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed block statement or an error message
     fn block_statement(&mut self) -> Result<Statement, ParseError> {
@@ -190,7 +188,7 @@ impl<'a> Parser<'a> {
 
     /// Parses a return statement
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed return statement or an error message
     fn return_statement(&mut self) -> Result<Statement, ParseError> {
@@ -209,7 +207,7 @@ impl<'a> Parser<'a> {
 
     /// Parses a function declaration
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed function declaration or an error message
     fn function_declaration_statement(&mut self) -> Result<Statement, ParseError> {
@@ -220,7 +218,17 @@ impl<'a> Parser<'a> {
                 self.peek().token_type
             )));
         }
-        let name = self.advance().lexeme.clone();
+        
+        // Get the token position first
+        let token_pos = self.peek().pos;
+        
+        // Now advance and get the token
+        let token = self.advance();
+        let name = token.lexeme.clone();
+        
+        // Create location from the saved position
+        let (line, column) = self.line_info.get_line_col(token_pos);
+        let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column);
 
         // Parse parameter list
         if !self.match_token(&Tokentype::LeftParen) {
@@ -299,6 +307,7 @@ impl<'a> Parser<'a> {
             parameters,
             return_type,
             body,
+            location,
         }))
     }
 
@@ -312,7 +321,14 @@ impl<'a> Parser<'a> {
             return Err(self.error("Expected parameter name"));
         }
 
-        let name = self.advance().lexeme.clone();
+        // Get position first
+        let token_pos = self.peek().pos;
+        let token = self.advance();
+        let name = token.lexeme.clone();
+        
+        // Create location
+        let (line, column) = self.line_info.get_line_col(token_pos);
+        let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column);
 
         if !self.match_token(&Tokentype::Colon) {
             return Err(self.error("Expected ':' after parameter name"));
@@ -334,7 +350,7 @@ impl<'a> Parser<'a> {
             return Err(self.error(&format!("Unknown type: {}", type_name)));
         }
 
-        Ok(Parameter { name, param_type })
+        Ok(Parameter { name, param_type, location })
     }
 
     /// Parses a type definition (struct declaration)
@@ -348,6 +364,8 @@ impl<'a> Parser<'a> {
             return Err(self.error("Expected struct name after 'struct' keyword"));
         }
 
+        let token = self.peek();
+        let location = self.source_location_from_token(token);
         let name = self.advance().lexeme.clone();
 
         // Expect opening brace
@@ -387,12 +405,13 @@ impl<'a> Parser<'a> {
         Ok(Statement::TypeDefinition(TypeDefinitionStmt {
             name,
             fields,
+            location,
         }))
     }
 
     /// Parses a variable declaration
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed variable declaration or an error message
     fn let_statement(&mut self) -> Result<Statement, ParseError> {
@@ -400,8 +419,13 @@ impl<'a> Parser<'a> {
             return Err(self.error("Expected identifier after 'let'"));
         }
 
+        // Get the position before advancing
+        let token_pos = self.peek().pos;
+        let (line, column) = self.line_info.get_line_col(token_pos);
+        
         let token = self.advance();
         let name = token.lexeme.clone();
+        let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column);
         let mut var_type = unknown_type();
 
         if self.match_token(&Tokentype::Colon) {
@@ -449,6 +473,7 @@ impl<'a> Parser<'a> {
             name,
             value: expr,
             expr_type: var_type,
+            location,
         }))
     }
 
@@ -469,7 +494,7 @@ impl<'a> Parser<'a> {
 
     /// Parses an expression
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed expression or an error message
     fn expression(&mut self) -> Result<Expression, ParseError> {
@@ -485,12 +510,15 @@ impl<'a> Parser<'a> {
         let mut expr = self.logical_and()?;
 
         while self.match_token(&Tokentype::Or) {
+            let token = self.previous();
+            let location = self.source_location_from_token(token);
             let right = self.logical_and()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator: BinaryOperator::Or,
                 right: Box::new(right),
                 expr_type: bool_type(),
+                location,
             });
         }
 
@@ -506,12 +534,15 @@ impl<'a> Parser<'a> {
         let mut expr = self.equality()?;
 
         while self.match_token(&Tokentype::And) {
+            let token = self.previous();
+            let location = self.source_location_from_token(token);
             let right = self.equality()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator: BinaryOperator::And,
                 right: Box::new(right),
                 expr_type: bool_type(),
+                location,
             });
         }
 
@@ -520,24 +551,27 @@ impl<'a> Parser<'a> {
 
     /// Parses an equality expression (== and !=)
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed equality expression or an error message
     fn equality(&mut self) -> Result<Expression, ParseError> {
         let mut expr = self.comparison()?;
 
         while self.match_any(&[Tokentype::EqualEqual, Tokentype::NotEqual]) {
-            let operator = match self.previous().token_type {
+            let token = self.previous();
+            let operator = match token.token_type {
                 Tokentype::EqualEqual => BinaryOperator::Equal,
                 Tokentype::NotEqual => BinaryOperator::NotEqual,
                 _ => unreachable!(),
             };
+            let location = self.source_location_from_token(token);
             let right = self.comparison()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
                 expr_type: bool_type(),
+                location,
             });
         }
 
@@ -546,7 +580,7 @@ impl<'a> Parser<'a> {
 
     /// Parses a comparison expression (>, <, >=, <=)
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed comparison expression or an error message
     fn comparison(&mut self) -> Result<Expression, ParseError> {
@@ -558,19 +592,22 @@ impl<'a> Parser<'a> {
             Tokentype::Less,
             Tokentype::LessEqual,
         ]) {
-            let operator = match self.previous().token_type {
+            let token = self.previous();
+            let operator = match token.token_type {
                 Tokentype::Greater => BinaryOperator::GreaterThan,
                 Tokentype::GreaterEqual => BinaryOperator::GreaterThanOrEqual,
                 Tokentype::Less => BinaryOperator::LessThan,
                 Tokentype::LessEqual => BinaryOperator::LessThanOrEqual,
                 _ => unreachable!(),
             };
+            let location = self.source_location_from_token(token);
             let right = self.term()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
                 expr_type: bool_type(),
+                location,
             });
         }
 
@@ -579,24 +616,27 @@ impl<'a> Parser<'a> {
 
     /// Parses a term (addition/subtraction)
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed term or an error message
     fn term(&mut self) -> Result<Expression, ParseError> {
         let mut expr = self.factor()?;
 
         while self.match_any(&[Tokentype::Plus, Tokentype::Minus]) {
-            let operator = match self.previous().token_type {
+            let token = self.previous();
+            let operator = match token.token_type {
                 Tokentype::Plus => BinaryOperator::Add,
                 Tokentype::Minus => BinaryOperator::Subtract,
                 _ => unreachable!(),
             };
+            let location = self.source_location_from_token(token);
             let right = self.factor()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
                 expr_type: unknown_type(),
+                location,
             });
         }
 
@@ -605,24 +645,27 @@ impl<'a> Parser<'a> {
 
     /// Parses a factor (multiplication/division)
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed factor or an error message
     fn factor(&mut self) -> Result<Expression, ParseError> {
         let mut expr = self.unary()?;
 
         while self.match_any(&[Tokentype::Multiply, Tokentype::Divide]) {
-            let operator = match self.previous().token_type {
+            let token = self.previous();
+            let operator = match token.token_type {
                 Tokentype::Multiply => BinaryOperator::Multiply,
                 Tokentype::Divide => BinaryOperator::Divide,
                 _ => unreachable!(),
             };
+            let location = self.source_location_from_token(token);
             let right = self.unary()?;
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
                 expr_type: unknown_type(),
+                location,
             });
         }
 
@@ -631,25 +674,31 @@ impl<'a> Parser<'a> {
 
     /// Parses a unary expression
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed unary expression or an error message
     fn unary(&mut self) -> Result<Expression, ParseError> {
         if self.match_token(&Tokentype::Minus) {
+            let token = self.previous();
+            let location = self.source_location_from_token(token);
             let right = self.primary()?;
             return Ok(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Negate,
                 right: Box::new(right),
                 expr_type: unknown_type(),
+                location,
             }));
         }
 
         if self.match_token(&Tokentype::Not) {
+            let token = self.previous();
+            let location = self.source_location_from_token(token);
             let right = self.primary()?;
             return Ok(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Not,
                 right: Box::new(right),
                 expr_type: bool_type(),
+                location,
             }));
         }
 
@@ -658,7 +707,7 @@ impl<'a> Parser<'a> {
 
     /// Parses a primary expression (literal, variable, or grouped expression)
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed primary expression or an error message
     fn primary(&mut self) -> Result<Expression, ParseError> {
@@ -671,19 +720,23 @@ impl<'a> Parser<'a> {
         }
 
         if self.match_token(&Tokentype::StringLiteral) {
-            let value = self.previous().lexeme.clone();
+            let token = self.previous();
+            let value = token.lexeme.clone();
             return Ok(Expression::Literal(LiteralExpr {
                 value: LiteralValue::String(value),
                 expr_type: string_type(),
+                location: self.source_location_from_token(token),
             }));
         }
 
         if self.match_token(&Tokentype::BooleanLiteral) {
-            let lexeme = self.previous().lexeme.clone();
+            let token = self.previous();
+            let lexeme = token.lexeme.clone();
             let bool_value = lexeme == "true";
             return Ok(Expression::Literal(LiteralExpr {
                 value: LiteralValue::Boolean(bool_value),
                 expr_type: bool_type(),
+                location: self.source_location_from_token(token),
             }));
         }
 
@@ -702,7 +755,9 @@ impl<'a> Parser<'a> {
                 return self.finish_call(name);
             }
 
-            return Ok(Expression::Variable(name));
+            let token = self.previous();
+            let location = self.source_location_from_token(token);
+            return Ok(Expression::Variable(name, location));
         }
 
         Err(self.error(&format!("Expected expression, found {}", self.peek())))
@@ -710,11 +765,13 @@ impl<'a> Parser<'a> {
 
     /// Parses a float literal with optional type suffix
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed float literal expression or an error message
     fn parse_float(&mut self) -> Result<Expression, ParseError> {
-        let value_str = self.previous().lexeme.clone();
+        let token = self.previous();
+        let value_str = token.lexeme.clone();
+        let location = self.source_location_from_token(token);
         let value = value_str
             .parse::<f64>()
             .map_err(|_| self.error_previous(&format!("Invalid float: {}", value_str)))?;
@@ -728,6 +785,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F32(value as f32),
                         expr_type: f32_type(),
+                        location,
                     }));
                 }
                 TYPE_NAME_F64 => {
@@ -735,6 +793,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F64(value),
                         expr_type: f64_type(),
+                        location,
                     }));
                 }
                 _ => {}
@@ -745,19 +804,24 @@ impl<'a> Parser<'a> {
         Ok(Expression::Literal(LiteralExpr {
             value: LiteralValue::UnspecifiedFloat(value),
             expr_type: unspecified_float_type(),
+            location,
         }))
     }
 
     /// Finishes parsing a function call after the name and '('
     ///
-    /// # Arguments
+    /// #### Arguments
     ///
     /// * `name` - The name of the function being called
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed function call expression or an error message
     fn finish_call(&mut self, name: String) -> Result<Expression, ParseError> {
+        // Store the token position of the function name for the location
+        let token = self.previous();
+        let location = self.source_location_from_token(token);
+        
         let mut arguments = Vec::new();
 
         if !self.check(&Tokentype::RightParen) {
@@ -781,19 +845,22 @@ impl<'a> Parser<'a> {
             name,
             arguments,
             expr_type: unknown_type(), // Type will be determined during type checking
+            location,
         }))
     }
 
     /// Parses an integer literal with optional type suffix
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed integer literal expression or an error message
     fn parse_integer(&mut self) -> Result<Expression, ParseError> {
-        let value_str = self.previous().lexeme.clone();
+        let token = self.previous();
+        let value_str = token.lexeme.clone();
         let base_value = value_str
             .parse::<i64>()
             .map_err(|_| self.error_previous(&format!("Invalid integer: {}", value_str)))?;
+        let location = self.source_location_from_token(token);
 
         if self.check(&Tokentype::Identifier) {
             let type_name = self.peek().lexeme.clone();
@@ -810,6 +877,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::I32(base_value as i32),
                         expr_type: i32_type(),
+                        location,
                     }));
                 }
                 TYPE_NAME_I64 => {
@@ -817,6 +885,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::I64(base_value),
                         expr_type: i64_type(),
+                        location,
                     }));
                 }
                 TYPE_NAME_U32 => {
@@ -830,6 +899,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::U32(base_value as u32),
                         expr_type: u32_type(),
+                        location,
                     }));
                 }
                 TYPE_NAME_U64 => {
@@ -843,6 +913,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::U64(base_value as u64),
                         expr_type: u64_type(),
+                        location,
                     }));
                 }
                 TYPE_NAME_F32 => {
@@ -850,6 +921,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F32(base_value as f32),
                         expr_type: f32_type(),
+                        location,
                     }));
                 }
                 TYPE_NAME_F64 => {
@@ -857,6 +929,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F64(base_value as f64),
                         expr_type: f64_type(),
+                        location,
                     }));
                 }
                 _ => {}
@@ -867,12 +940,13 @@ impl<'a> Parser<'a> {
         Ok(Expression::Literal(LiteralExpr {
             value: LiteralValue::UnspecifiedInteger(base_value),
             expr_type: unspecified_int_type(),
+            location,
         }))
     }
 
     /// Parses a type name
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The type ID for the parsed type or an error
     fn parse_type(&mut self) -> Result<TypeId, ParseError> {
@@ -903,13 +977,19 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Creates a SourceLocation from a token's position
+    fn source_location_from_token(&self, token: &Token) -> slang_ir::source_location::SourceLocation {
+        let (line, column) = self.line_info.get_line_col(token.pos);
+        slang_ir::source_location::SourceLocation::new(token.pos, line, column)
+    }
+
     /// Consumes the current token if it matches the expected type
     ///
-    /// # Arguments
+    /// ### Arguments
     ///
     /// * `token_type` - The token type to match
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// true if the token was consumed, false otherwise
     fn match_token(&mut self, token_type: &Tokentype) -> bool {
@@ -923,11 +1003,11 @@ impl<'a> Parser<'a> {
 
     /// Consumes the current token if it matches any of the expected types
     ///
-    /// # Arguments
+    /// ### Arguments
     ///
     /// * `types` - The token types to match
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// true if a token was consumed, false otherwise
     fn match_any(&mut self, types: &[Tokentype]) -> bool {
@@ -958,7 +1038,7 @@ impl<'a> Parser<'a> {
 
     /// Advances to the next token and returns the previous token
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The token that was current before advancing, if the end of the token stream was not reached
     /// Otherwise, returns the last token
@@ -971,7 +1051,7 @@ impl<'a> Parser<'a> {
 
     /// Checks if we've reached the end of the token stream
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// true if all tokens have been procesed, false otherwise
     #[inline]
@@ -981,7 +1061,7 @@ impl<'a> Parser<'a> {
 
     /// Returns the current token without consuming it
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The current token
     #[inline]
@@ -991,7 +1071,7 @@ impl<'a> Parser<'a> {
 
     /// Returns the most recently consumed token
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The previous token
     #[inline]
