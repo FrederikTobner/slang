@@ -9,7 +9,7 @@ fn main() {
     let input = cli::Parser::parse();
     #[cfg(windows)]
     colored::control::set_virtual_terminal(true);
-    
+
     match &input.command {
         Some(cli::Commands::Repl {}) => {
             cli::repl();

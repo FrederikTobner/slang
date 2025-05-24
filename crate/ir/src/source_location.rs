@@ -26,12 +26,16 @@ impl SourceLocation {
             column,
         }
     }
-    
+
     /// Creates a source location from a position, line, and column
     pub fn from_position(position: usize, line: usize, column: usize) -> Self {
-        Self { position, line, column }
+        Self {
+            position,
+            line,
+            column,
+        }
     }
-    
+
     /// Creates a default source location (position 0, line 1, column 1)
     pub fn default() -> Self {
         Self {

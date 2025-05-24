@@ -1,6 +1,13 @@
-use crate::ast::{BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, LiteralValue, UnaryOperator, BinaryOperator};
+use crate::ast::{
+    BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
+    UnaryOperator,
+};
 use crate::visitor::Visitor;
-use slang_types::types::{TYPE_NAME_BOOL, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_STRING, TYPE_NAME_INT, TYPE_NAME_FLOAT, TYPE_NAME_U32, TYPE_NAME_U64};
+use slang_types::types::{
+    TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64,
+    TYPE_NAME_INT, TYPE_NAME_STRING, TYPE_NAME_U32, TYPE_NAME_U64,
+};
 
 /// A visitor implementation that prints the AST in a human-readable format
 pub struct ASTPrinter {
@@ -15,9 +22,9 @@ impl ASTPrinter {
     }
 
     /// Prints the AST for a list of statements
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `statements` - The statements to print
     pub fn print(&mut self, statements: &[Statement]) {
         println!("AST Root");
@@ -39,17 +46,24 @@ impl Visitor<()> for ASTPrinter {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
             Statement::TypeDefinition(type_stmt) => self.visit_type_definition_statement(type_stmt),
-            Statement::FunctionDeclaration(fn_decl) => self.visit_function_declaration_statement(fn_decl),
+            Statement::FunctionDeclaration(fn_decl) => {
+                self.visit_function_declaration_statement(fn_decl)
+            }
             Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(expr) => self.visit_return_statement(expr),
         }
     }
 
     fn visit_function_declaration_statement(&mut self, fn_decl: &FunctionDeclarationStmt) {
-        println!("{}Function: {} -> {:?}", self.indent(), fn_decl.name, fn_decl.return_type);
-        
+        println!(
+            "{}Function: {} -> {:?}",
+            self.indent(),
+            fn_decl.name,
+            fn_decl.return_type
+        );
+
         self.indent_level += 1;
-        
+
         if !fn_decl.parameters.is_empty() {
             println!("{}Parameters:", self.indent());
             self.indent_level += 1;
@@ -58,7 +72,7 @@ impl Visitor<()> for ASTPrinter {
             }
             self.indent_level -= 1;
         }
-        
+
         println!("{}Body:", self.indent());
         self.indent_level += 1;
         for stmt in &fn_decl.body {
@@ -66,7 +80,7 @@ impl Visitor<()> for ASTPrinter {
         }
         self.indent_level -= 2;
     }
-    
+
     fn visit_block_statement(&mut self, stmts: &[Statement]) {
         println!("{}Block:", self.indent());
         self.indent_level += 1;
@@ -75,7 +89,7 @@ impl Visitor<()> for ASTPrinter {
         }
         self.indent_level -= 1;
     }
-    
+
     fn visit_return_statement(&mut self, expr: &Option<Expression>) {
         println!("{}Return:", self.indent());
         if let Some(expr) = expr {
@@ -117,10 +131,10 @@ impl Visitor<()> for ASTPrinter {
             Expression::Call(call) => self.visit_call_expression(call),
         }
     }
-    
+
     fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) {
         println!("{}Call: {}", self.indent(), call_expr.name);
-        
+
         if !call_expr.arguments.is_empty() {
             self.indent_level += 1;
             println!("{}Arguments:", self.indent());
@@ -135,15 +149,19 @@ impl Visitor<()> for ASTPrinter {
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) {
         match &lit_expr.value {
             LiteralValue::I32(i) => println!("{}{}: {}", self.indent(), TYPE_NAME_I32, i),
-            LiteralValue::I64(i) => println!("{}{}: {}", self.indent(),  TYPE_NAME_I64, i),
-            LiteralValue::U32(u) => println!("{}{}: {}", self.indent(),  TYPE_NAME_U32, u),
-            LiteralValue::U64(u) => println!("{}{}: {}", self.indent(),  TYPE_NAME_U64, u),
-            LiteralValue::UnspecifiedInteger(i) => println!("{}{}: {}", self.indent(), TYPE_NAME_INT, i),
-            LiteralValue::F64(f) => println!("{}{}: {}", self.indent(),  TYPE_NAME_F64, f),
-            LiteralValue::F32(f) => println!("{}{}: {}", self.indent(),  TYPE_NAME_F32, f),
-            LiteralValue::UnspecifiedFloat(f) => println!("{}{}: {}", self.indent(), TYPE_NAME_FLOAT,f),
-            LiteralValue::Boolean(b) => println!("{}{}: {}",  self.indent(),  TYPE_NAME_BOOL, b),
-            LiteralValue::String(s) => println!("{}{}: \"{}\"", self.indent(),  TYPE_NAME_STRING, s),
+            LiteralValue::I64(i) => println!("{}{}: {}", self.indent(), TYPE_NAME_I64, i),
+            LiteralValue::U32(u) => println!("{}{}: {}", self.indent(), TYPE_NAME_U32, u),
+            LiteralValue::U64(u) => println!("{}{}: {}", self.indent(), TYPE_NAME_U64, u),
+            LiteralValue::UnspecifiedInteger(i) => {
+                println!("{}{}: {}", self.indent(), TYPE_NAME_INT, i)
+            }
+            LiteralValue::F64(f) => println!("{}{}: {}", self.indent(), TYPE_NAME_F64, f),
+            LiteralValue::F32(f) => println!("{}{}: {}", self.indent(), TYPE_NAME_F32, f),
+            LiteralValue::UnspecifiedFloat(f) => {
+                println!("{}{}: {}", self.indent(), TYPE_NAME_FLOAT, f)
+            }
+            LiteralValue::Boolean(b) => println!("{}{}: {}", self.indent(), TYPE_NAME_BOOL, b),
+            LiteralValue::String(s) => println!("{}{}: \"{}\"", self.indent(), TYPE_NAME_STRING, s),
         }
     }
 
@@ -177,7 +195,11 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level -= 1;
     }
 
-    fn visit_variable_expression(&mut self, name: &str, _location: &crate::source_location::SourceLocation) {
+    fn visit_variable_expression(
+        &mut self,
+        name: &str,
+        _location: &crate::source_location::SourceLocation,
+    ) {
         println!("{}Var: {}", self.indent(), name);
     }
 }

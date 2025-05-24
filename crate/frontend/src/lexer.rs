@@ -1,5 +1,5 @@
-use crate::token::{Token, Tokentype};
 use crate::error::LineInfo;
+use crate::token::{Token, Tokentype};
 
 pub struct Result<'a> {
     /// The list of tokens generated from the input

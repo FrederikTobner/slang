@@ -34,7 +34,13 @@ impl CompilerError {
     ///
     /// let error = CompilerError::new("Syntax error".to_string(), 10, 5, 0, Some(1));
     /// ```
-    pub fn new(message: String, line: usize, column: usize, position: usize, token_length: Option<usize>) -> Self {
+    pub fn new(
+        message: String,
+        line: usize,
+        column: usize,
+        position: usize,
+        token_length: Option<usize>,
+    ) -> Self {
         Self {
             message,
             line,
@@ -58,7 +64,9 @@ impl CompilerError {
         let (line, col) = line_info.get_line_col(self.position);
 
         // Get line text for current line
-        let current_line_text = line_info.get_line_text(line).unwrap_or("<line not available>");
+        let current_line_text = line_info
+            .get_line_text(line)
+            .unwrap_or("<line not available>");
 
         // Format line numbers for consistent spacing
         let line_num_str = format!("{}", line);
@@ -66,13 +74,14 @@ impl CompilerError {
         // Create the error marker line with red carets
         // Use self.token_length, defaulting to 1 if None
         let token_display_length = self.token_length.unwrap_or(1).max(1);
-        let error_marker = " ".repeat(col.saturating_sub(1)) + &"^".repeat(token_display_length).red().to_string();
-        
+        let error_marker =
+            " ".repeat(col.saturating_sub(1)) + &"^".repeat(token_display_length).red().to_string();
+
         // Determine indentation based on the longest line number string in the vicinity if needed,
         // or just use a fixed reasonable indent. For now, using line_num_str.len() for current line.
         let indent_width = line_num_str.len() + 1;
         let indent = " ".repeat(indent_width);
-        
+
         let arrow = "-->".yellow();
         let pipe = "|".yellow();
 

@@ -7,10 +7,8 @@ use slang_ir::ast::{
     UnaryOperator,
 };
 use slang_types::types::{
-    TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_INT,
-    TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNKNOWN, TYPE_REGISTRY, TypeId, bool_type, f32_type,
-    f64_type, i32_type, i64_type, string_type, u32_type, u64_type, unknown_type,
-    unspecified_float_type, unspecified_int_type,
+    CompilationContext, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32,
+    TYPE_NAME_I64, TYPE_NAME_INT, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNKNOWN, TypeId,
 };
 
 /// Error that occurs during parsing
@@ -40,8 +38,8 @@ impl ParseError {
             self.message.clone(), // Pass the raw message
             line_pos.0,
             line_pos.1,
-            self.position,         // Pass the position
-            Some(self.underline_length) // Pass the token length
+            self.position,               // Pass the position
+            Some(self.underline_length), // Pass the token length
         )
     }
 }
@@ -50,7 +48,6 @@ impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.message)
     }
-
 }
 
 impl std::error::Error for ParseError {}
@@ -65,10 +62,16 @@ pub struct Parser<'a> {
     line_info: &'a LineInfo<'a>,
     /// Errors collected during parsing
     errors: Vec<CompilerError>,
+    /// Compilation context for type information
+    context: &'a mut CompilationContext, // Changed to mutable
 }
 
-pub fn parse(tokens: &[Token], line_info: &LineInfo) -> CompileResult<Vec<Statement>> {
-    let mut parser = Parser::new(tokens, line_info);
+pub fn parse<'a>(
+    tokens: &'a [Token],
+    line_info: &'a LineInfo,
+    context: &'a mut CompilationContext,
+) -> CompileResult<Vec<Statement>> {
+    let mut parser = Parser::new(tokens, line_info, context);
     parser.parse()
 }
 
@@ -79,12 +82,18 @@ impl<'a> Parser<'a> {
     ///
     /// * `tokens` - The tokens to parse
     /// * `line_info` - Line information for error reporting
-    fn new(tokens: &'a [Token], line_info: &'a LineInfo) -> Self {
+    /// * `context` - The compilation context
+    fn new(
+        tokens: &'a [Token],
+        line_info: &'a LineInfo,
+        context: &'a mut CompilationContext,
+    ) -> Self {
         Parser {
             tokens,
             current: 0,
             line_info,
             errors: Vec::new(),
+            context,
         }
     }
 
@@ -218,14 +227,14 @@ impl<'a> Parser<'a> {
                 self.peek().token_type
             )));
         }
-        
+
         // Get the token position first
         let token_pos = self.peek().pos;
-        
+
         // Now advance and get the token
         let token = self.advance();
         let name = token.lexeme.clone();
-        
+
         // Create location from the saved position
         let (line, column) = self.line_info.get_line_col(token_pos);
         let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column);
@@ -265,28 +274,54 @@ impl<'a> Parser<'a> {
                 return Err(self.error("Expected return type after '->'"));
             }
 
-            let type_name = self.advance().lexeme.clone();
+            let type_name_token = self.advance();
+            let type_name = type_name_token.lexeme.clone();
+            let token_pos = type_name_token.pos;
+            let token_len = type_name_token.lexeme.len();
 
+            // Explicitly reject placeholder types as type specifiers
             if type_name == TYPE_NAME_INT {
-                return Err(self.error(&format!("'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead", 
-                    TYPE_NAME_INT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64)));
+                return Err(self.error_previous(&format!(
+                    "'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead",
+                    TYPE_NAME_INT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64
+                )));
             } else if type_name == TYPE_NAME_FLOAT {
-                return Err(
-                    self.error(&format!("'{}' is not a valid type specifier. Use '{}' or '{}' instead",
-                        TYPE_NAME_FLOAT, TYPE_NAME_F32, TYPE_NAME_F64))
-                );
+                return Err(self.error_previous(&format!(
+                    "'{}' is not a valid type specifier. Use '{}' or '{}' instead",
+                    TYPE_NAME_FLOAT, TYPE_NAME_F32, TYPE_NAME_F64
+                )));
             } else if type_name == TYPE_NAME_UNKNOWN {
-                return Err(self.error(&format!("'{}' is not a valid type specifier", TYPE_NAME_UNKNOWN)));
+                return Err(self.error_previous(&format!(
+                    "'{}' is not a valid type specifier",
+                    TYPE_NAME_UNKNOWN
+                )));
             }
 
-            TYPE_REGISTRY
-                .read()
-                .unwrap()
-                .get_type_by_name(&type_name)
-                .cloned()
-                .unwrap_or_else(unknown_type)
+            // Use context to resolve type by name
+            let unknown_type = self.context.unknown_type().clone(); // Clone unknown_type
+            let type_id_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
+                if symbol.kind == slang_types::types::SymbolKind::Type {
+                    Some(symbol.type_id.clone())
+                } else {
+                    None
+                }
+            });
+
+            match type_id_option {
+                Some(type_id) => type_id,
+                None => {
+                    let error = ParseError::new(
+                        &format!("Unknown type name: {}", type_name),
+                        token_pos,
+                        token_len,
+                    )
+                    .to_compiler_error(self.line_info);
+                    self.errors.push(error);
+                    unknown_type // Return unknown_type on error to allow parsing to continue
+                }
+            }
         } else {
-            unknown_type()
+            self.context.unknown_type() // Default return type if not specified
         };
 
         if !self.match_token(&Tokentype::LeftBrace) {
@@ -325,7 +360,7 @@ impl<'a> Parser<'a> {
         let token_pos = self.peek().pos;
         let token = self.advance();
         let name = token.lexeme.clone();
-        
+
         // Create location
         let (line, column) = self.line_info.get_line_col(token_pos);
         let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column);
@@ -338,19 +373,50 @@ impl<'a> Parser<'a> {
             return Err(self.error("Expected parameter type"));
         }
 
-        let type_name = self.advance().lexeme.clone();
-        let param_type = TYPE_REGISTRY
-            .read()
-            .unwrap()
-            .get_type_by_name(&type_name)
-            .cloned()
-            .unwrap_or_else(unknown_type);
+        let type_name_token = self.advance();
+        let type_name = type_name_token.lexeme.clone();
+        let token_pos = type_name_token.pos;
+        let token_len = type_name_token.lexeme.len();
 
-        if param_type == unknown_type() {
-            return Err(self.error(&format!("Unknown type: {}", type_name)));
+        // Use context to resolve type by name
+        let unknown_type = self.context.unknown_type().clone(); // Clone unknown_type
+        let param_type_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
+            if symbol.kind == slang_types::types::SymbolKind::Type {
+                Some(symbol.type_id.clone())
+            } else {
+                None
+            }
+        });
+
+        let param_type = match param_type_option {
+            Some(type_id) => type_id,
+            None => {
+                let error = ParseError::new(
+                    &format!("Unknown type name: {}", type_name),
+                    token_pos,
+                    token_len,
+                )
+                .to_compiler_error(self.line_info);
+                self.errors.push(error);
+                unknown_type.clone() // Return unknown_type on error
+            }
+        };
+
+        if param_type == unknown_type
+            && !self.errors.iter().any(|e| {
+                e.message
+                    .contains(&format!("Unknown type name: {}", type_name))
+            })
+        {
+            // Avoid double error if already pushed above, but ensure an error if lookup failed silently
+            return Err(self.error_previous(&format!("Unknown type: {}", type_name)));
         }
 
-        Ok(Parameter { name, param_type, location })
+        Ok(Parameter {
+            name,
+            param_type,
+            location,
+        })
     }
 
     /// Parses a type definition (struct declaration)
@@ -422,39 +488,66 @@ impl<'a> Parser<'a> {
         // Get the position before advancing
         let token_pos = self.peek().pos;
         let (line, column) = self.line_info.get_line_col(token_pos);
-        
+
         let token = self.advance();
         let name = token.lexeme.clone();
         let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column);
-        let mut var_type = unknown_type();
+        let mut var_type = self.context.unknown_type();
 
         if self.match_token(&Tokentype::Colon) {
             if !self.check(&Tokentype::Identifier) {
                 return Err(self.error("Expected type name after colon"));
             }
-
-            let type_name = self.advance().lexeme.clone();
+            let type_name_token = self.advance();
+            let type_name = type_name_token.lexeme.clone();
+            let token_pos = type_name_token.pos;
+            let token_len = type_name_token.lexeme.len();
 
             // Explicitly reject placeholder types as type specifiers
             if type_name == TYPE_NAME_INT {
-                return Err(self.error(&format!("'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead", 
-                    TYPE_NAME_INT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64)));
+                return Err(self.error_previous(&format!(
+                    "'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead",
+                    TYPE_NAME_INT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64
+                )));
             } else if type_name == TYPE_NAME_FLOAT {
-                return Err(
-                    self.error(&format!("'{}' is not a valid type specifier. Use '{}' or '{}' instead",
-                        TYPE_NAME_FLOAT, TYPE_NAME_F32, TYPE_NAME_F64))
-                );
+                return Err(self.error_previous(&format!(
+                    "'{}' is not a valid type specifier. Use '{}' or '{}' instead",
+                    TYPE_NAME_FLOAT, TYPE_NAME_F32, TYPE_NAME_F64
+                )));
             }
 
-            var_type = TYPE_REGISTRY
-                .read()
-                .unwrap()
-                .get_type_by_name(&type_name)
-                .cloned()
-                .unwrap_or_else(unknown_type);
+            // Use context to resolve type by name
+            let unknown_type = self.context.unknown_type().clone(); // Clone unknown_type
+            let var_type_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
+                if symbol.kind == slang_types::types::SymbolKind::Type {
+                    Some(symbol.type_id.clone())
+                } else {
+                    None
+                }
+            });
 
-            if var_type == unknown_type() {
-                return Err(self.error(&format!("Unknown type: {}", type_name)));
+            var_type = match var_type_option {
+                Some(type_id) => type_id,
+                None => {
+                    let error = ParseError::new(
+                        &format!("Unknown type name: {}", type_name),
+                        token_pos,
+                        token_len,
+                    )
+                    .to_compiler_error(self.line_info);
+                    self.errors.push(error);
+                    unknown_type.clone() // Return unknown_type on error
+                }
+            };
+
+            if var_type == unknown_type
+                && !self.errors.iter().any(|e| {
+                    e.message
+                        .contains(&format!("Unknown type name: {}", type_name))
+                })
+            {
+                // Avoid double error if already pushed above
+                return Err(self.error_previous(&format!("Unknown type: {}", type_name)));
             }
         }
 
@@ -517,7 +610,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator: BinaryOperator::Or,
                 right: Box::new(right),
-                expr_type: bool_type(),
+                expr_type: self.context.bool_type(),
                 location,
             });
         }
@@ -541,7 +634,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator: BinaryOperator::And,
                 right: Box::new(right),
-                expr_type: bool_type(),
+                expr_type: self.context.bool_type(),
                 location,
             });
         }
@@ -570,7 +663,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: bool_type(),
+                expr_type: self.context.bool_type(),
                 location,
             });
         }
@@ -606,7 +699,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: bool_type(),
+                expr_type: self.context.bool_type(),
                 location,
             });
         }
@@ -635,7 +728,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: unknown_type(),
+                expr_type: self.context.unknown_type(),
                 location,
             });
         }
@@ -664,7 +757,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: unknown_type(),
+                expr_type: self.context.unknown_type(),
                 location,
             });
         }
@@ -685,7 +778,7 @@ impl<'a> Parser<'a> {
             return Ok(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Negate,
                 right: Box::new(right),
-                expr_type: unknown_type(),
+                expr_type: self.context.unknown_type(),
                 location,
             }));
         }
@@ -697,7 +790,7 @@ impl<'a> Parser<'a> {
             return Ok(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Not,
                 right: Box::new(right),
-                expr_type: bool_type(),
+                expr_type: self.context.bool_type(),
                 location,
             }));
         }
@@ -724,7 +817,7 @@ impl<'a> Parser<'a> {
             let value = token.lexeme.clone();
             return Ok(Expression::Literal(LiteralExpr {
                 value: LiteralValue::String(value),
-                expr_type: string_type(),
+                expr_type: self.context.string_type(),
                 location: self.source_location_from_token(token),
             }));
         }
@@ -735,7 +828,7 @@ impl<'a> Parser<'a> {
             let bool_value = lexeme == "true";
             return Ok(Expression::Literal(LiteralExpr {
                 value: LiteralValue::Boolean(bool_value),
-                expr_type: bool_type(),
+                expr_type: self.context.bool_type(),
                 location: self.source_location_from_token(token),
             }));
         }
@@ -784,7 +877,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F32(value as f32),
-                        expr_type: f32_type(),
+                        expr_type: self.context.f32_type(),
                         location,
                     }));
                 }
@@ -792,7 +885,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F64(value),
-                        expr_type: f64_type(),
+                        expr_type: self.context.f64_type(),
                         location,
                     }));
                 }
@@ -803,7 +896,7 @@ impl<'a> Parser<'a> {
         // Unspecified float literal
         Ok(Expression::Literal(LiteralExpr {
             value: LiteralValue::UnspecifiedFloat(value),
-            expr_type: unspecified_float_type(),
+            expr_type: self.context.unspecified_float_type(),
             location,
         }))
     }
@@ -821,7 +914,7 @@ impl<'a> Parser<'a> {
         // Store the token position of the function name for the location
         let token = self.previous();
         let location = self.source_location_from_token(token);
-        
+
         let mut arguments = Vec::new();
 
         if !self.check(&Tokentype::RightParen) {
@@ -844,7 +937,7 @@ impl<'a> Parser<'a> {
         Ok(Expression::Call(FunctionCallExpr {
             name,
             arguments,
-            expr_type: unknown_type(), // Type will be determined during type checking
+            expr_type: self.context.unknown_type(),
             location,
         }))
     }
@@ -876,7 +969,7 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::I32(base_value as i32),
-                        expr_type: i32_type(),
+                        expr_type: self.context.i32_type(),
                         location,
                     }));
                 }
@@ -884,7 +977,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::I64(base_value),
-                        expr_type: i64_type(),
+                        expr_type: self.context.i64_type(),
                         location,
                     }));
                 }
@@ -898,7 +991,7 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::U32(base_value as u32),
-                        expr_type: u32_type(),
+                        expr_type: self.context.u32_type(),
                         location,
                     }));
                 }
@@ -912,7 +1005,7 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::U64(base_value as u64),
-                        expr_type: u64_type(),
+                        expr_type: self.context.u64_type(),
                         location,
                     }));
                 }
@@ -920,7 +1013,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F32(base_value as f32),
-                        expr_type: f32_type(),
+                        expr_type: self.context.f32_type(),
                         location,
                     }));
                 }
@@ -928,7 +1021,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F64(base_value as f64),
-                        expr_type: f64_type(),
+                        expr_type: self.context.f64_type(),
                         location,
                     }));
                 }
@@ -939,7 +1032,7 @@ impl<'a> Parser<'a> {
         // Unspecified integer literal
         Ok(Expression::Literal(LiteralExpr {
             value: LiteralValue::UnspecifiedInteger(base_value),
-            expr_type: unspecified_int_type(),
+            expr_type: self.context.unspecified_int_type(),
             location,
         }))
     }
@@ -954,31 +1047,43 @@ impl<'a> Parser<'a> {
             return Err(self.error("Expected type identifier"));
         }
 
-        let type_name = self.advance().lexeme.clone();
+        let type_name_token = self.advance();
+        let type_name = type_name_token.lexeme.clone();
 
         // Check for placeholder types
         if type_name == TYPE_NAME_INT {
-            return Err(self.error(
-                &format!("'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead",
-                    TYPE_NAME_INT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64)
-            ));
+            return Err(self.error(&format!(
+                "'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead",
+                TYPE_NAME_INT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64
+            )));
         } else if type_name == TYPE_NAME_FLOAT {
-            return Err(
-                self.error(&format!("'{}' is not a valid type specifier. Use '{}' or '{}' instead",
-                    TYPE_NAME_FLOAT, TYPE_NAME_F32, TYPE_NAME_F64))
-            );
+            return Err(self.error(&format!(
+                "'{}' is not a valid type specifier. Use '{}' or '{}' instead",
+                TYPE_NAME_FLOAT, TYPE_NAME_F32, TYPE_NAME_F64
+            )));
         } else if type_name == TYPE_NAME_UNKNOWN {
-            return Err(self.error(&format!("'{}' is not a valid type specifier", TYPE_NAME_UNKNOWN)));
+            return Err(self.error_previous(&format!(
+                "'{}' is not a valid type specifier",
+                TYPE_NAME_UNKNOWN
+            )));
         }
-        if let Some(type_id) = TYPE_REGISTRY.read().unwrap().get_type_by_name(&type_name) {
-            Ok(type_id.clone())
+        // Use context to resolve type by name
+        if let Some(symbol) = self.context.lookup_symbol(&type_name) {
+            if symbol.kind == slang_types::types::SymbolKind::Type {
+                Ok(symbol.type_id.clone())
+            } else {
+                Err(self.error_previous(&format!("'{}' is not a type name", type_name)))
+            }
         } else {
-            Err(self.error(&format!("Unknown type: {}", type_name)))
+            Err(self.error_previous(&format!("Unknown type: {}", type_name)))
         }
     }
 
     /// Creates a SourceLocation from a token's position
-    fn source_location_from_token(&self, token: &Token) -> slang_ir::source_location::SourceLocation {
+    fn source_location_from_token(
+        &self,
+        token: &Token,
+    ) -> slang_ir::source_location::SourceLocation {
         let (line, column) = self.line_info.get_line_col(token.pos);
         slang_ir::source_location::SourceLocation::new(token.pos, line, column)
     }

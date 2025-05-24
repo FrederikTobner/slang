@@ -9,6 +9,7 @@ use slang_frontend::error::{CompileResult, report_errors};
 use slang_frontend::lexer;
 use slang_frontend::parser;
 use slang_frontend::semantic_analyzer;
+use slang_types::types::CompilationContext;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
@@ -199,13 +200,14 @@ pub fn run_file(input: &str) {
 /// The compiled bytecode chunk or compilation errors
 fn compile_source_to_bytecode(source: &str) -> CompileResult<Chunk> {
     let lexer_result = lexer::tokenize(source);
-    let statements = parser::parse(&lexer_result.tokens, &lexer_result.line_info)?;
+    let mut context = CompilationContext::new();
+    let statements = parser::parse(&lexer_result.tokens, &lexer_result.line_info, &mut context)?;
     #[cfg(feature = "print-ast")]
     {
         let mut printer = slang_ir::ast_printer::ASTPrinter::new();
         printer.print(&statements);
     }
-    semantic_analyzer::execute(&statements)?;
+    semantic_analyzer::execute(&statements, &mut context)?;
     compiler::compile(&statements)
         .map_err(|err_msg| vec![slang_frontend::error::CompilerError::new(err_msg, 0, 0, 0, None)])
 }
@@ -277,7 +279,7 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> SlangResult<()> {
     zip.start_file("bytecode.bin", options)
         .map_err(|e| SlangError::Zip {
             source: e,
-            context: format!("Failed to create zip entry"),
+            context: "Failed to create zip entry".to_string(),
             exit_code: exit::Code::IoErr,
         })?;
 
@@ -287,7 +289,7 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> SlangResult<()> {
             .serialize(&mut cursor)
             .map_err(|e| SlangError::Serialization {
                 source: Box::new(e),
-                context: format!("Failed to serialize bytecode"),
+                context: "Failed to serialize bytecode".to_string(),
                 exit_code: exit::Code::Software,
             })?;
 
@@ -301,7 +303,7 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> SlangResult<()> {
 
     zip.finish().map_err(|e| SlangError::Zip {
         source: e,
-        context: format!("Failed to finalize zip file"),
+        context: "Failed to finalize zip file".to_string(),
         exit_code: exit::Code::IoErr,
     })?;
 
@@ -326,7 +328,7 @@ fn read_bytecode_file(input_path: &str) -> SlangResult<Chunk> {
 
     let mut archive = ZipArchive::new(file).map_err(|e| SlangError::Zip {
         source: e,
-        context: format!("Failed to read zip archive"),
+        context: "Failed to read zip archive".to_string(),
         exit_code: exit::Code::Dataerr,
     })?;
 
@@ -342,7 +344,7 @@ fn read_bytecode_file(input_path: &str) -> SlangResult<Chunk> {
         let mut cursor = std::io::Cursor::new(buffer);
         let chunk = Chunk::deserialize(&mut cursor).map_err(|e| SlangError::Serialization {
             source: Box::new(e),
-            context: format!("Failed to deserialize bytecode"),
+            context:"Failed to deserialize bytecode".to_string(),
             exit_code: exit::Code::Dataerr,
         })?;
 

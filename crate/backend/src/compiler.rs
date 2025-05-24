@@ -1,7 +1,10 @@
-use slang_ir::ast::{BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator};
 use crate::bytecode::{Chunk, Function, OpCode};
-use slang_ir::visitor::Visitor;
 use crate::value::Value;
+use slang_ir::ast::{
+    BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
+};
+use slang_ir::visitor::Visitor;
 
 /// Compiles AST nodes into bytecode instructions
 struct Compiler {
@@ -27,7 +30,7 @@ impl Compiler {
     fn new() -> Self {
         Compiler {
             chunk: Chunk::new(),
-            line: 1, 
+            line: 1,
             variables: Vec::new(),
             functions: Vec::new(),
             local_scopes: Vec::new(),
@@ -35,13 +38,13 @@ impl Compiler {
     }
 
     /// Compiles a list of statements into bytecode
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `statements` - The statements to compile
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// A reference to the compiled bytecode chunk, or an error message
     fn compile(mut self, statements: &[Statement]) -> Result<Chunk, String> {
         for stmt in statements {
@@ -57,27 +60,27 @@ impl Compiler {
     }
 
     /// Emits a single byte to the bytecode chunk
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `byte` - The byte to emit
     fn emit_byte(&mut self, byte: u8) {
         self.chunk.write_byte(byte, self.line);
     }
 
     /// Emits an opcode to the bytecode chunk
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `op` - The opcode to emit
     fn emit_op(&mut self, op: OpCode) {
         self.chunk.write_op(op, self.line);
     }
 
     /// Adds a constant value to the chunk and emits code to load it
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `value` - The constant value to add
     fn emit_constant(&mut self, value: Value) {
         let constant_index = self.chunk.add_constant(value);
@@ -88,42 +91,42 @@ impl Compiler {
         self.emit_op(OpCode::Constant);
         self.emit_byte(constant_index as u8);
     }
-    
+
     /// Emits a jump instruction with placeholder offset
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `op` - The jump opcode (Jump or JumpIfFalse)
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// The position where the jump offset needs to be patched later
     fn emit_jump(&mut self, op: OpCode) -> usize {
         self.emit_op(op);
         self.emit_byte(0xFF);
         self.emit_byte(0xFF);
-        self.chunk.code.len() - 2 
+        self.chunk.code.len() - 2
     }
-    
+
     /// Patches a previously emitted jump instruction with the actual offset
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `offset` - The position of the jump offset to patch
     fn patch_jump(&mut self, offset: usize) {
         let jump = self.chunk.code.len() - offset - 2;
         if jump > 0xFFFF {
             panic!("Jump too far");
         }
-        
+
         self.chunk.code[offset] = ((jump >> 8) & 0xFF) as u8;
         self.chunk.code[offset + 1] = (jump & 0xFF) as u8;
     }
-    
+
     fn begin_scope(&mut self) {
         self.local_scopes.push(Vec::new());
     }
-    
+
     fn end_scope(&mut self) {
         if let Some(scope) = self.local_scopes.pop() {
             for _ in 0..scope.len() {
@@ -139,32 +142,37 @@ impl Visitor<Result<(), String>> for Compiler {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
             Statement::TypeDefinition(type_stmt) => self.visit_type_definition_statement(type_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
-            Statement::FunctionDeclaration(fn_decl) => self.visit_function_declaration_statement(fn_decl),
+            Statement::FunctionDeclaration(fn_decl) => {
+                self.visit_function_declaration_statement(fn_decl)
+            }
             Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(expr) => self.visit_return_statement(expr),
         }
     }
-    
+
     fn visit_block_statement(&mut self, stmts: &[Statement]) -> Result<(), String> {
         self.begin_scope();
-        
+
         for stmt in stmts {
             stmt.accept(self)?;
         }
-        
+
         self.end_scope();
         Ok(())
     }
-    
-    fn visit_function_declaration_statement(&mut self, fn_decl: &FunctionDeclarationStmt) -> Result<(), String> {
+
+    fn visit_function_declaration_statement(
+        &mut self,
+        fn_decl: &FunctionDeclarationStmt,
+    ) -> Result<(), String> {
         self.functions.push(fn_decl.name.clone());
         let function_name_idx = self.chunk.add_identifier(fn_decl.name.clone());
-        
+
         let jump_over = self.emit_jump(OpCode::Jump);
-        
+
         let code_offset = self.chunk.code.len();
         let mut locals = Vec::new();
-        
+
         self.begin_scope();
         for param in &fn_decl.parameters {
             locals.push(param.name.clone());
@@ -172,16 +180,16 @@ impl Visitor<Result<(), String>> for Compiler {
                 current_scope.push(param.name.clone());
             }
         }
-        
+
         for stmt in &fn_decl.body {
             stmt.accept(self)?;
         }
-        
+
         self.emit_op(OpCode::Return);
-        
+
         self.end_scope();
         self.patch_jump(jump_over);
-        
+
         let function = Value::Function(Function {
             name: fn_decl.name.clone(),
             arity: fn_decl.parameters.len() as u8,
@@ -189,14 +197,14 @@ impl Visitor<Result<(), String>> for Compiler {
             locals,
         });
         let fn_constant = self.chunk.add_constant(function);
-        
+
         self.emit_op(OpCode::DefineFunction);
         self.emit_byte(function_name_idx as u8);
         self.emit_byte(fn_constant as u8);
-        
+
         Ok(())
     }
-    
+
     fn visit_return_statement(&mut self, expr: &Option<Expression>) -> Result<(), String> {
         if let Some(expr) = expr {
             self.visit_expression(expr)?;
@@ -214,7 +222,7 @@ impl Visitor<Result<(), String>> for Compiler {
 
     fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> Result<(), String> {
         let is_local = !self.local_scopes.is_empty();
-        
+
         if is_local {
             if let Some(current_scope) = self.local_scopes.last_mut() {
                 current_scope.push(let_stmt.name.clone());
@@ -245,19 +253,19 @@ impl Visitor<Result<(), String>> for Compiler {
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
         }
     }
-    
+
     fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> Result<(), String> {
         for arg in &call_expr.arguments {
             self.visit_expression(arg)?;
         }
-        
+
         let fn_name_idx = self.chunk.add_identifier(call_expr.name.clone());
         self.emit_op(OpCode::GetVariable);
         self.emit_byte(fn_name_idx as u8);
-        
+
         self.emit_op(OpCode::Call);
         self.emit_byte(call_expr.arguments.len() as u8);
-        
+
         Ok(())
     }
 
@@ -307,8 +315,8 @@ impl Visitor<Result<(), String>> for Compiler {
                 self.visit_expression(&bin_expr.right)?;
                 self.patch_jump(jump_if_false);
                 return Ok(());
-            },
-            
+            }
+
             BinaryOperator::Or => {
                 self.visit_expression(&bin_expr.left)?;
                 let jump_if_true = self.emit_jump(OpCode::JumpIfFalse);
@@ -318,12 +326,12 @@ impl Visitor<Result<(), String>> for Compiler {
                 self.visit_expression(&bin_expr.right)?;
                 self.patch_jump(jump_to_end);
                 return Ok(());
-            },
-            
+            }
+
             _ => {
                 self.visit_expression(&bin_expr.left)?;
                 self.visit_expression(&bin_expr.right)?;
-                
+
                 match bin_expr.operator {
                     BinaryOperator::Add => self.emit_op(OpCode::Add),
                     BinaryOperator::Subtract => self.emit_op(OpCode::Subtract),
@@ -350,16 +358,20 @@ impl Visitor<Result<(), String>> for Compiler {
 
     fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> Result<(), String> {
         self.visit_expression(&unary_expr.right)?;
-        
+
         match unary_expr.operator {
             UnaryOperator::Negate => self.emit_op(OpCode::Negate),
             UnaryOperator::Not => self.emit_op(OpCode::BoolNot),
         }
-        
+
         Ok(())
     }
-    
-    fn visit_variable_expression(&mut self, name: &str, _location: &slang_ir::source_location::SourceLocation) -> Result<(), String> {
+
+    fn visit_variable_expression(
+        &mut self,
+        name: &str,
+        _location: &slang_ir::source_location::SourceLocation,
+    ) -> Result<(), String> {
         let var_index = self.chunk.add_identifier(name.to_string());
         if var_index > 255 {
             return Err("Too many variables".to_string());
@@ -369,7 +381,10 @@ impl Visitor<Result<(), String>> for Compiler {
         Ok(())
     }
 
-    fn visit_type_definition_statement(&mut self, _stmt: &TypeDefinitionStmt) -> Result<(), String> {
+    fn visit_type_definition_statement(
+        &mut self,
+        _stmt: &TypeDefinitionStmt,
+    ) -> Result<(), String> {
         // Type definitions don't generate code at runtime
         // They're just for the type checker
         Ok(())

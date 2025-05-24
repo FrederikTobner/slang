@@ -42,13 +42,13 @@ impl SlangError {
             SlangError::Generic { exit_code, .. } => *exit_code,
         }
     }
-    
+
     /// Convert from io::Error to SlangError with appropriate exit code and path
-    /// 
+    ///
     /// ### Arguments
     /// * `error` - The io::Error to convert
     /// * `path` - The path associated with the error
-    /// 
+    ///
     /// ### Returns
     /// A SlangError with the appropriate exit code and path
     pub fn from_io_error(error: io::Error, path: &str) -> Self {
@@ -57,7 +57,7 @@ impl SlangError {
             io::ErrorKind::PermissionDenied => exit::Code::NoPerm,
             _ => exit::Code::IoErr,
         };
-        
+
         SlangError::Io {
             source: error,
             path: path.to_string(),
@@ -72,10 +72,14 @@ impl fmt::Display for SlangError {
             SlangError::Io { source, path, .. } => {
                 write!(f, "Error reading file '{}': {}", path, source)
             }
-            SlangError::Zip { source, context, .. } => {
+            SlangError::Zip {
+                source, context, ..
+            } => {
                 write!(f, "{}: {}", context, source)
             }
-            SlangError::Serialization { source, context, .. } => {
+            SlangError::Serialization {
+                source, context, ..
+            } => {
                 write!(f, "{}: {}", context, source)
             }
             SlangError::Generic { message, .. } => {
