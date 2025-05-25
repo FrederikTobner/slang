@@ -48,22 +48,22 @@ impl SourceLocation {
             length: 1,
         }
     }
-    
+
     /// Get the end position of this location
     pub fn end_position(&self) -> usize {
         self.position + self.length
     }
-    
+
     /// Get the end column of this location (assuming single line)
     pub fn end_column(&self) -> usize {
         self.column + self.length
     }
-    
+
     /// Create a span from this location to another location
     pub fn span_to(&self, other: &SourceLocation) -> SourceLocation {
         let start_pos = self.position.min(other.position);
         let end_pos = self.end_position().max(other.end_position());
-        
+
         SourceLocation {
             position: start_pos,
             line: self.line.min(other.line),

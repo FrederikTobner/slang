@@ -1,5 +1,5 @@
-use crate::visitor::Visitor;
 use crate::source_location::SourceLocation;
+use crate::visitor::Visitor;
 use slang_types::types::TypeId;
 use std::fmt::Display;
 
@@ -87,11 +87,11 @@ pub enum Expression {
 impl Expression {
     pub fn location(&self) -> SourceLocation {
         match self {
-            Expression::Literal(e) => e.location.clone(),
-            Expression::Binary(e) => e.location.clone(),
-            Expression::Variable(_, loc) => loc.clone(),
-            Expression::Unary(e) => e.location.clone(),
-            Expression::Call(e) => e.location.clone(),
+            Expression::Literal(e) => e.location,
+            Expression::Binary(e) => e.location,
+            Expression::Variable(_, loc) => *loc,
+            Expression::Unary(e) => e.location,
+            Expression::Call(e) => e.location,
         }
     }
 }
@@ -106,11 +106,11 @@ pub enum Statement {
     /// Type definition (e.g., struct)
     TypeDefinition(TypeDefinitionStmt),
     /// Function declaration
-    FunctionDeclaration(FunctionDeclarationStmt), 
+    FunctionDeclaration(FunctionDeclarationStmt),
     /// Block of statements
     Block(Vec<Statement>),
     /// Return statement
-    Return(Option<Expression>), 
+    Return(Option<Expression>),
 }
 
 /// A function call expression
@@ -245,14 +245,18 @@ pub struct LetStatement {
 
 impl Statement {
     /// Accepts a visitor for this statement
-    /// 
+    ///
     /// This is part of the visitor pattern implementation.
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
         match self {
             Statement::Let(let_stmt) => visitor.visit_let_statement(let_stmt),
             Statement::Expression(expr) => visitor.visit_expression_statement(expr),
-            Statement::TypeDefinition(type_def) => visitor.visit_type_definition_statement(type_def),
-            Statement::FunctionDeclaration(fn_decl) => visitor.visit_function_declaration_statement(fn_decl),
+            Statement::TypeDefinition(type_def) => {
+                visitor.visit_type_definition_statement(type_def)
+            }
+            Statement::FunctionDeclaration(fn_decl) => {
+                visitor.visit_function_declaration_statement(fn_decl)
+            }
             Statement::Block(stmts) => visitor.visit_block_statement(stmts),
             Statement::Return(expr) => visitor.visit_return_statement(expr),
         }
@@ -261,16 +265,17 @@ impl Statement {
 
 impl Expression {
     /// Accepts a visitor for this expression
-    /// 
+    ///
     /// This is part of the visitor pattern implementation.
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
         match self {
             Expression::Literal(lit) => visitor.visit_literal_expression(lit),
             Expression::Binary(bin) => visitor.visit_binary_expression(bin),
-            Expression::Variable(name, location) => visitor.visit_variable_expression(name, location),
+            Expression::Variable(name, location) => {
+                visitor.visit_variable_expression(name, location)
+            }
             Expression::Unary(unary) => visitor.visit_unary_expression(unary),
             Expression::Call(call) => visitor.visit_call_expression(call),
         }
     }
 }
-

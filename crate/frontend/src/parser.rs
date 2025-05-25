@@ -1,17 +1,18 @@
 use crate::error::LineInfo;
 use crate::error::{CompileResult, CompilerError};
 use crate::token::{Token, Tokentype};
+use slang_compilation_context::compilation_context::CompilationContext;
+use slang_compilation_context::symbol_table::SymbolKind;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
     LetStatement, LiteralExpr, LiteralValue, Parameter, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator,
 };
-use slang_types::types::{TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32,
-    TYPE_NAME_I64, TYPE_NAME_INT, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNKNOWN, TypeId,
-};
-use slang_compilation_context::compilation_context::CompilationContext;
-use slang_compilation_context::symbol_table::SymbolKind;
 use slang_ir::source_location::SourceLocation;
+use slang_types::types::{
+    TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_INT,
+    TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNKNOWN, TypeId,
+};
 
 /// Error that occurs during parsing
 #[derive(Debug)]
@@ -239,7 +240,8 @@ impl<'a> Parser<'a> {
 
         // Create location from the saved position
         let (line, column) = self.line_info.get_line_col(token_pos);
-        let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
+        let location =
+            slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
 
         // Parse parameter list
         if !self.match_token(&Tokentype::LeftParen) {
@@ -493,7 +495,8 @@ impl<'a> Parser<'a> {
 
         let token = self.advance();
         let name = token.lexeme.clone();
-        let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
+        let location =
+            slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
         let mut var_type = self.context.unknown_type();
 
         if self.match_token(&Tokentype::Colon) {

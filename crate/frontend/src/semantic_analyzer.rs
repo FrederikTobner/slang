@@ -1,5 +1,7 @@
 use crate::error::{CompileResult, CompilerError};
 use crate::semantic_error::SemanticAnalysisError;
+use slang_compilation_context::compilation_context::CompilationContext;
+use slang_compilation_context::symbol_table::SymbolKind;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
     LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
@@ -7,16 +9,13 @@ use slang_ir::ast::{
 };
 use slang_ir::source_location::SourceLocation;
 use slang_ir::visitor::Visitor;
-use slang_types::types::{TypeId, TYPE_NAME_U64, TYPE_NAME_U32};
-use slang_compilation_context::compilation_context::CompilationContext;
-use slang_compilation_context::symbol_table::SymbolKind;
+use slang_types::types::{TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
 
 use std::collections::HashMap;
 
 /// Type alias for result of semantic analysis operations
 /// Contains either a valid TypeId or a SemanticAnalysisError
 pub type SemanticResult = Result<TypeId, SemanticAnalysisError>;
-
 
 /// A scope represents a lexical scope for variables in the program.
 /// Each scope contains a mapping of variable names to their types.
@@ -814,10 +813,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
         }
     }
 
-    fn visit_type_definition_statement(
-        &mut self,
-        type_def: &TypeDefinitionStmt,
-    ) -> SemanticResult {
+    fn visit_type_definition_statement(&mut self, type_def: &TypeDefinitionStmt) -> SemanticResult {
         if self.context.lookup_symbol(&type_def.name).is_some() {
             return Err(SemanticAnalysisError::SymbolRedefinition {
                 name: type_def.name.clone(),
@@ -893,15 +889,13 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                     kind: "variable (conflicts with type)".to_string(),
                     location: let_stmt.location.clone(),
                 });
-            }
-            else if symbol.kind == SymbolKind::Function {
+            } else if symbol.kind == SymbolKind::Function {
                 return Err(SemanticAnalysisError::SymbolRedefinition {
                     name: let_stmt.name.clone(),
                     kind: "variable (conflicts with function)".to_string(),
                     location: let_stmt.location.clone(),
                 });
-            }
-            else {
+            } else {
                 return Err(SemanticAnalysisError::SymbolRedefinition {
                     name: let_stmt.name.clone(),
                     kind: "variable".to_string(),

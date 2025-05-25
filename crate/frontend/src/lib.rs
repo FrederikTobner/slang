@@ -11,4 +11,3 @@ pub use parser::Parser;
 pub use semantic_analyzer::SemanticAnalyzer;
 pub use semantic_error::SemanticAnalysisError;
 pub use token::{Token, Tokentype};
-

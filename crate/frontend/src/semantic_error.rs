@@ -1,6 +1,6 @@
 use crate::error::CompilerError;
 use slang_ir::source_location::SourceLocation;
-use slang_types::types::{TypeId};
+use slang_types::types::TypeId;
 use slang_compilation_context::compilation_context::CompilationContext;
 
 /// Represents different categories of semantic analysis errors
