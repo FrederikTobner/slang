@@ -152,7 +152,7 @@ pub enum SemanticAnalysisError {
 impl SemanticAnalysisError {
     /// Convert the SemanticAnalysisError to a String representation
     /// that matches the existing error message formats.
-    pub fn to_string(&self, context: &CompilationContext) -> String {
+    pub fn format_message(&self, context: &CompilationContext) -> String {
         match self {
             SemanticAnalysisError::UndefinedVariable { name, .. } => {
                 format!("Undefined variable: {}", name)
@@ -403,7 +403,7 @@ impl SemanticAnalysisError {
         let location = self.get_location();
         let token_length = self.get_token_length();
         CompilerError::new(
-            self.to_string(context),
+            self.format_message(context),
             location.line,
             location.column,
             location.position,
