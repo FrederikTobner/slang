@@ -71,5 +71,5 @@ fn using_boolean_type_as_name() {
     let program = r#"
         let bool: bool = true;
     "#;
-    execute_program_expect_error(&program, "Type mismatch: variable bool is bool but expression is bool");
+    execute_program_expect_error(&program, "Symbol \'bool\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.");
 }

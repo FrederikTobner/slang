@@ -158,3 +158,17 @@ fn u32_unsigned_negative_value_error() {
     "#;
     execute_program_expect_error(program, "Integer literal -1 is out of range for type u32");
 }
+
+#[rstest]
+#[case("i32")]
+#[case("i64")]
+#[case("u32")]
+#[case("u64")]
+fn using_type_as_variable_name(
+    #[case] type_name: &str,
+) {
+    let program = format!(r#"
+        let {} = 42.0;
+    "#, type_name);
+    execute_program_expect_error(&program, &format!("Symbol \'{}\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.", type_name));
+}

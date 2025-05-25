@@ -65,3 +65,11 @@ fn from_float_literal(
     "#, value);
     execute_program_expect_error(&program, &format!("Type mismatch: variable a is string but expression is {}", _type));
 }
+
+#[test]
+fn using_string_type_as_name() {
+    let program = r#"
+        let string: bool = true;
+    "#;
+    execute_program_expect_error(&program, "Symbol \'string\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.");
+}

@@ -149,3 +149,15 @@ fn float_type() {
     "#;
     execute_program_expect_error(program, "\'float\' is not a valid type specifier. Use \'f32\' or \'f64\' instead");
 }
+
+#[rstest]
+#[case("f32")]
+#[case("f64")]
+fn using_type_as_variable_name(
+    #[case] type_name: &str,
+) {
+    let program = format!(r#"
+        let {} = 42.0;
+    "#, type_name);
+    execute_program_expect_error(&program, &format!("Symbol \'{}\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.", type_name));
+}
