@@ -1,5 +1,5 @@
-use crate::source_location::SourceLocation;
-use crate::visitor::Visitor;
+use crate::SourceLocation;
+use crate::Visitor;
 use slang_types::types::TypeId;
 use std::fmt::Display;
 

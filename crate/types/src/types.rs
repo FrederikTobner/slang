@@ -107,7 +107,7 @@ impl Default for TypeId {
 impl TypeId {
     /// Creates a new unique type identifier
     pub fn new() -> Self {
-        static NEXT_ID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        static NEXT_ID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(PrimitiveType::Unknown as usize + 1);
         TypeId(NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
     }
 }
@@ -186,8 +186,6 @@ pub struct TypeInfo {
 pub struct TypeRegistry {
     /// Map from TypeId to TypeInfo
     types: HashMap<TypeId, TypeInfo>,
-    /// Map from type names to TypeId for quick lookup
-    type_names: HashMap<String, TypeId>,
 }
 
 impl TypeRegistry {
@@ -195,7 +193,6 @@ impl TypeRegistry {
     pub fn new_instance() -> Self {
         let mut registry = TypeRegistry {
             types: HashMap::new(),
-            type_names: HashMap::new(),
         };
         registry.register_built_in_types();
         registry
@@ -271,7 +268,7 @@ impl TypeRegistry {
         ];
 
         for (ptype, kind) in types_to_register {
-            self.register_type(ptype.name(), kind.clone());
+            self.register_primitive_type(ptype.name(), kind.clone(), TypeId(*ptype as usize));
         }
     }
 
@@ -285,20 +282,21 @@ impl TypeRegistry {
         };
 
         self.types.insert(id.clone(), type_info);
-        self.type_names.insert(name.to_string(), id.clone());
 
         id
     }
 
-    /// Looks up a type by name
-    /// 
-    /// ### Arguments
-    /// * `name` - The name of the type to look up
-    /// 
-    /// ### Returns
-    /// An Option containing the TypeId if found, or None if not found
-    pub fn get_type_by_name(&self, name: &str) -> Option<&TypeId> {
-        self.type_names.get(name)
+        /// Registers a new type in the registry
+    pub fn register_primitive_type(&mut self, name: &str, kind: TypeKind, id: TypeId) -> TypeId {
+        let type_info = TypeInfo {
+            id: id.clone(),
+            name: name.to_string(),
+            kind,
+        };
+
+        self.types.insert(id.clone(), type_info);
+
+        id
     }
 
     /// Gets type information for a given TypeId

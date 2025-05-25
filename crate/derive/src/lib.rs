@@ -97,7 +97,7 @@ fn extract_name_attribute(variant: &Variant) -> Option<String> {
 /// - `from_int<T: Into<usize>>(value: T) -> Option<Self>`: Converts a numeric value to the corresponding enum variant
 /// - `to_int(&self) -> usize`: Converts the enum variant back to its numeric value
 ///
-/// # Examples
+/// ### Examples
 ///
 /// Basic usage:
 ///

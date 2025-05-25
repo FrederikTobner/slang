@@ -55,7 +55,7 @@ impl VM {
 
     /// Defines a native (built-in) function
     ///
-    /// # Arguments
+    /// ### Arguments
     ///
     /// * `name` - Name of the native function
     /// * `arity` - Number of parameters

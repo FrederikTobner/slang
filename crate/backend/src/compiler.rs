@@ -4,7 +4,7 @@ use slang_ir::ast::{
     BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
     LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
 };
-use slang_ir::visitor::Visitor;
+use slang_ir::Visitor;
 
 /// Compiles AST nodes into bytecode instructions
 struct Compiler {
@@ -79,7 +79,7 @@ impl Compiler {
 
     /// Adds a constant value to the chunk and emits code to load it
     ///
-    /// # Arguments
+    /// ### Arguments
     ///
     /// * `value` - The constant value to add
     fn emit_constant(&mut self, value: Value) {

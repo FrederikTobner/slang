@@ -1,17 +1,16 @@
 use crate::error::LineInfo;
 use crate::error::{CompileResult, CompilerError};
 use crate::token::{Token, Tokentype};
-use slang_compilation_context::compilation_context::CompilationContext;
-use slang_compilation_context::symbol_table::SymbolKind;
+use slang_compilation_context::CompilationContext;
+use slang_compilation_context::SymbolKind;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
     LetStatement, LiteralExpr, LiteralValue, Parameter, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator,
 };
-use slang_ir::source_location::SourceLocation;
-use slang_types::types::{
-    TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_INT,
-    TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNKNOWN, TypeId,
+use slang_ir::SourceLocation;
+use slang_types::{
+    PrimitiveType, TypeId, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_INT, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNKNOWN
 };
 
 /// Error that occurs during parsing
@@ -81,7 +80,7 @@ pub fn parse<'a>(
 impl<'a> Parser<'a> {
     /// Creates a new parser for the given tokens and line information
     ///
-    /// # Arguments
+    /// ### Arguments
     ///
     /// * `tokens` - The tokens to parse
     /// * `line_info` - Line information for error reporting
@@ -102,7 +101,7 @@ impl<'a> Parser<'a> {
 
     /// Parses the tokens into a list of statements
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed statements or an error message
     fn parse(&mut self) -> CompileResult<Vec<Statement>> {
@@ -160,7 +159,7 @@ impl<'a> Parser<'a> {
     }
     /// Parses a single statement
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed statement or an error message
     fn try_parse_statement(&mut self) -> Result<Statement, ParseError> {
@@ -230,12 +229,8 @@ impl<'a> Parser<'a> {
                 self.peek().token_type
             )));
         }
-
-        // Get the token position first
-        let token_pos = self.peek().pos;
-
-        // Now advance and get the token
         let token = self.advance();
+        let token_pos = token.pos;
         let name = token.lexeme.clone();
 
         // Create location from the saved position
@@ -243,7 +238,6 @@ impl<'a> Parser<'a> {
         let location =
             slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
 
-        // Parse parameter list
         if !self.match_token(&Tokentype::LeftParen) {
             return Err(self.error(&format!(
                 "Expected '(' after function name, found {}",
@@ -253,10 +247,7 @@ impl<'a> Parser<'a> {
 
         let mut parameters = Vec::new();
         if !self.check(&Tokentype::RightParen) {
-            // Parse first parameter
             parameters.push(self.parameter()?);
-
-            // Parse the rest of the parameters
             while self.match_token(&Tokentype::Comma) {
                 if parameters.len() >= 255 {
                     return Err(self.error("Cannot have more than 255 parameters"));
@@ -301,8 +292,6 @@ impl<'a> Parser<'a> {
                 )));
             }
 
-            // Use context to resolve type by name
-            let unknown_type = self.context.unknown_type().clone(); // Clone unknown_type
             let type_id_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
                 if symbol.kind == slang_compilation_context::symbol_table::SymbolKind::Type {
                     Some(symbol.type_id.clone())
@@ -321,11 +310,11 @@ impl<'a> Parser<'a> {
                     )
                     .to_compiler_error(self.line_info);
                     self.errors.push(error);
-                    unknown_type // Return unknown_type on error to allow parsing to continue
+                    TypeId(PrimitiveType::Unknown as usize) // Return unknown_type on error to allow parsing to continue
                 }
             }
         } else {
-            self.context.unknown_type() // Default return type if not specified
+            TypeId(PrimitiveType::Unknown as usize) // TODO: Introduce a void or unit type
         };
 
         if !self.match_token(&Tokentype::LeftBrace) {
@@ -352,7 +341,7 @@ impl<'a> Parser<'a> {
 
     /// Parses a function parameter
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed parameter or an error message
     fn parameter(&mut self) -> Result<Parameter, ParseError> {
@@ -383,7 +372,7 @@ impl<'a> Parser<'a> {
         let token_len = type_name_token.lexeme.len();
 
         // Use context to resolve type by name
-        let unknown_type = self.context.unknown_type().clone(); // Clone unknown_type
+        let unknown_type = TypeId(PrimitiveType::Unknown as usize);
         let param_type_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
             if symbol.kind == SymbolKind::Type {
                 Some(symbol.type_id.clone())
@@ -425,7 +414,7 @@ impl<'a> Parser<'a> {
 
     /// Parses a type definition (struct declaration)
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed type definition or an error message
     fn type_definition_statement(&mut self) -> Result<Statement, ParseError> {
@@ -497,7 +486,7 @@ impl<'a> Parser<'a> {
         let name = token.lexeme.clone();
         let location =
             slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
-        let mut var_type = self.context.unknown_type();
+        let mut var_type = TypeId(PrimitiveType::Unknown as usize); // Default to unknown type
 
         if self.match_token(&Tokentype::Colon) {
             if !self.check(&Tokentype::Identifier) {
@@ -522,7 +511,7 @@ impl<'a> Parser<'a> {
             }
 
             // Use context to resolve type by name
-            let unknown_type = self.context.unknown_type().clone(); // Clone unknown_type
+            let unknown_type = TypeId(PrimitiveType::Unknown as usize);
             let var_type_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
                 if symbol.kind == SymbolKind::Type {
                     Some(symbol.type_id.clone())
@@ -577,7 +566,7 @@ impl<'a> Parser<'a> {
 
     /// Parses an expression statement
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed expression statement or an error message
     fn expression_statement(&mut self) -> Result<Statement, ParseError> {
@@ -601,7 +590,7 @@ impl<'a> Parser<'a> {
 
     /// Parses a logical OR expression
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed logical OR expression or an error message
     fn logical_or(&mut self) -> Result<Expression, ParseError> {
@@ -615,7 +604,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator: BinaryOperator::Or,
                 right: Box::new(right),
-                expr_type: self.context.bool_type(),
+                expr_type: TypeId(PrimitiveType::Bool as usize),
                 location,
             });
         }
@@ -625,7 +614,7 @@ impl<'a> Parser<'a> {
 
     /// Parses a logical AND expression
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The parsed logical AND expression or an error message
     fn logical_and(&mut self) -> Result<Expression, ParseError> {
@@ -639,7 +628,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator: BinaryOperator::And,
                 right: Box::new(right),
-                expr_type: self.context.bool_type(),
+                expr_type: TypeId(PrimitiveType::Bool as usize),
                 location,
             });
         }
@@ -668,7 +657,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: self.context.bool_type(),
+                expr_type: TypeId(PrimitiveType::Bool as usize),
                 location,
             });
         }
@@ -704,7 +693,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: self.context.bool_type(),
+                expr_type: TypeId(PrimitiveType::Bool as usize),
                 location,
             });
         }
@@ -733,7 +722,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: self.context.unknown_type(),
+                expr_type: TypeId(PrimitiveType::Unknown as usize),
                 location,
             });
         }
@@ -762,7 +751,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: self.context.unknown_type(),
+                expr_type: TypeId(PrimitiveType::Unknown as usize),
                 location,
             });
         }
@@ -783,7 +772,7 @@ impl<'a> Parser<'a> {
             return Ok(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Negate,
                 right: Box::new(right),
-                expr_type: self.context.unknown_type(),
+                expr_type: TypeId(PrimitiveType::Unknown as usize),
                 location,
             }));
         }
@@ -795,7 +784,7 @@ impl<'a> Parser<'a> {
             return Ok(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Not,
                 right: Box::new(right),
-                expr_type: self.context.bool_type(),
+                expr_type: TypeId(PrimitiveType::Bool as usize),
                 location,
             }));
         }
@@ -822,7 +811,7 @@ impl<'a> Parser<'a> {
             let value = token.lexeme.clone();
             return Ok(Expression::Literal(LiteralExpr {
                 value: LiteralValue::String(value),
-                expr_type: self.context.string_type(),
+                expr_type: TypeId(PrimitiveType::String as usize),
                 location: self.source_location_from_token(token),
             }));
         }
@@ -833,7 +822,7 @@ impl<'a> Parser<'a> {
             let bool_value = lexeme == "true";
             return Ok(Expression::Literal(LiteralExpr {
                 value: LiteralValue::Boolean(bool_value),
-                expr_type: self.context.bool_type(),
+                expr_type: TypeId(PrimitiveType::Bool as usize),
                 location: self.source_location_from_token(token),
             }));
         }
@@ -882,7 +871,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F32(value as f32),
-                        expr_type: self.context.f32_type(),
+                        expr_type: TypeId(PrimitiveType::F32 as usize),
                         location,
                     }));
                 }
@@ -890,7 +879,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F64(value),
-                        expr_type: self.context.f64_type(),
+                        expr_type: TypeId(PrimitiveType::F64 as usize),
                         location,
                     }));
                 }
@@ -901,7 +890,7 @@ impl<'a> Parser<'a> {
         // Unspecified float literal
         Ok(Expression::Literal(LiteralExpr {
             value: LiteralValue::UnspecifiedFloat(value),
-            expr_type: self.context.unspecified_float_type(),
+            expr_type: TypeId(PrimitiveType::UnspecifiedFloat as usize) ,
             location,
         }))
     }
@@ -942,7 +931,7 @@ impl<'a> Parser<'a> {
         Ok(Expression::Call(FunctionCallExpr {
             name,
             arguments,
-            expr_type: self.context.unknown_type(),
+            expr_type: TypeId(PrimitiveType::Unknown as usize),
             location,
         }))
     }
@@ -974,7 +963,7 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::I32(base_value as i32),
-                        expr_type: self.context.i32_type(),
+                        expr_type: TypeId(PrimitiveType::I32 as usize),
                         location,
                     }));
                 }
@@ -982,7 +971,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::I64(base_value),
-                        expr_type: self.context.i64_type(),
+                        expr_type: TypeId(PrimitiveType::I64 as usize),
                         location,
                     }));
                 }
@@ -996,7 +985,7 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::U32(base_value as u32),
-                        expr_type: self.context.u32_type(),
+                        expr_type: TypeId(PrimitiveType::U32 as usize),
                         location,
                     }));
                 }
@@ -1010,7 +999,7 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::U64(base_value as u64),
-                        expr_type: self.context.u64_type(),
+                        expr_type: TypeId(PrimitiveType::U64 as usize),
                         location,
                     }));
                 }
@@ -1018,7 +1007,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F32(base_value as f32),
-                        expr_type: self.context.f32_type(),
+                        expr_type: TypeId(PrimitiveType::F32 as usize),
                         location,
                     }));
                 }
@@ -1026,7 +1015,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F64(base_value as f64),
-                        expr_type: self.context.f64_type(),
+                        expr_type: TypeId(PrimitiveType::F64 as usize),
                         location,
                     }));
                 }
@@ -1037,7 +1026,7 @@ impl<'a> Parser<'a> {
         // Unspecified integer literal
         Ok(Expression::Literal(LiteralExpr {
             value: LiteralValue::UnspecifiedInteger(base_value),
-            expr_type: self.context.unspecified_int_type(),
+            expr_type: TypeId(PrimitiveType::UnspecifiedInt as usize) ,
             location,
         }))
     }
@@ -1132,11 +1121,11 @@ impl<'a> Parser<'a> {
 
     /// Checks if the current token is of the expected type
     ///
-    /// # Arguments
+    /// ### Arguments
     ///
     /// * `token_type` - The token type to check for
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// true if the current token matches, false otherwise
     fn check(&self, token_type: &Tokentype) -> bool {

@@ -25,7 +25,7 @@ pub trait Visitor<T> {
     /// Visit a function declaration statement
     fn visit_function_declaration_statement(&mut self, stmt: &FunctionDeclarationStmt) -> T;
 
-    /// Visit a block statement (multiple statements in braces)
+    /// Visit a block statement
     fn visit_block_statement(&mut self, stmts: &[Statement]) -> T;
 
     /// Visit a return statement

@@ -1,17 +1,18 @@
+use std::collections::HashMap;
+
 use crate::error::{CompileResult, CompilerError};
 use crate::semantic_error::SemanticAnalysisError;
-use slang_compilation_context::compilation_context::CompilationContext;
-use slang_compilation_context::symbol_table::SymbolKind;
+
+use slang_compilation_context::CompilationContext;
+use slang_compilation_context::SymbolKind;
+use slang_ir::SourceLocation;
+use slang_ir::Visitor;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
     LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator,
 };
-use slang_ir::source_location::SourceLocation;
-use slang_ir::visitor::Visitor;
-use slang_types::types::{TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
-
-use std::collections::HashMap;
+use slang_types::{PrimitiveType, TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
 
 /// Type alias for result of semantic analysis operations
 /// Contains either a valid TypeId or a SemanticAnalysisError
@@ -176,8 +177,8 @@ impl<'a> SemanticAnalyzer<'a> {
         self.functions.insert(
             "print_value".to_string(),
             FunctionSignature {
-                param_types: vec![self.context.unknown_type()],
-                return_type: self.context.i32_type(),
+                param_types: vec![TypeId(PrimitiveType::Unknown as usize)],
+                return_type: TypeId(PrimitiveType::I32 as usize),
             },
         );
     }
@@ -201,8 +202,10 @@ impl<'a> SemanticAnalyzer<'a> {
         operator: &BinaryOperator,
         location: &SourceLocation,
     ) -> SemanticResult {
-        if *left_type == self.context.bool_type() && *right_type == self.context.bool_type() {
-            Ok(self.context.bool_type())
+        if *left_type == TypeId(PrimitiveType::Bool as usize)
+            && *right_type == TypeId(PrimitiveType::Bool as usize)
+        {
+            Ok(TypeId(PrimitiveType::Bool as usize))
         } else {
             Err(SemanticAnalysisError::LogicalOperatorTypeMismatch {
                 operator: operator.to_string(),
@@ -236,16 +239,16 @@ impl<'a> SemanticAnalyzer<'a> {
         location: &SourceLocation,
     ) -> SemanticResult {
         if left_type == right_type
-            || (left_type == &self.context.unspecified_int_type()
+            || (*left_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
                 && self.is_integer_type(right_type))
-            || (right_type == &self.context.unspecified_int_type()
+            || (*right_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
                 && self.is_integer_type(left_type))
-            || (left_type == &self.context.unspecified_float_type()
+            || (*left_type == TypeId(PrimitiveType::UnspecifiedFloat as usize)
                 && self.is_float_type(right_type))
-            || (right_type == &self.context.unspecified_float_type()
+            || (*right_type == TypeId(PrimitiveType::UnspecifiedFloat as usize)
                 && self.is_float_type(left_type))
         {
-            Ok(self.context.bool_type())
+            Ok(TypeId(PrimitiveType::Bool as usize))
         } else {
             Err(SemanticAnalysisError::OperationTypeMismatch {
                 operator: operator.to_string(),
@@ -274,8 +277,9 @@ impl<'a> SemanticAnalyzer<'a> {
         operator: &BinaryOperator,
         location: &SourceLocation,
     ) -> SemanticResult {
-        if *type_id == self.context.bool_type()
-            || (operator != &BinaryOperator::Add && *type_id == self.context.string_type())
+        if *type_id == TypeId(PrimitiveType::Bool as usize)
+            || (operator != &BinaryOperator::Add
+                && *type_id == TypeId(PrimitiveType::String as usize))
         {
             Err(SemanticAnalysisError::OperationTypeMismatch {
                 operator: operator.to_string(),
@@ -402,27 +406,35 @@ impl<'a> SemanticAnalyzer<'a> {
         right_type: &TypeId,
         bin_expr: &BinaryExpr,
     ) -> SemanticResult {
-        if *left_type == self.context.unspecified_int_type() && self.is_integer_type(right_type) {
+        if *left_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
+            && self.is_integer_type(right_type)
+        {
             return self.check_unspecified_int_for_type(&bin_expr.left, right_type);
         }
 
-        if *right_type == self.context.unspecified_int_type() && self.is_integer_type(left_type) {
+        if *right_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
+            && self.is_integer_type(left_type)
+        {
             return self.check_unspecified_int_for_type(&bin_expr.right, left_type);
         }
 
-        if *left_type == self.context.unspecified_float_type() && self.is_float_type(right_type) {
+        if *left_type == TypeId(PrimitiveType::UnspecifiedFloat as usize)
+            && self.is_float_type(right_type)
+        {
             return self.check_unspecified_float_for_type(&bin_expr.left, right_type);
         }
 
-        if *right_type == self.context.unspecified_float_type() && self.is_float_type(left_type) {
+        if *right_type == TypeId(PrimitiveType::UnspecifiedFloat as usize)
+            && self.is_float_type(left_type)
+        {
             return self.check_unspecified_float_for_type(&bin_expr.right, left_type);
         }
 
         if bin_expr.operator == BinaryOperator::Add
-            && *left_type == self.context.string_type()
-            && *right_type == self.context.string_type()
+            && *left_type == TypeId(PrimitiveType::String as usize)
+            && *right_type == TypeId(PrimitiveType::String as usize)
         {
-            return Ok(self.context.string_type());
+            return Ok(TypeId(PrimitiveType::String as usize));
         }
 
         Err(SemanticAnalysisError::OperationTypeMismatch {
@@ -467,10 +479,10 @@ impl<'a> SemanticAnalyzer<'a> {
     /// * The concrete type (i64 for unspecified integers, f64 for unspecified floats)
     /// * The original type if it wasn't an unspecified literal type
     fn finalize_inferred_type(&self, type_id: TypeId) -> TypeId {
-        if type_id == self.context.unspecified_int_type() {
-            self.context.i64_type()
-        } else if type_id == self.context.unspecified_float_type() {
-            self.context.f64_type()
+        if type_id == TypeId(PrimitiveType::UnspecifiedInt as usize) {
+            TypeId(PrimitiveType::I64 as usize)
+        } else if type_id == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
+            TypeId(PrimitiveType::F64 as usize)
         } else {
             type_id
         }
@@ -492,7 +504,7 @@ impl<'a> SemanticAnalyzer<'a> {
         let_stmt: &LetStatement,
         expr_type: TypeId,
     ) -> SemanticResult {
-        if let_stmt.expr_type == self.context.unknown_type() {
+        if let_stmt.expr_type == TypeId(PrimitiveType::Unknown as usize) {
             // Type is not specified, infer from expression
             return Ok(expr_type);
         }
@@ -507,11 +519,11 @@ impl<'a> SemanticAnalyzer<'a> {
             return Ok(let_stmt.expr_type.clone());
         }
 
-        if expr_type == self.context.unspecified_int_type() {
+        if expr_type == TypeId(PrimitiveType::UnspecifiedInt as usize) {
             return self.handle_unspecified_int_assignment(let_stmt, &expr_type);
         }
 
-        if expr_type == self.context.unspecified_float_type() {
+        if expr_type == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
             return self.handle_unspecified_float_assignment(let_stmt, &expr_type);
         }
 
@@ -543,7 +555,7 @@ impl<'a> SemanticAnalyzer<'a> {
         } else {
             Err(SemanticAnalysisError::TypeMismatch {
                 expected: let_stmt.expr_type.clone(),
-                actual: self.context.unspecified_int_type(),
+                actual: TypeId(PrimitiveType::UnspecifiedInt as usize),
                 context: Some(let_stmt.name.clone()),
                 location: let_stmt.location.clone(),
             })
@@ -569,7 +581,7 @@ impl<'a> SemanticAnalyzer<'a> {
         } else {
             Err(SemanticAnalysisError::TypeMismatch {
                 expected: let_stmt.expr_type.clone(),
-                actual: self.context.unspecified_float_type(),
+                actual: TypeId(PrimitiveType::UnspecifiedFloat as usize),
                 context: Some(let_stmt.name.clone()),
                 location: let_stmt.location.clone(),
             })
@@ -599,7 +611,7 @@ impl<'a> SemanticAnalyzer<'a> {
             return Ok(actual_type);
         }
 
-        if actual_type == self.context.unspecified_int_type() {
+        if actual_type == TypeId(PrimitiveType::UnspecifiedInt as usize) {
             if let Expression::Literal(lit) = expr {
                 if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                     let value_in_range = self.context.check_value_in_range(n, expected_type);
@@ -611,7 +623,7 @@ impl<'a> SemanticAnalyzer<'a> {
             }
         }
 
-        if actual_type == self.context.unspecified_float_type() {
+        if actual_type == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
             if let Expression::Literal(lit) = expr {
                 if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
                     let value_in_range = self.context.check_float_value_in_range(f, expected_type);
@@ -716,7 +728,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
         }
 
         self.end_scope();
-        Ok(self.context.unknown_type())
+        Ok(TypeId(PrimitiveType::Unknown as usize))
     }
 
     fn visit_return_statement(&mut self, opt_expr: &Option<Expression>) -> SemanticResult {
@@ -733,7 +745,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                     &expected_type,
                     &expr.location(),
                 );
-            } else if expected_type != self.context.unknown_type() {
+            } else if expected_type != TypeId(PrimitiveType::Unknown as usize) {
                 return Err(SemanticAnalysisError::MissingReturnValue {
                     expected: expected_type.clone(),
                     location: error_location,
@@ -763,12 +775,12 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                 let arg_type = self.visit_expression(arg)?;
                 let param_type = &function_semanitic.param_types[i];
 
-                if param_type == &self.context.unknown_type() {
+                if *param_type == TypeId(PrimitiveType::Unknown as usize) {
                     continue;
                 }
 
                 if arg_type != *param_type {
-                    if arg_type == self.context.unspecified_int_type() {
+                    if arg_type == TypeId(PrimitiveType::UnspecifiedInt as usize) {
                         if let Err(_) = self.check_unspecified_int_for_type(arg, param_type) {
                             return Err(SemanticAnalysisError::ArgumentTypeMismatch {
                                 function_name: call_expr.name.clone(),
@@ -781,7 +793,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                         continue;
                     }
 
-                    if arg_type == self.context.unspecified_float_type() {
+                    if arg_type == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
                         if let Err(_) = self.check_unspecified_float_for_type(arg, param_type) {
                             return Err(SemanticAnalysisError::ArgumentTypeMismatch {
                                 function_name: call_expr.name.clone(),
@@ -825,9 +837,9 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
         let mut field_types_for_registration = Vec::new();
         for (name, type_id) in &type_def.fields {
             // Ensure field types are concrete and known
-            if *type_id == self.context.unknown_type()
-                || *type_id == self.context.unspecified_int_type()
-                || *type_id == self.context.unspecified_float_type()
+            if *type_id == TypeId(PrimitiveType::Unknown as usize)
+                || *type_id == TypeId(PrimitiveType::UnspecifiedInt as usize)
+                || *type_id == TypeId(PrimitiveType::UnspecifiedFloat as usize)
             {
                 return Err(SemanticAnalysisError::InvalidFieldType {
                     struct_name: type_def.name.clone(),
@@ -998,19 +1010,19 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
 
         match unary_expr.operator {
             UnaryOperator::Negate => {
-                if operand_type == self.context.unspecified_int_type() {
+                if operand_type == TypeId(PrimitiveType::UnspecifiedInt as usize) {
                     if let Expression::Literal(lit) = &*unary_expr.right {
                         if let slang_ir::ast::LiteralValue::UnspecifiedInteger(_value) = &lit.value
                         {
-                            return Ok(self.context.unspecified_int_type());
+                            return Ok(TypeId(PrimitiveType::UnspecifiedInt as usize));
                         }
-                        return Ok(self.context.unspecified_int_type());
+                        return Ok(TypeId(PrimitiveType::UnspecifiedFloat as usize));
                     }
                 }
 
-                if operand_type == self.context.unspecified_float_type() {
+                if operand_type == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
                     if let Expression::Literal(_) = &*unary_expr.right {
-                        return Ok(self.context.unspecified_float_type());
+                        return Ok(TypeId(PrimitiveType::UnspecifiedFloat as usize));
                     }
                 }
 
@@ -1018,17 +1030,17 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                     self.is_integer_type(&operand_type) || self.is_float_type(&operand_type);
 
                 if is_numeric {
-                    if operand_type == self.context.i32_type()
-                        || operand_type == self.context.i64_type()
-                        || operand_type == self.context.f32_type()
-                        || operand_type == self.context.f64_type()
+                    if operand_type == TypeId(PrimitiveType::I32 as usize)
+                        || operand_type == TypeId(PrimitiveType::I64 as usize)
+                        || operand_type == TypeId(PrimitiveType::F32 as usize)
+                        || operand_type == TypeId(PrimitiveType::F64 as usize)
                     {
                         return Ok(operand_type);
                     }
 
                     // For unsigned types, we need to reject negation entirely
-                    if operand_type == self.context.u32_type()
-                        || operand_type == self.context.u64_type()
+                    if operand_type == TypeId(PrimitiveType::U32 as usize)
+                        || operand_type == TypeId(PrimitiveType::U64 as usize)
                     {
                         // Attempting to negate an unsigned type
                         return Err(SemanticAnalysisError::InvalidUnaryOperation {
@@ -1045,8 +1057,8 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                 })
             }
             UnaryOperator::Not => {
-                if operand_type == self.context.bool_type() {
-                    return Ok(self.context.bool_type());
+                if operand_type == TypeId(PrimitiveType::Bool as usize) {
+                    return Ok(TypeId(PrimitiveType::Bool as usize));
                 }
 
                 Err(SemanticAnalysisError::InvalidUnaryOperation {

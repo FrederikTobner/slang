@@ -5,7 +5,7 @@ use crate::ast::{
 };
 use crate::visitor::Visitor;
 use slang_types::types::{
-    TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64,
+    TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I64,
     TYPE_NAME_INT, TYPE_NAME_STRING, TYPE_NAME_U32, TYPE_NAME_U64,
 };
 
@@ -148,7 +148,7 @@ impl Visitor<()> for ASTPrinter {
 
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) {
         match &lit_expr.value {
-            LiteralValue::I32(i) => println!("{}{}: {}", self.indent(), TYPE_NAME_I32, i),
+            LiteralValue::I32(i) => println!("{}{}: {}", self.indent(), PrimitiveType::I32.name(), i),
             LiteralValue::I64(i) => println!("{}{}: {}", self.indent(), TYPE_NAME_I64, i),
             LiteralValue::U32(u) => println!("{}{}: {}", self.indent(), TYPE_NAME_U32, u),
             LiteralValue::U64(u) => println!("{}{}: {}", self.indent(), TYPE_NAME_U64, u),

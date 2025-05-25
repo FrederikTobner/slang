@@ -192,12 +192,12 @@ impl Value {
 
     /// Deserialize a value from a reader based on its type tag
     ///
-    /// # Arguments
+    /// ### Arguments
     ///
     /// * `type_tag` - The type tag of the value
     /// * `reader` - The reader to read the value data from
     ///
-    /// # Returns
+    /// ### Returns
     ///
     /// The deserialized value or an IO error
     pub fn deserialize_from_type_tag(type_tag: u8, reader: &mut dyn Read) -> std::io::Result<Self> {

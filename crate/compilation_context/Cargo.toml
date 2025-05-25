@@ -1,0 +1,14 @@
+[package]
+name = "slang_compilation_context"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = []
+
+[lib]
+name = "slang_compilation_context"
+path = "src/lib.rs"
+
+[dependencies]
+slang_types = { path = "../types" }

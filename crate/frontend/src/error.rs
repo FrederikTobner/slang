@@ -55,10 +55,10 @@ impl CompilerError {
     /// This creates a nicely formatted error message similar to Rust's compiler errors,
     /// with line numbers, source code context, and arrows pointing to the error location.
     ///
-    /// # Arguments
+    /// ### Arguments
     /// * `line_info` - LineInfo object for the source code context
     ///
-    /// # Returns
+    /// ### Returns
     /// A formatted error message string
     pub fn format_for_display(&self, line_info: &LineInfo) -> String {
         let (line, col) = line_info.get_line_col(self.position);
