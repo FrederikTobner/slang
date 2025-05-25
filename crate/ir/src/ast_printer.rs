@@ -3,8 +3,8 @@ use crate::ast::{
     LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator,
 };
-use crate::visitor::Visitor;
-use slang_types::types::{
+use crate::Visitor;
+use slang_types::{
     TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I64,
     TYPE_NAME_INT, TYPE_NAME_STRING, TYPE_NAME_U32, TYPE_NAME_U64,
 };
@@ -44,6 +44,7 @@ impl Visitor<()> for ASTPrinter {
     fn visit_statement(&mut self, stmt: &Statement) {
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
+            Statement::Assignment(assign_stmt) => self.visit_assignment_statement(assign_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
             Statement::TypeDefinition(type_stmt) => self.visit_type_definition_statement(type_stmt),
             Statement::FunctionDeclaration(fn_decl) => {
@@ -106,6 +107,13 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level -= 1;
     }
 
+    fn visit_assignment_statement(&mut self, assign_stmt: &slang_ir::ast::AssignmentStatement) {
+        println!("{}Assignment: {} =", self.indent(), assign_stmt.name);
+        self.indent_level += 1;
+        assign_stmt.value.accept(self);
+        self.indent_level -= 1;
+    }
+
     fn visit_expression_statement(&mut self, expr: &Expression) {
         println!("{}Expression:", self.indent());
         self.indent_level += 1;
@@ -148,7 +156,7 @@ impl Visitor<()> for ASTPrinter {
 
     fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) {
         match &lit_expr.value {
-            LiteralValue::I32(i) => println!("{}{}: {}", self.indent(), PrimitiveType::I32.name(), i),
+            LiteralValue::I32(i) => println!("{}{}: {}", self.indent(), TYPE_NAME_I32, i),
             LiteralValue::I64(i) => println!("{}{}: {}", self.indent(), TYPE_NAME_I64, i),
             LiteralValue::U32(u) => println!("{}{}: {}", self.indent(), TYPE_NAME_U32, u),
             LiteralValue::U64(u) => println!("{}{}: {}", self.indent(), TYPE_NAME_U64, u),

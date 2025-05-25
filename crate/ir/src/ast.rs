@@ -101,6 +101,8 @@ impl Expression {
 pub enum Statement {
     /// Variable declaration
     Let(LetStatement),
+    /// Variable assignment
+    Assignment(AssignmentStatement),
     /// Expression statement
     Expression(Expression),
     /// Type definition (e.g., struct)
@@ -243,6 +245,17 @@ pub struct LetStatement {
     pub location: SourceLocation,
 }
 
+/// A variable assignment statement
+#[derive(Debug)]
+pub struct AssignmentStatement {
+    /// Name of the variable being assigned
+    pub name: String,
+    /// New value for the variable
+    pub value: Expression,
+    /// Source code location information
+    pub location: SourceLocation,
+}
+
 impl Statement {
     /// Accepts a visitor for this statement
     ///
@@ -250,6 +263,7 @@ impl Statement {
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
         match self {
             Statement::Let(let_stmt) => visitor.visit_let_statement(let_stmt),
+            Statement::Assignment(assign_stmt) => visitor.visit_assignment_statement(assign_stmt),
             Statement::Expression(expr) => visitor.visit_expression_statement(expr),
             Statement::TypeDefinition(type_def) => {
                 visitor.visit_type_definition_statement(type_def)

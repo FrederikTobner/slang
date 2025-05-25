@@ -164,13 +164,13 @@ pub enum Value {
     /// 64-bit floating point
     F64(f64),
     /// String value
-    String(String),
+    String(Box<String>),
     /// Boolean value
     Boolean(bool),
     /// Function value
-    Function(Function),
+    Function(Box<Function>),
     /// Native function value
-    NativeFunction(NativeFunction),
+    NativeFunction(Box<NativeFunction>),
 }
 
 impl Value {
@@ -235,7 +235,7 @@ impl Value {
                 let mut string_bytes = vec![0u8; len];
                 reader.read_exact(&mut string_bytes)?;
                 String::from_utf8(string_bytes)
-                    .map(Value::String)
+                    .map(|s| Value::String(Box::new(s)))
                     .map_err(|_| {
                         std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UTF-8")
                     })
@@ -284,12 +284,12 @@ impl Value {
                     locals.push(local);
                 }
 
-                Ok(Value::Function(Function {
+                Ok(Value::Function(Box::new(Function {
                     name,
                     arity,
                     code_offset,
                     locals,
-                }))
+                })))
             }
             // F32
             8 => {
@@ -363,7 +363,7 @@ impl ValueOperation for Value {
                     Ok(Value::F64(result))
                 }
             }
-            (Value::String(a), Value::String(b)) => Ok(Value::String(format!("{}{}", a, b))),
+            (Value::String(a), Value::String(b)) => Ok(Value::String(Box::new(format!("{}{}", a, b)))),
             _ => Err("Cannot add these types".to_string()),
         }
     }

@@ -1,11 +1,11 @@
-use crate::bytecode::{Chunk, Function, NativeFunction, OpCode};
+use crate::bytecode::{Chunk, NativeFunction, OpCode};
 use crate::value::{Value, ValueOperation};
 use std::collections::HashMap;
 
 /// Call frame to track function calls
 struct CallFrame {
-    /// The function being called
-    function: Function,
+    /// Parameter names for the function (for local variable checking)
+    param_names: Vec<String>,
     /// Address to return to after function completes
     return_address: usize,
     /// Stack position before function call
@@ -66,11 +66,11 @@ impl VM {
         arity: u8,
         function: fn(&[Value]) -> Result<Value, String>,
     ) {
-        let native_fn = Value::NativeFunction(NativeFunction {
+        let native_fn = Value::NativeFunction(Box::new(NativeFunction {
             name: name.to_string(),
             arity,
             function,
-        });
+        }));
 
         self.variables.insert(name.to_string(), native_fn);
     }
@@ -231,7 +231,7 @@ impl VM {
                 let value = self.stack.last().unwrap().clone();
 
                 if let Some(frame_idx) = self.current_frame {
-                    if self.frames[frame_idx].function.locals.contains(&var_name) {
+                    if self.frames[frame_idx].param_names.contains(&var_name) {
                         // Local variable
                         self.frames[frame_idx].locals.insert(var_name, value);
                     } else {
@@ -289,7 +289,7 @@ impl VM {
                         }
 
                         let frame = CallFrame {
-                            function: func.clone(),
+                            param_names: func.locals.clone(),
                             return_address: self.ip,
                             stack_offset: function_pos,
                             locals,

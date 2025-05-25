@@ -14,3 +14,4 @@ print-ast = []
 [lib]
 name = "slang_ir"
 path = "src/lib.rs"
+

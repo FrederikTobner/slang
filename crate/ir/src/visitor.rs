@@ -1,6 +1,6 @@
 use crate::ast::{
-    BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, LetStatement, LiteralExpr,
-    Statement, TypeDefinitionStmt, UnaryExpr,
+    AssignmentStatement, BinaryExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, 
+    LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr,
 };
 
 /// Trait implementing the visitor pattern for traversing the AST
@@ -30,6 +30,9 @@ pub trait Visitor<T> {
 
     /// Visit a return statement
     fn visit_return_statement(&mut self, expr: &Option<Expression>) -> T;
+
+    /// Visit a variable assignment statement
+    fn visit_assignment_statement(&mut self, stmt: &AssignmentStatement) -> T;
 
     /// Visit a general expression
     fn visit_expression(&mut self, expr: &Expression) -> T;

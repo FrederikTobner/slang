@@ -76,3 +76,19 @@ fn test_nested_function_calls() {
     "#;
     execute_program_and_assert(program, "42");
 }
+
+#[test]
+fn arguments_are_passed_by_value() {
+    let program = r#"
+        fn modify_value(x: i32) -> i32 {
+            x = x + 10;
+            return x;
+        }
+        
+        let a : i32 = 5;
+        let b = modify_value(a);
+        
+        print_value(a); // Should print 5, not 15
+    "#;
+    execute_program_and_assert(program, "5");
+}

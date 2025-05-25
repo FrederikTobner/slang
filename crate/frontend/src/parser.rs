@@ -173,6 +173,8 @@ impl<'a> Parser<'a> {
             self.return_statement()
         } else if self.match_token(&Tokentype::LeftBrace) {
             self.block_statement()
+        } else if self.check(&Tokentype::Identifier) && self.check_next(&Tokentype::Equal) {
+            self.assignment_statement()
         } else {
             self.expression_statement()
         }
@@ -1135,6 +1137,22 @@ impl<'a> Parser<'a> {
         self.peek().token_type == *token_type
     }
 
+    /// Checks if the next token matches the given type (lookahead of 2)
+    ///
+    /// ### Arguments
+    ///
+    /// * `token_type` - The token type to check against
+    ///
+    /// ### Returns
+    ///
+    /// true if the next token matches, false otherwise
+    fn check_next(&self, token_type: &Tokentype) -> bool {
+        if self.current + 1 >= self.tokens.len() {
+            return false;
+        }
+        self.tokens[self.current + 1].token_type == *token_type
+    }
+
     /// Advances to the next token and returns the previous token
     ///
     /// ### Returns
@@ -1176,5 +1194,40 @@ impl<'a> Parser<'a> {
     #[inline]
     fn previous(&self) -> &Token {
         &self.tokens[self.current - 1]
+    }
+
+    /// Parses an assignment statement
+    ///
+    /// ### Returns
+    ///
+    /// The parsed assignment statement or an error message
+    fn assignment_statement(&mut self) -> Result<Statement, ParseError> {
+        if !self.check(&Tokentype::Identifier) {
+            return Err(self.error("Expected identifier for assignment"));
+        }
+
+        // Get the position before advancing
+        let token_pos = self.peek().pos;
+        let (line, column) = self.line_info.get_line_col(token_pos);
+
+        let token = self.advance();
+        let name = token.lexeme.clone();
+        let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
+
+        if !self.match_token(&Tokentype::Equal) {
+            return Err(self.error("Expected '=' for assignment"));
+        }
+
+        let value = self.expression()?;
+
+        if !self.match_token(&Tokentype::Semicolon) {
+            return Err(self.error("Expected ';' after assignment"));
+        }
+
+        Ok(Statement::Assignment(slang_ir::ast::AssignmentStatement {
+            name,
+            value,
+            location,
+        }))
     }
 }

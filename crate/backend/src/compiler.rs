@@ -140,6 +140,7 @@ impl Visitor<Result<(), String>> for Compiler {
     fn visit_statement(&mut self, stmt: &Statement) -> Result<(), String> {
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
+            Statement::Assignment(assign_stmt) => self.visit_assignment_statement(assign_stmt),
             Statement::TypeDefinition(type_stmt) => self.visit_type_definition_statement(type_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
             Statement::FunctionDeclaration(fn_decl) => {
@@ -190,12 +191,12 @@ impl Visitor<Result<(), String>> for Compiler {
         self.end_scope();
         self.patch_jump(jump_over);
 
-        let function = Value::Function(Function {
+        let function = Value::Function(Box::new(Function {
             name: fn_decl.name.clone(),
             arity: fn_decl.parameters.len() as u8,
             code_offset,
             locals,
-        });
+        }));
         let fn_constant = self.chunk.add_constant(function);
 
         self.emit_op(OpCode::DefineFunction);
@@ -238,6 +239,23 @@ impl Visitor<Result<(), String>> for Compiler {
             return Err("Too many variables in one scope".to_string());
         }
 
+        self.emit_op(OpCode::SetVariable);
+        self.emit_byte(var_index as u8);
+
+        Ok(())
+    }
+
+    fn visit_assignment_statement(&mut self, assign_stmt: &slang_ir::ast::AssignmentStatement) -> Result<(), String> {
+        // Visit the expression to put its value on the stack
+        self.visit_expression(&assign_stmt.value)?;
+
+        // Get the variable index for the assignment target
+        let var_index = self.chunk.add_identifier(assign_stmt.name.clone());
+        if var_index > 255 {
+            return Err("Too many variables in one scope".to_string());
+        }
+
+        // Emit the assignment instruction - same as SetVariable since VM handles both
         self.emit_op(OpCode::SetVariable);
         self.emit_byte(var_index as u8);
 
@@ -296,7 +314,7 @@ impl Visitor<Result<(), String>> for Compiler {
                 self.emit_constant(Value::F64(*f));
             }
             slang_ir::ast::LiteralValue::String(s) => {
-                self.emit_constant(Value::String(s.clone()));
+                self.emit_constant(Value::String(Box::new(s.clone())));
             }
             slang_ir::ast::LiteralValue::Boolean(b) => {
                 self.emit_constant(Value::Boolean(*b));

@@ -679,6 +679,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
     fn visit_statement(&mut self, stmt: &Statement) -> SemanticResult {
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
+            Statement::Assignment(assign_stmt) => self.visit_assignment_statement(assign_stmt),
             Statement::Expression(expr) => self.visit_expression_statement(expr),
             Statement::TypeDefinition(type_def) => self.visit_type_definition_statement(type_def),
             Statement::FunctionDeclaration(fn_decl) => {
@@ -922,6 +923,37 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
 
         self.define_variable(let_stmt.name.clone(), final_type.clone());
         Ok(final_type)
+    }
+
+    fn visit_assignment_statement(&mut self, assign_stmt: &slang_ir::ast::AssignmentStatement) -> SemanticResult {
+        // Check if the variable exists
+        if let Some(var_type) = self.resolve_variable(&assign_stmt.name) {
+            // Check if the assigned value's type matches the variable's type
+            let expr_type = self.visit_expression(&assign_stmt.value)?;
+            
+            if var_type == expr_type {
+                Ok(var_type)
+            } else {
+                // Allow assignment of unspecified integers/floats to concrete types
+                if expr_type == TypeId(slang_types::types::PrimitiveType::UnspecifiedInt as usize) {
+                    Ok(var_type)
+                } else if expr_type == TypeId(slang_types::types::PrimitiveType::UnspecifiedFloat as usize) {
+                    Ok(var_type)
+                } else {
+                    Err(SemanticAnalysisError::TypeMismatch {
+                        expected: var_type,
+                        actual: expr_type,
+                        context: Some(format!("assignment to variable '{}'", assign_stmt.name)),
+                        location: assign_stmt.location.clone(),
+                    })
+                }
+            }
+        } else {
+            Err(SemanticAnalysisError::UndefinedVariable {
+                name: assign_stmt.name.clone(),
+                location: assign_stmt.location.clone(),
+            })
+        }
     }
 
     fn visit_variable_expression(
