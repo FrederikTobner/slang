@@ -1,6 +1,7 @@
 use crate::error::CompilerError;
 use slang_ir::source_location::SourceLocation;
-use slang_types::types::{CompilationContext, TypeId};
+use slang_types::types::{TypeId};
+use slang_compilation_context::compilation_context::CompilationContext;
 
 /// Represents different categories of semantic analysis errors
 /// that occur during static analysis of the program.
@@ -13,6 +14,7 @@ pub enum SemanticAnalysisError {
     UndefinedVariable {
         /// The name of the undefined variable
         name: String,
+        /// The source location where the error occurred
         location: SourceLocation,
     },
 
@@ -20,21 +22,29 @@ pub enum SemanticAnalysisError {
     VariableRedefinition {
         /// The name of the variable being redefined
         name: String,
+        /// The source location where the redefinition occurred
         location: SourceLocation,
     },
 
     /// A symbol (type, variable, function) is being redefined.
     SymbolRedefinition {
+        /// The name of the symbol being redefined
         name: String,
-        kind: String, // e.g., "type", "variable", "function"
+        /// The kind of the symbol (e.g., type, variable, function)
+        kind: String,
+        /// The source location where the redefinition occurred
         location: SourceLocation,
     },
 
     /// A struct field is defined with an invalid type (e.g. unknown, unspecified)
     InvalidFieldType {
+        /// The name of the struct containing the field
         struct_name: String,
+        /// The name of the field with the invalid type
         field_name: String,
+        /// The type ID of the invalid field type
         type_id: TypeId,
+        /// The source location where the invalid field type was defined
         location: SourceLocation,
     },
 
@@ -46,6 +56,7 @@ pub enum SemanticAnalysisError {
         actual: TypeId,
         /// Optional context for the mismatch (like variable or function name)
         context: Option<String>,
+        /// The source location where the type mismatch occurred
         location: SourceLocation,
     },
 
@@ -57,6 +68,7 @@ pub enum SemanticAnalysisError {
         left_type: TypeId,
         /// Right operand type
         right_type: TypeId,
+        /// The source location where the operation type mismatch occurred
         location: SourceLocation,
     },
 
@@ -68,6 +80,7 @@ pub enum SemanticAnalysisError {
         left_type: TypeId,
         /// Right operand type
         right_type: TypeId,
+        /// The source location where the logical operator type mismatch occurred
         location: SourceLocation,
     },
 
@@ -79,6 +92,7 @@ pub enum SemanticAnalysisError {
         target_type: TypeId,
         /// Whether the value is an integer or float
         is_float: bool,
+        /// The source location where the value out of range occurred
         location: SourceLocation,
     },
 
@@ -90,6 +104,7 @@ pub enum SemanticAnalysisError {
         expected: usize,
         /// Actual number of arguments provided
         actual: usize,
+        /// The source location where the argument count mismatch occurred
         location: SourceLocation,
     },
 
@@ -103,11 +118,15 @@ pub enum SemanticAnalysisError {
         expected: TypeId,
         /// Actual type
         actual: TypeId,
+        /// The source location where the argument type mismatch occurred
         location: SourceLocation,
     },
 
     /// Return statement outside of a function
-    ReturnOutsideFunction { location: SourceLocation },
+    ReturnOutsideFunction {
+        /// The source location where the return statement was found
+        location: SourceLocation,
+    },
 
     /// Return type does not match function declaration
     ReturnTypeMismatch {
@@ -115,6 +134,7 @@ pub enum SemanticAnalysisError {
         expected: TypeId,
         /// Actual returned type
         actual: TypeId,
+        /// The source location where the return type mismatch occurred
         location: SourceLocation,
     },
 
@@ -122,6 +142,7 @@ pub enum SemanticAnalysisError {
     MissingReturnValue {
         /// Expected return type
         expected: TypeId,
+        /// The source location where the missing return value was found
         location: SourceLocation,
     },
 
@@ -129,6 +150,7 @@ pub enum SemanticAnalysisError {
     UndefinedFunction {
         /// The name of the undefined function
         name: String,
+        /// The source location where the undefined function was called
         location: SourceLocation,
     },
 
@@ -138,6 +160,7 @@ pub enum SemanticAnalysisError {
         operator: String,
         /// The operand type
         operand_type: TypeId,
+        /// The source location where the invalid unary operation occurred
         location: SourceLocation,
     },
 
@@ -145,6 +168,7 @@ pub enum SemanticAnalysisError {
     InvalidExpression {
         /// A description of what was expected vs what was found
         message: String,
+        /// The source location where the invalid expression was found
         location: SourceLocation,
     },
 }
@@ -364,9 +388,17 @@ impl SemanticAnalysisError {
         }
     }
 
-    /// Determines an approximate token length for the error based on its type.
-    /// This is a heuristic and might not be perfectly accurate for all cases.
+    /// Determines the token length for the error, preferring the length from SourceLocation.
+    /// Falls back to heuristics if the SourceLocation length is not available or is 0.
     fn get_token_length(&self) -> Option<usize> {
+        let location = self.get_location();
+
+        // Prefer the length from SourceLocation if it's meaningful
+        if location.length > 0 {
+            return Some(location.length);
+        }
+
+        // Fall back to heuristics for backward compatibility
         match self {
             SemanticAnalysisError::UndefinedVariable { name, .. } => Some(name.len()),
             SemanticAnalysisError::VariableRedefinition { name, .. } => Some(name.len()),
@@ -374,7 +406,7 @@ impl SemanticAnalysisError {
             SemanticAnalysisError::InvalidFieldType { field_name, .. } => Some(field_name.len()),
             SemanticAnalysisError::TypeMismatch { context, .. } => {
                 context.as_ref().map(|s| s.len())
-            } // Length of variable name or context
+            }
             SemanticAnalysisError::OperationTypeMismatch { operator, .. } => Some(operator.len()),
             SemanticAnalysisError::LogicalOperatorTypeMismatch { operator, .. } => {
                 Some(operator.len())
@@ -382,20 +414,23 @@ impl SemanticAnalysisError {
             SemanticAnalysisError::ValueOutOfRange { value, .. } => Some(value.len()),
             SemanticAnalysisError::ArgumentCountMismatch { function_name, .. } => {
                 Some(function_name.len())
-            } // Could be the call itself
+            }
             SemanticAnalysisError::ArgumentTypeMismatch { function_name, .. } => {
                 Some(function_name.len())
-            } // Could be the specific argument
+            }
             SemanticAnalysisError::ReturnOutsideFunction { .. } => Some("return".len()),
-            SemanticAnalysisError::ReturnTypeMismatch { .. } => None, // Hard to determine a specific token
-            SemanticAnalysisError::MissingReturnValue { .. } => Some("return".len()), // Location of the return keyword
+            SemanticAnalysisError::ReturnTypeMismatch { .. } => None,
+            SemanticAnalysisError::MissingReturnValue { .. } => Some("return".len()),
             SemanticAnalysisError::UndefinedFunction { name, .. } => Some(name.len()),
             SemanticAnalysisError::InvalidUnaryOperation { operator, .. } => Some(operator.len()),
-            SemanticAnalysisError::InvalidExpression { .. } => None, // General expression, length unknown
+            SemanticAnalysisError::InvalidExpression { .. } => None,
         }
     }
 
     /// Convert a SemanticAnalysisError to a CompilerError that can be used by the rest of the compiler.
+    ///
+    /// ### Arguments
+    /// * `context` - The CompilationContext providing type names and other context for error messages
     ///
     /// ### Returns
     /// A CompilerError with the appropriate message and location information.

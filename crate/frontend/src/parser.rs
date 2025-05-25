@@ -6,10 +6,12 @@ use slang_ir::ast::{
     LetStatement, LiteralExpr, LiteralValue, Parameter, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator,
 };
-use slang_types::types::{
-    CompilationContext, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32,
+use slang_types::types::{TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32,
     TYPE_NAME_I64, TYPE_NAME_INT, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNKNOWN, TypeId,
 };
+use slang_compilation_context::compilation_context::CompilationContext;
+use slang_compilation_context::symbol_table::SymbolKind;
+use slang_ir::source_location::SourceLocation;
 
 /// Error that occurs during parsing
 #[derive(Debug)]
@@ -237,7 +239,7 @@ impl<'a> Parser<'a> {
 
         // Create location from the saved position
         let (line, column) = self.line_info.get_line_col(token_pos);
-        let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column);
+        let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
 
         // Parse parameter list
         if !self.match_token(&Tokentype::LeftParen) {
@@ -300,7 +302,7 @@ impl<'a> Parser<'a> {
             // Use context to resolve type by name
             let unknown_type = self.context.unknown_type().clone(); // Clone unknown_type
             let type_id_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
-                if symbol.kind == slang_types::types::SymbolKind::Type {
+                if symbol.kind == slang_compilation_context::symbol_table::SymbolKind::Type {
                     Some(symbol.type_id.clone())
                 } else {
                     None
@@ -363,7 +365,7 @@ impl<'a> Parser<'a> {
 
         // Create location
         let (line, column) = self.line_info.get_line_col(token_pos);
-        let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column);
+        let location = SourceLocation::new(token_pos, line, column, name.len());
 
         if !self.match_token(&Tokentype::Colon) {
             return Err(self.error("Expected ':' after parameter name"));
@@ -381,7 +383,7 @@ impl<'a> Parser<'a> {
         // Use context to resolve type by name
         let unknown_type = self.context.unknown_type().clone(); // Clone unknown_type
         let param_type_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
-            if symbol.kind == slang_types::types::SymbolKind::Type {
+            if symbol.kind == SymbolKind::Type {
                 Some(symbol.type_id.clone())
             } else {
                 None
@@ -491,7 +493,7 @@ impl<'a> Parser<'a> {
 
         let token = self.advance();
         let name = token.lexeme.clone();
-        let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column);
+        let location = slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
         let mut var_type = self.context.unknown_type();
 
         if self.match_token(&Tokentype::Colon) {
@@ -519,7 +521,7 @@ impl<'a> Parser<'a> {
             // Use context to resolve type by name
             let unknown_type = self.context.unknown_type().clone(); // Clone unknown_type
             let var_type_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
-                if symbol.kind == slang_types::types::SymbolKind::Type {
+                if symbol.kind == SymbolKind::Type {
                     Some(symbol.type_id.clone())
                 } else {
                     None
@@ -1069,7 +1071,7 @@ impl<'a> Parser<'a> {
         }
         // Use context to resolve type by name
         if let Some(symbol) = self.context.lookup_symbol(&type_name) {
-            if symbol.kind == slang_types::types::SymbolKind::Type {
+            if symbol.kind == SymbolKind::Type {
                 Ok(symbol.type_id.clone())
             } else {
                 Err(self.error_previous(&format!("'{}' is not a type name", type_name)))
@@ -1085,7 +1087,7 @@ impl<'a> Parser<'a> {
         token: &Token,
     ) -> slang_ir::source_location::SourceLocation {
         let (line, column) = self.line_info.get_line_col(token.pos);
-        slang_ir::source_location::SourceLocation::new(token.pos, line, column)
+        slang_ir::source_location::SourceLocation::new(token.pos, line, column, token.lexeme.len())
     }
 
     /// Consumes the current token if it matches the expected type

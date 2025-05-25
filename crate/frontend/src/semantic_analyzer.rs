@@ -7,7 +7,9 @@ use slang_ir::ast::{
 };
 use slang_ir::source_location::SourceLocation;
 use slang_ir::visitor::Visitor;
-use slang_types::types::{CompilationContext, SymbolKind, TypeId, TYPE_NAME_U64, TYPE_NAME_U32};
+use slang_types::types::{TypeId, TYPE_NAME_U64, TYPE_NAME_U32};
+use slang_compilation_context::compilation_context::CompilationContext;
+use slang_compilation_context::symbol_table::SymbolKind;
 
 use std::collections::HashMap;
 

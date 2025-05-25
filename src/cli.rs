@@ -9,7 +9,7 @@ use slang_frontend::error::{CompileResult, report_errors};
 use slang_frontend::lexer;
 use slang_frontend::parser;
 use slang_frontend::semantic_analyzer;
-use slang_types::types::CompilationContext;
+use slang_compilation_context::compilation_context::CompilationContext;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
