@@ -1,12 +1,12 @@
 use crate::ast::{
     BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
     LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
-    UnaryOperator,
+    UnaryOperator, AssignmentStatement,
 };
 use crate::Visitor;
 use slang_types::{
     TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I64,
-    TYPE_NAME_INT, TYPE_NAME_STRING, TYPE_NAME_U32, TYPE_NAME_U64,
+    TYPE_NAME_INT, TYPE_NAME_STRING, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_I32,
 };
 
 /// A visitor implementation that prints the AST in a human-readable format
@@ -107,7 +107,7 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level -= 1;
     }
 
-    fn visit_assignment_statement(&mut self, assign_stmt: &slang_ir::ast::AssignmentStatement) {
+    fn visit_assignment_statement(&mut self, assign_stmt: &AssignmentStatement) {
         println!("{}Assignment: {} =", self.indent(), assign_stmt.name);
         self.indent_level += 1;
         assign_stmt.value.accept(self);

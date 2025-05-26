@@ -209,7 +209,7 @@ fn compile_source_to_bytecode(source: &str) -> CompileResult<Chunk> {
     }
     semantic_analyzer::execute(&statements, &mut context)?;
     compiler::compile(&statements)
-        .map_err(|err_msg| vec![slang_frontend::error::CompilerError::new(err_msg, 0, 0, 0, None)])
+        .map_err(|err_msg| vec![slang_frontend::error::CompilerError::new(slang_frontend::error_codes::ErrorCode::GenericCompileError, err_msg, 0, 0, 0, None)])
 }
 
 /// Determine the output path for a compiled file

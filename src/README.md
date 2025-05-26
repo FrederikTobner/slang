@@ -195,4 +195,4 @@ The CLI provides comprehensive error reporting with:
 - **Source location information** - Line and column numbers for errors
 - **Colored output** - Visual distinction between error types
 - **Context preservation** - Full source code context for error reporting
-- **Graceful degradation** - Continues operation after recoverable errors 
+- **Graceful degradation** - Continues operation after recoverable errors

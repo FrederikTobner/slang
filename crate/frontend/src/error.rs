@@ -1,8 +1,11 @@
 use colored::Colorize;
+use crate::error_codes::ErrorCode;
 
 /// Represents a compiler error with a message, line number, column number, position, and token length
 #[derive(Debug)]
 pub struct CompilerError {
+    /// The structured error code for this error
+    pub error_code: ErrorCode,
     /// The error message
     pub message: String,
     /// The line number where the error occurred
@@ -16,9 +19,10 @@ pub struct CompilerError {
 }
 
 impl CompilerError {
-    /// Creates a new CompilerError with the given message, line number, column number, position, and token length
+    /// Creates a new CompilerError with the given error code, message, line number, column number, position, and token length
     ///
     /// ### Arguments
+    /// * `error_code` - The structured error code for this error
     /// * `message` - The error message
     /// * `line` - The line number where the error occurred
     /// * `column` - The column number where the error occurred
@@ -31,10 +35,12 @@ impl CompilerError {
     /// ### Example
     /// ```
     /// use slang_frontend::error::CompilerError;
+    /// use slang_frontend::error_codes::ErrorCode;
     ///
-    /// let error = CompilerError::new("Syntax error".to_string(), 10, 5, 0, Some(1));
+    /// let error = CompilerError::new(ErrorCode::ExpectedSemicolon, "Syntax error".to_string(), 10, 5, 0, Some(1));
     /// ```
     pub fn new(
+        error_code: ErrorCode,
         message: String,
         line: usize,
         column: usize,
@@ -42,6 +48,7 @@ impl CompilerError {
         token_length: Option<usize>,
     ) -> Self {
         Self {
+            error_code,
             message,
             line,
             column,
@@ -75,7 +82,7 @@ impl CompilerError {
         // Use self.token_length, defaulting to 1 if None
         let token_display_length = self.token_length.unwrap_or(1).max(1);
         let error_marker =
-            " ".repeat(col.saturating_sub(1)) + &"^".repeat(token_display_length).red().to_string();
+            " ".repeat(col.saturating_sub(1)) + &"^".repeat(token_display_length).bold().red().to_string();
 
         // Determine indentation based on the longest line number string in the vicinity if needed,
         // or just use a fixed reasonable indent. For now, using line_num_str.len() for current line.
@@ -86,20 +93,21 @@ impl CompilerError {
         let pipe = "|".yellow();
 
         // Build the nicely formatted error message
-        // Display the primary error message with file and line:col info first
+        // Display the primary error message with error code and file and line:col info first
         let mut result = format!(
-            "{}: {}\n  {} {}:{}:{}\n",
+            "{} {}: {}\n  {} {}:{}:{}\n",
             "error".red().bold(),
-            self.message.bold(),
+            self.error_code.to_string().bold().red(),
+            self.error_code.description(),
             arrow,
-            "input", // Assuming a generic filename, replace if actual filename is available
+            "input", // TODO: replace if actual filename is available
             line,
             col
         );
 
         result += &format!("{indent}{}\n", pipe);
         result += &format!("{} {} {}\n", line_num_str.yellow(), pipe, current_line_text);
-        result += &format!("{indent}{} {}\n", pipe, error_marker);
+        result += &format!("{indent}{} {} {}\n", pipe, error_marker, self.message.bold().red());
 
         result
     }

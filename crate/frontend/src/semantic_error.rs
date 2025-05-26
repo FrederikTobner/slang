@@ -1,4 +1,5 @@
 use crate::error::CompilerError;
+use crate::error_codes::ErrorCode;
 use slang_ir::SourceLocation;
 use slang_types::TypeId;
 use slang_compilation_context::CompilationContext;
@@ -452,11 +453,35 @@ impl SemanticAnalysisError {
         let location = self.get_location();
         let token_length = self.get_token_length();
         CompilerError::new(
+            self.error_code(),
             self.format_message(context),
             location.line,
             location.column,
             location.position,
             token_length,
         )
+    }
+
+    /// Get the appropriate error code for this semantic error
+    pub fn error_code(&self) -> ErrorCode {
+        match self {
+            SemanticAnalysisError::UndefinedVariable { .. } => ErrorCode::UndefinedVariable,
+            SemanticAnalysisError::VariableRedefinition { .. } => ErrorCode::VariableRedefinition,
+            SemanticAnalysisError::SymbolRedefinition { .. } => ErrorCode::SymbolRedefinition,
+            SemanticAnalysisError::InvalidFieldType { .. } => ErrorCode::InvalidFieldType,
+            SemanticAnalysisError::TypeMismatch { .. } => ErrorCode::TypeMismatch,
+            SemanticAnalysisError::OperationTypeMismatch { .. } => ErrorCode::OperationTypeMismatch,
+            SemanticAnalysisError::LogicalOperatorTypeMismatch { .. } => ErrorCode::LogicalOperatorTypeMismatch,
+            SemanticAnalysisError::ValueOutOfRange { .. } => ErrorCode::ValueOutOfRange,
+            SemanticAnalysisError::ArgumentCountMismatch { .. } => ErrorCode::ArgumentCountMismatch,
+            SemanticAnalysisError::ArgumentTypeMismatch { .. } => ErrorCode::ArgumentTypeMismatch,
+            SemanticAnalysisError::ReturnOutsideFunction { .. } => ErrorCode::ReturnOutsideFunction,
+            SemanticAnalysisError::ReturnTypeMismatch { .. } => ErrorCode::ReturnTypeMismatch,
+            SemanticAnalysisError::MissingReturnValue { .. } => ErrorCode::MissingReturnValue,
+            SemanticAnalysisError::UndefinedFunction { .. } => ErrorCode::UndefinedFunction,
+            SemanticAnalysisError::InvalidUnaryOperation { .. } => ErrorCode::InvalidUnaryOperation,
+            SemanticAnalysisError::AssignmentToImmutableVariable { .. } => ErrorCode::AssignmentToImmutableVariable,
+            SemanticAnalysisError::InvalidExpression { .. } => ErrorCode::InvalidExpression,
+        }
     }
 }
