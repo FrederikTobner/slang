@@ -70,37 +70,29 @@ impl CompilerError {
     pub fn format_for_display(&self, line_info: &LineInfo) -> String {
         let (line, col) = line_info.get_line_col(self.position);
 
-        // Get line text for current line
         let current_line_text = line_info
             .get_line_text(line)
             .unwrap_or("<line not available>");
 
-        // Format line numbers for consistent spacing
         let line_num_str = format!("{}", line);
 
-        // Create the error marker line with red carets
-        // Use self.token_length, defaulting to 1 if None
         let token_display_length = self.token_length.unwrap_or(1).max(1);
         let error_marker =
             " ".repeat(col.saturating_sub(1)) + &"^".repeat(token_display_length).bold().red().to_string();
 
-        // Determine indentation based on the longest line number string in the vicinity if needed,
-        // or just use a fixed reasonable indent. For now, using line_num_str.len() for current line.
         let indent_width = line_num_str.len() + 1;
         let indent = " ".repeat(indent_width);
 
         let arrow = "-->".yellow();
         let pipe = "|".yellow();
 
-        // Build the nicely formatted error message
-        // Display the primary error message with error code and file and line:col info first
         let mut result = format!(
             "{} {}: {}\n  {} {}:{}:{}\n",
             "error".red().bold(),
             self.error_code.to_string().bold().red(),
             self.error_code.description(),
             arrow,
-            "input", // TODO: replace if actual filename is available
+            "main", // TODO: replace if actual filename is available
             line,
             col
         );

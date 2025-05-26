@@ -10,6 +10,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ErrorCode {
     // Parse Errors (1000-1999)
+
     /// Expected a semicolon after a statement
     ExpectedSemicolon = 1001,
     /// Expected a closing brace
@@ -72,6 +73,7 @@ pub enum ErrorCode {
     UnknownType = 1030,
 
     // Semantic Analysis Errors (2000-2999)
+    
     /// Variable used before being defined
     UndefinedVariable = 2001,
     /// Variable redefinition in the same scope
@@ -108,6 +110,7 @@ pub enum ErrorCode {
     InvalidExpression = 2017,
 
     // Generic Compile Errors (3000-3999)
+
     /// Generic compile error not categorized
     GenericCompileError = 3000,
 }

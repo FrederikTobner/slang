@@ -1,4 +1,4 @@
-use crate::error::{SlangResult, SlangError};
+use crate::error::{SlangResult, CliError};
 use crate::exit;
 use clap::{Parser as ClapParser, Subcommand};
 use colored::Colorize;
@@ -244,7 +244,7 @@ fn resolve_output_path(input: &str, output: Option<String>) -> String {
 ///
 /// The file contents or an error message
 fn read_source_file(path: &str) -> SlangResult<String> {
-    fs::read_to_string(path).map_err(|e| SlangError::from_io_error(e, path))
+    fs::read_to_string(path).map_err(|e| CliError::from_io_error(e, path))
 }
 
 /// Write a bytecode chunk to a file
@@ -260,8 +260,7 @@ fn read_source_file(path: &str) -> SlangResult<String> {
 fn write_bytecode(chunk: &Chunk, output_path: &str) -> SlangResult<()> {
     let path = Path::new(output_path);
 
-    // Create a zip file
-    let file = File::create(path).map_err(|e| SlangError::Io {
+    let file = File::create(path).map_err(|e| CliError::Io {
         exit_code: if e.kind() == std::io::ErrorKind::PermissionDenied {
             exit::Code::NoPerm
         } else {
@@ -277,7 +276,7 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> SlangResult<()> {
         .unix_permissions(0o755);
 
     zip.start_file("bytecode.bin", options)
-        .map_err(|e| SlangError::Zip {
+        .map_err(|e| CliError::Zip {
             source: e,
             context: "Failed to create zip entry".to_string(),
             exit_code: exit::Code::IoErr,
@@ -287,21 +286,21 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> SlangResult<()> {
         let mut cursor = std::io::Cursor::new(Vec::new());
         chunk
             .serialize(&mut cursor)
-            .map_err(|e| SlangError::Serialization {
+            .map_err(|e| CliError::Serialization {
                 source: Box::new(e),
                 context: "Failed to serialize bytecode".to_string(),
                 exit_code: exit::Code::Software,
             })?;
 
         zip.write_all(&cursor.into_inner())
-            .map_err(|e| SlangError::Io {
+            .map_err(|e| CliError::Io {
                 source: e,
                 path: output_path.to_string(),
                 exit_code: exit::Code::IoErr,
             })?;
     }
 
-    zip.finish().map_err(|e| SlangError::Zip {
+    zip.finish().map_err(|e| CliError::Zip {
         source: e,
         context: "Failed to finalize zip file".to_string(),
         exit_code: exit::Code::IoErr,
@@ -320,29 +319,28 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> SlangResult<()> {
 ///
 /// The bytecode chunk or an error message
 fn read_bytecode_file(input_path: &str) -> SlangResult<Chunk> {
-    let file = File::open(input_path).map_err(|e| SlangError::Io {
+    let file = File::open(input_path).map_err(|e| CliError::Io {
         source: e,
         path: input_path.to_string(),
         exit_code: exit::Code::NoInput,
     })?;
 
-    let mut archive = ZipArchive::new(file).map_err(|e| SlangError::Zip {
+    let mut archive = ZipArchive::new(file).map_err(|e| CliError::Zip {
         source: e,
         context: "Failed to read zip archive".to_string(),
         exit_code: exit::Code::Dataerr,
     })?;
 
-    // Find and extract the bytecode file
     if let Ok(mut bytecode_file) = archive.by_name("bytecode.bin") {
         let mut buffer = Vec::new();
-        std::io::copy(&mut bytecode_file, &mut buffer).map_err(|e| SlangError::Io {
+        std::io::copy(&mut bytecode_file, &mut buffer).map_err(|e| CliError::Io {
             source: e,
             path: input_path.to_string(),
             exit_code: exit::Code::IoErr,
         })?;
 
         let mut cursor = std::io::Cursor::new(buffer);
-        let chunk = Chunk::deserialize(&mut cursor).map_err(|e| SlangError::Serialization {
+        let chunk = Chunk::deserialize(&mut cursor).map_err(|e| CliError::Serialization {
             source: Box::new(e),
             context:"Failed to deserialize bytecode".to_string(),
             exit_code: exit::Code::Dataerr,
@@ -350,7 +348,7 @@ fn read_bytecode_file(input_path: &str) -> SlangResult<Chunk> {
 
         Ok(chunk)
     } else {
-        Err(SlangError::Generic {
+        Err(CliError::Generic {
             message: "Invalid bytecode file format: missing bytecode.bin".to_string(),
             exit_code: exit::Code::Dataerr,
         })

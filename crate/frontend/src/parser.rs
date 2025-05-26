@@ -281,7 +281,6 @@ impl<'a> Parser<'a> {
             )));
         }
 
-        // Parse return type
         let return_type = if self.match_token(&Tokentype::Arrow) {
             if !self.check(&Tokentype::Identifier) {
                 return Err(self.error(ErrorCode::ExpectedType, "Expected return type after '->'"));
@@ -292,7 +291,6 @@ impl<'a> Parser<'a> {
             let token_pos = type_name_token.pos;
             let token_len = type_name_token.lexeme.len();
 
-            // Explicitly reject placeholder types as type specifiers
             if type_name == TYPE_NAME_INT {
                 return Err(self.error_previous(ErrorCode::InvalidSyntax, &format!(
                     "'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead",
@@ -368,12 +366,10 @@ impl<'a> Parser<'a> {
             return Err(self.error(ErrorCode::ExpectedIdentifier, "Expected parameter name"));
         }
 
-        // Get position first
         let token_pos = self.peek().pos;
         let token = self.advance();
         let name = token.lexeme.clone();
 
-        // Create location
         let (line, column) = self.line_info.get_line_col(token_pos);
         let location = SourceLocation::new(token_pos, line, column, name.len());
 
@@ -390,7 +386,6 @@ impl<'a> Parser<'a> {
         let token_pos = type_name_token.pos;
         let token_len = type_name_token.lexeme.len();
 
-        // Use context to resolve type by name
         let unknown_type = TypeId(PrimitiveType::Unknown as usize);
         let param_type_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
             if symbol.kind == SymbolKind::Type {
@@ -415,16 +410,6 @@ impl<'a> Parser<'a> {
             }
         };
 
-        if param_type == unknown_type
-            && !self.errors.iter().any(|e| {
-                e.message
-                    .contains(&format!("Unknown type name: {}", type_name))
-            })
-        {
-            // Avoid double error if already pushed above, but ensure an error if lookup failed silently
-            return Err(self.error_previous(ErrorCode::InvalidSyntax, &format!("Unknown type: {}", type_name)));
-        }
-
         Ok(Parameter {
             name,
             param_type,
@@ -438,7 +423,6 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed type definition or an error message
     fn type_definition_statement(&mut self) -> Result<Statement, ParseError> {
-        // Expect struct name
         if !self.check(&Tokentype::Identifier) {
             return Err(self.error(ErrorCode::ExpectedIdentifier, "Expected struct name after 'struct' keyword"));
         }
@@ -447,7 +431,6 @@ impl<'a> Parser<'a> {
         let location = self.source_location_from_token(token);
         let name = self.advance().lexeme.clone();
 
-        // Expect opening brace
         if !self.match_token(&Tokentype::LeftBrace) {
             return Err(self.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after struct name"));
         }
@@ -494,14 +477,12 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed variable declaration or an error message
     fn let_statement(&mut self) -> Result<Statement, ParseError> {
-        // Check for optional 'mut' keyword
         let is_mutable = self.match_token(&Tokentype::Mut);
         
         if !self.check(&Tokentype::Identifier) {
             return Err(self.error(ErrorCode::ExpectedIdentifier, "Expected identifier after 'let'"));
         }
 
-        // Get the position before advancing
         let token_pos = self.peek().pos;
         let (line, column) = self.line_info.get_line_col(token_pos);
 
@@ -520,7 +501,6 @@ impl<'a> Parser<'a> {
             let token_pos = type_name_token.pos;
             let token_len = type_name_token.lexeme.len();
 
-            // Explicitly reject placeholder types as type specifiers
             if type_name == TYPE_NAME_INT {
                 return Err(self.error_previous(ErrorCode::InvalidSyntax, &format!(
                     "'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead",
@@ -533,7 +513,6 @@ impl<'a> Parser<'a> {
                 )));
             }
 
-            // Use context to resolve type by name
             let unknown_type = TypeId(PrimitiveType::Unknown as usize);
             let var_type_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
                 if symbol.kind == SymbolKind::Type {
@@ -564,7 +543,6 @@ impl<'a> Parser<'a> {
                         .contains(&format!("Unknown type name: {}", type_name))
                 })
             {
-                // Avoid double error if already pushed above
                 return Err(self.error_previous(ErrorCode::InvalidSyntax, &format!("Unknown type: {}", type_name)));
             }
         }
@@ -575,7 +553,6 @@ impl<'a> Parser<'a> {
 
         let expr = self.expression()?;
 
-        // Expect semicolon
         if !self.match_token(&Tokentype::Semicolon) {
             return Err(self.error(ErrorCode::ExpectedSemicolon, "Expected ';' after let statement"));
         }
@@ -934,7 +911,6 @@ impl<'a> Parser<'a> {
             }
         }
 
-        // Unspecified float literal
         Ok(Expression::Literal(LiteralExpr {
             value: LiteralValue::UnspecifiedFloat(value),
             expr_type: TypeId(PrimitiveType::UnspecifiedFloat as usize) ,
@@ -952,17 +928,14 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed function call expression or an error message
     fn finish_call(&mut self, name: String) -> Result<Expression, ParseError> {
-        // Store the token position of the function name for the start location
         let name_token = self.previous();
         let start_location = self.source_location_from_token(name_token);
 
         let mut arguments = Vec::new();
 
         if !self.check(&Tokentype::RightParen) {
-            // Parse first argument
             arguments.push(self.expression()?);
 
-            // Parse rest of the arguments
             while self.match_token(&Tokentype::Comma) {
                 if arguments.len() >= 255 {
                     return Err(self.error(ErrorCode::InvalidSyntax, "Cannot have more than 255 arguments"));
@@ -975,7 +948,6 @@ impl<'a> Parser<'a> {
             return Err(self.error(ErrorCode::ExpectedClosingParen, "Expected ')' after function arguments"));
         }
 
-        // Get the location of the closing paren to create a span
         let closing_paren_token = self.previous();
         let end_location = self.source_location_from_token(closing_paren_token);
         let span_location = start_location.span_to(&end_location);
@@ -1096,7 +1068,6 @@ impl<'a> Parser<'a> {
         let type_name_token = self.advance();
         let type_name = type_name_token.lexeme.clone();
 
-        // Check for placeholder types
         if type_name == TYPE_NAME_INT {
             return Err(self.error(ErrorCode::UnknownType, &format!(
                 "'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead",

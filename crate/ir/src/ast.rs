@@ -260,8 +260,12 @@ pub struct AssignmentStatement {
 
 impl Statement {
     /// Accepts a visitor for this statement
-    ///
-    /// This is part of the visitor pattern implementation.
+    /// 
+    /// ### Arguments
+    /// * `visitor` - The visitor to accept
+    /// 
+    /// ### Returns
+    /// The result of the visitor's visit method for this statement
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
         match self {
             Statement::Let(let_stmt) => visitor.visit_let_statement(let_stmt),
@@ -282,7 +286,11 @@ impl Statement {
 impl Expression {
     /// Accepts a visitor for this expression
     ///
-    /// This is part of the visitor pattern implementation.
+    /// ### Arguments
+    /// * `visitor` - The visitor to accept
+    /// 
+    /// ### Returns
+    /// The result of the visitor's visit method for this expression
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
         match self {
             Expression::Literal(lit) => visitor.visit_literal_expression(lit),

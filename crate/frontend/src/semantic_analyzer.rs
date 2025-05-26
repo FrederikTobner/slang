@@ -321,16 +321,13 @@ impl<'a> SemanticAnalyzer<'a> {
         expr: &Expression,
         target_type: &TypeId,
     ) -> SemanticResult {
-        // Special case for unary minus applied to integer literals assigned to unsigned types
         if let Expression::Unary(unary_expr) = expr {
             if unary_expr.operator == UnaryOperator::Negate {
                 if let Expression::Literal(lit) = &*unary_expr.right {
                     if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                        // We have a negated integer literal (e.g., -1)
                         if self.context.get_type_name(target_type) == "u32"
                             || self.context.get_type_name(target_type) == "u64"
                         {
-                            // Trying to assign negative value to unsigned type
                             return Err(SemanticAnalysisError::ValueOutOfRange {
                                 value: format!("-{}", n),
                                 target_type: target_type.clone(),
@@ -518,15 +515,11 @@ impl<'a> SemanticAnalyzer<'a> {
         expr_type: TypeId,
     ) -> SemanticResult {
         if let_stmt.expr_type == TypeId(PrimitiveType::Unknown as usize) {
-            // Type is not specified, infer from expression
             return Ok(expr_type);
         }
 
-        // Type is specified, check for compatibility
         if let_stmt.expr_type == expr_type {
-            // Special case: check for negated literals with unsigned types
             if self.is_unsigned_type(&let_stmt.expr_type) {
-                // For unsigned types, check if we're trying to assign a negative value
                 self.check_unspecified_int_for_type(&let_stmt.value, &let_stmt.expr_type)?;
             }
             return Ok(let_stmt.expr_type.clone());
@@ -560,10 +553,9 @@ impl<'a> SemanticAnalyzer<'a> {
     fn handle_unspecified_int_assignment(
         &mut self,
         let_stmt: &LetStatement,
-        _expr_type: &TypeId, // expr_type is known to be unspecified_int_type
+        _expr_type: &TypeId,
     ) -> SemanticResult {
         if self.is_integer_type(&let_stmt.expr_type) {
-            // Check if the literal value fits into the declared integer type
             self.check_unspecified_int_for_type(&let_stmt.value, &let_stmt.expr_type)
         } else {
             Err(SemanticAnalysisError::TypeMismatch {
@@ -587,7 +579,7 @@ impl<'a> SemanticAnalyzer<'a> {
     fn handle_unspecified_float_assignment(
         &mut self,
         let_stmt: &LetStatement,
-        _expr_type: &TypeId, // expr_type is known to be unspecified_float_type
+        _expr_type: &TypeId,
     ) -> SemanticResult {
         if self.is_float_type(&let_stmt.expr_type) {
             self.check_unspecified_float_for_type(&let_stmt.value, &let_stmt.expr_type)
@@ -850,7 +842,6 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
 
         let mut field_types_for_registration = Vec::new();
         for (name, type_id) in &type_def.fields {
-            // Ensure field types are concrete and known
             if *type_id == TypeId(PrimitiveType::Unknown as usize)
                 || *type_id == TypeId(PrimitiveType::UnspecifiedInt as usize)
                 || *type_id == TypeId(PrimitiveType::UnspecifiedFloat as usize)
@@ -865,7 +856,6 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             field_types_for_registration.push((name.clone(), type_id.clone()));
         }
 
-        // No need to create StructType here, register_struct_type will do it.
         match self
             .context
             .register_struct_type(type_def.name.clone(), field_types_for_registration)
@@ -939,9 +929,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
     }
 
     fn visit_assignment_statement(&mut self, assign_stmt: &slang_ir::ast::AssignmentStatement) -> SemanticResult {
-        // Check if the variable exists
         if let Some(var_info) = self.resolve_variable(&assign_stmt.name) {
-            // Check if the variable is mutable
             if !var_info.is_mutable {
                 return Err(SemanticAnalysisError::AssignmentToImmutableVariable {
                     name: assign_stmt.name.clone(),
@@ -949,13 +937,11 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                 });
             }
 
-            // Check if the assigned value's type matches the variable's type
             let expr_type = self.visit_expression(&assign_stmt.value)?;
             
             if var_info.type_id == expr_type {
                 Ok(var_info.type_id)
             } else {
-                // Allow assignment of unspecified integers/floats to concrete types
                 if expr_type == TypeId(slang_types::types::PrimitiveType::UnspecifiedInt as usize) {
                     Ok(var_info.type_id)
                 } else if expr_type == TypeId(slang_types::types::PrimitiveType::UnspecifiedFloat as usize) {
