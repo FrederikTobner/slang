@@ -7,7 +7,7 @@ fn test_type_mismatch_in_function_argument() {
         
         expect_int("not an integer");
     "#;
-    execute_program_expect_error(program, "Type mismatch: function \'expect_int\' expects argument 1 to be i32, but got string");
+    execute_program_expect_error(program, "[E2010]", "Type mismatch: function \'expect_int\' expects argument 1 to be i32, but got string");
 }
 
 
@@ -20,7 +20,7 @@ fn test_function_wrong_parameter_count() {
         
         print_value(add(5));
     "#;
-    execute_program_expect_error(program, "Function \'add\' expects 2 arguments, but got 1");
+    execute_program_expect_error(program, "[E2009]", "Function \'add\' expects 2 arguments, but got 1");
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn test_function_wrong_parameter_types() {
         
         print_value(add("hello", 5));
     "#;
-    execute_program_expect_error(program, "Type mismatch: function \'add\' expects argument 1 to be i32, but got string\n");
+    execute_program_expect_error(program, "[E2010]", "Type mismatch: function \'add\' expects argument 1 to be i32, but got string\n");
 }
 
 #[test]
@@ -44,7 +44,7 @@ fn test_return_type_mismatch() {
         
         print_value(get_number());
     "#;
-    execute_program_expect_error(program, "Type mismatch: function returns i32 but got string");
+    execute_program_expect_error(program, "[E2012]", "Type mismatch: function returns i32 but got string");
 }
 
 
@@ -55,7 +55,7 @@ fn test_undefined_function() {
         print_value(result);
     "#;
     
-    execute_program_expect_error(program, "Undefined function");
+    execute_program_expect_error(program, "[E2014]", "Undefined function");
 }
 
 #[test]
@@ -69,5 +69,5 @@ fn test_integer_return_type() {
         print_value(result);
     "#;
     
-    execute_program_expect_error(program, "\'int\' is not a valid type specifier. Use \'i32\', \'i64\', \'u32\', or \'u64\' instead");
+    execute_program_expect_error(program, "[E1029]", "\'int\' is not a valid type specifier. Use \'i32\', \'i64\', \'u32\', or \'u64\' instead");
 }

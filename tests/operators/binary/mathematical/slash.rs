@@ -125,7 +125,7 @@ fn with_incompatible_types() {
                 left_type, right_type
             );
             
-            execute_program_expect_error(&program, &expected_error);
+            execute_program_expect_error(&program, "[E2006]", &expected_error);
         }
     }
 }

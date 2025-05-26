@@ -6,7 +6,7 @@ fn undefined_variable() {
         print_value(y); 
     "#;
     
-    execute_program_expect_error(program, "Undefined variable: y");
+    execute_program_expect_error(program, "[E2001]", "Undefined variable: y");
 }
 
 
@@ -16,6 +16,6 @@ fn unknown_type() {
     let program = r#"
         let a: unknown = 0; 
     "#;
-    execute_program_expect_error(program, "Unknown type: unknown");
+    execute_program_expect_error(program, "[E1029]", "Unknown type: unknown");
 }
 

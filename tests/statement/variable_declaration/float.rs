@@ -51,7 +51,7 @@ fn from_true_literal(
     let program = format!(r#"
         let a: {} = true;
     "#, type_name);
-    execute_program_expect_error(&program, &format!("Type mismatch: variable a is {} but expression is bool", type_name));
+    execute_program_expect_error(&program, "[E2005]", &format!("Type mismatch: variable a is {} but expression is bool", type_name));
 }
 
 #[rstest]
@@ -63,7 +63,7 @@ fn from_false_literal(
     let program = format!(r#"
         let a: {} = false;
     "#, type_name);
-    execute_program_expect_error(&program, &format!("Type mismatch: variable a is {} but expression is bool", type_name));
+    execute_program_expect_error(&program, "[E2005]", &format!("Type mismatch: variable a is {} but expression is bool", type_name));
 }
 
 #[rstest]
@@ -75,7 +75,7 @@ fn from_string_literal(
     let program = format!(r#"
         let a: {} = "hello";
     "#, type_name);
-    execute_program_expect_error(&program, &format!("Type mismatch: variable a is {} but expression is string", type_name));
+    execute_program_expect_error(&program, "[E2005]", &format!("Type mismatch: variable a is {} but expression is string", type_name));
 }
 
 #[rstest]
@@ -87,7 +87,7 @@ fn from_integer_literal(
     let program = format!(r#"
         let a: {} = 42;
     "#, type_name);
-    execute_program_expect_error(&program, &format!("Type mismatch: variable a is {} but expression is int", type_name));
+    execute_program_expect_error(&program, "[E2005]", &format!("Type mismatch: variable a is {} but expression is int", type_name));
 }
 
 #[rstest]
@@ -99,7 +99,7 @@ fn from_integer_literal_with_i32_suffix(
     let program = format!(r#"
         let a: {} = 42i32;
     "#, type_name);
-    execute_program_expect_error(&program, &format!("Type mismatch: variable a is {} but expression is i32", type_name));
+    execute_program_expect_error(&program, "[E2005]", &format!("Type mismatch: variable a is {} but expression is i32", type_name));
 }
 
 #[rstest]
@@ -111,7 +111,7 @@ fn from_integer_literal_with_i64_suffix(
     let program = format!(r#"
         let a: {} = 42i64;
     "#, type_name);
-    execute_program_expect_error(&program, &format!("Type mismatch: variable a is {} but expression is i64", type_name));
+    execute_program_expect_error(&program, "[E2005]", &format!("Type mismatch: variable a is {} but expression is i64", type_name));
 }
 
 
@@ -124,7 +124,7 @@ fn from_integer_literal_with_u32_suffix(
     let program = format!(r#"
         let a: {} = 42u32;
     "#, type_name);
-    execute_program_expect_error(&program, &format!("Type mismatch: variable a is {} but expression is u32", type_name));
+    execute_program_expect_error(&program, "[E2005]", &format!("Type mismatch: variable a is {} but expression is u32", type_name));
 }
 
 
@@ -138,7 +138,7 @@ fn from_float_literal_with_u64_suffix(
     let program = format!(r#"
         let a: {} = 42u64;
     "#, type_name);
-    execute_program_expect_error(&program, &format!("Type mismatch: variable a is {} but expression is u64", type_name));
+    execute_program_expect_error(&program, "[E2005]", &format!("Type mismatch: variable a is {} but expression is u64", type_name));
 }
 
 
@@ -147,7 +147,7 @@ fn float_type() {
     let program = r#"
         let a: float = 0.0; 
     "#;
-    execute_program_expect_error(program, "\'float\' is not a valid type specifier. Use \'f32\' or \'f64\' instead");
+    execute_program_expect_error(program, "[E1029]", "\'float\' is not a valid type specifier. Use \'f32\' or \'f64\' instead");
 }
 
 #[rstest]
@@ -159,5 +159,5 @@ fn using_type_as_variable_name(
     let program = format!(r#"
         let {} = 42.0;
     "#, type_name);
-    execute_program_expect_error(&program, &format!("Symbol \'{}\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.", type_name));
+    execute_program_expect_error(&program, "[E2003]", &format!("Symbol \'{}\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.", type_name));
 }
