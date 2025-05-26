@@ -6,7 +6,7 @@ fn missing_semicolon() {
         let a = 42
         print_value(a);
     "#;
-    execute_program_expect_error(program, "Expected \';\' after let statement");
+    execute_program_expect_error(program, "[E1001]", "Expected \';\' after let statement");
 }
 
 #[test]
@@ -14,7 +14,7 @@ fn mismatched_brackets() {
     let program = r#"
         fn test() {
     "#;
-    execute_program_expect_error(program, "Expected \'}\' after function body");
+    execute_program_expect_error(program, "[E1002]", "Expected \'}\' after function body");
 }
 
 #[test]
@@ -23,7 +23,7 @@ fn mismatched_parentheses() {
         let a = 42;
         print_value(a;
     "#;
-    execute_program_expect_error(program, "Expected \')\' after function arguments");
+    execute_program_expect_error(program, "[E1003]", "Expected \')\' after function arguments");
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn invalid_assignment() {
         let a = 42;
         42 = a;
     "#;
-    execute_program_expect_error(program, "Expected \';\' after expression");
+    execute_program_expect_error(program, "[E1001]", "Expected \';\' after expression");
 }
 
 #[test]
@@ -41,7 +41,7 @@ fn invalid_variable_declaration() {
         let 123abc = 42;
         print_value(123abc);
     "#;
-    execute_program_expect_error(program, "Expected identifier after \'let\'");
+    execute_program_expect_error(program, "[E1007]", "Expected identifier after \'let\'");
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn invalid_function_declaration() {
             print_value(42);
         }
     "#;
-    execute_program_expect_error(program, "Expected function name");
+    execute_program_expect_error(program, "[E1007]", "Expected function name");
 }
 
 #[test]
@@ -61,5 +61,5 @@ fn redefined_variable() {
         let a = 43;
         print_value(a);
     "#;
-    execute_program_expect_error(program, "Variable \'a\' already defined");
+    execute_program_expect_error(program, "[E2002]", "Variable \'a\' already defined");
 }

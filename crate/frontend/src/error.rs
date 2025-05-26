@@ -1,23 +1,33 @@
 use colored::Colorize;
+use crate::error_codes::ErrorCode;
 
-/// Represents a compiler error with a message, line number, and column number
+/// Represents a compiler error with a message, line number, column number, position, and token length
 #[derive(Debug)]
 pub struct CompilerError {
+    /// The structured error code for this error
+    pub error_code: ErrorCode,
     /// The error message
     pub message: String,
     /// The line number where the error occurred
     pub line: usize,
     /// The column number where the error occurred
     pub column: usize,
+    /// The byte offset position of the error in the source code
+    pub position: usize,
+    /// The length of the token causing the error, if applicable
+    pub token_length: Option<usize>,
 }
 
 impl CompilerError {
-    /// Creates a new CompilerError with the given message, line number, and column number
-    /// 
+    /// Creates a new CompilerError with the given error code, message, line number, column number, position, and token length
+    ///
     /// ### Arguments
+    /// * `error_code` - The structured error code for this error
     /// * `message` - The error message
     /// * `line` - The line number where the error occurred
     /// * `column` - The column number where the error occurred
+    /// * `position` - The byte offset position of the error
+    /// * `token_length` - The length of the token, if applicable
     ///
     /// ### Returns
     /// A new CompilerError object
@@ -25,15 +35,73 @@ impl CompilerError {
     /// ### Example
     /// ```
     /// use slang_frontend::error::CompilerError;
-    /// 
-    /// let error = CompilerError::new("Syntax error".to_string(), 10, 5);
+    /// use slang_frontend::error_codes::ErrorCode;
+    ///
+    /// let error = CompilerError::new(ErrorCode::ExpectedSemicolon, "Syntax error".to_string(), 10, 5, 0, Some(1));
     /// ```
-    pub fn new(message: String, line: usize, column: usize) -> Self {
+    pub fn new(
+        error_code: ErrorCode,
+        message: String,
+        line: usize,
+        column: usize,
+        position: usize,
+        token_length: Option<usize>,
+    ) -> Self {
         Self {
+            error_code,
             message,
             line,
             column,
+            position,
+            token_length,
         }
+    }
+
+    /// Format an error message with line information and source code snippet
+    ///
+    /// This creates a nicely formatted error message similar to Rust's compiler errors,
+    /// with line numbers, source code context, and arrows pointing to the error location.
+    ///
+    /// ### Arguments
+    /// * `line_info` - LineInfo object for the source code context
+    ///
+    /// ### Returns
+    /// A formatted error message string
+    pub fn format_for_display(&self, line_info: &LineInfo) -> String {
+        let (line, col) = line_info.get_line_col(self.position);
+
+        let current_line_text = line_info
+            .get_line_text(line)
+            .unwrap_or("<line not available>");
+
+        let line_num_str = format!("{}", line);
+
+        let token_display_length = self.token_length.unwrap_or(1).max(1);
+        let error_marker =
+            " ".repeat(col.saturating_sub(1)) + &"^".repeat(token_display_length).bold().red().to_string();
+
+        let indent_width = line_num_str.len() + 1;
+        let indent = " ".repeat(indent_width);
+
+        let arrow = "-->".yellow();
+        let pipe = "|".yellow();
+
+        let mut result = format!(
+            "{} {}: {}\n  {} {}:{}:{}\n",
+            "error".red().bold(),
+            self.error_code.to_string().bold().red(),
+            self.error_code.description(),
+            arrow,
+            "main", // TODO: replace if actual filename is available
+            line,
+            col
+        );
+
+        result += &format!("{indent}{}\n", pipe);
+        result += &format!("{} {} {}\n", line_num_str.yellow(), pipe, current_line_text);
+        result += &format!("{indent}{} {} {}\n", pipe, error_marker, self.message.bold().red());
+
+        result
     }
 }
 
@@ -47,9 +115,14 @@ impl std::fmt::Display for CompilerError {
 pub type CompileResult<T> = Result<T, Vec<CompilerError>>;
 
 /// Reports a list of compiler errors to stderr
-pub fn report_errors(errors: &[CompilerError]) {
+///
+/// ### Arguments
+/// * `errors` - A slice of CompilerError to report
+/// * `source` - The source code string, used for generating line information
+pub fn report_errors(errors: &[CompilerError], source: &str) {
+    let line_info = LineInfo::new(source);
     for error in errors.iter() {
-        eprintln!("{}", error);
+        eprintln!("{}", error.format_for_display(&line_info));
     }
 }
 
@@ -127,10 +200,10 @@ impl LineInfo<'_> {
 
     /// Get the line and column number for a token position
     ///
-    /// # Arguments
+    /// ### Arguments
     /// * `pos` - The position of the token in the source code
     ///
-    /// # Returns
+    /// ### Returns
     /// A tuple containing the line number and column number
     pub fn get_line_col(&self, pos: usize) -> (usize, usize) {
         match self.line_starts.binary_search(&pos) {
@@ -170,45 +243,5 @@ impl LineInfo<'_> {
             };
 
         Some(&self.source[start..actual_end])
-    }
-
-    /// Format an error message with line information and source code snippet
-    ///
-    /// This creates a nicely formatted error message similar to Rust's compiler errors,
-    /// with line numbers, source code context, and arrows pointing to the error location.
-    ///
-    /// # Arguments
-    /// * `pos` - The position of the error in the source code
-    /// * `message` - The error message
-    /// * `token_length` - The length of the problematic token
-    ///
-    /// # Returns
-    /// A formatted error message string
-    pub fn format_error(&self, pos: usize, message: &str, token_length: usize) -> String {
-        let (line, col) = self.get_line_col(pos);
-
-        // Get line text for current line and previous line if available
-        let current_line_text = self.get_line_text(line).unwrap_or("<line not available>");
-
-        // Format line numbers for consistent spacing
-        let line_num = format!("{}", line);
-
-        // Create the error marker line with red carets
-        let error_marker = " ".repeat(col - 1) + &"^".repeat(token_length.max(1)).red().to_string();
-        // Format the line number as a string to determine indentation
-        let line_string = format!("{}", line);
-        // Create indentation with 1 more whitespace than the line string length
-        let indent = " ".repeat(line_string.len() + 1);
-        let arrow = "-->".yellow();
-        // Build the nicely formatted error message
-        let pipe = "|".yellow();
-        let mut result = format!("  {} line {}:{}\n{indent}{}\n", arrow, line, col, pipe);
-        result += &format!("{} {} {}\n", line_num.yellow(), pipe, current_line_text);
-        result += &format!("{indent}{} {}\n", pipe, error_marker);
-
-        // Create error marker with caret depending on if we know the token length
-        result += &format!("{indent}{} {}\n", pipe, message);
-
-        result
     }
 }

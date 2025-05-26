@@ -16,7 +16,7 @@ The types crate defines the complete type system of Slang. It provides:
 The types crate consists of these key components:
 
 - **Type Definitions (`types.rs`)**: Core type definitions including primitives and composite types
-- **Type Registry**: Centralized system for registering and looking up types
+- **Type Registry(`registry.rs`)** Centralized system for registering and looking up types
 - **Type Checking Logic**: Utilities for type compatibility and conversions
 - **Core Library (`lib.rs`)**: Exports the public API and initializes the type system
 

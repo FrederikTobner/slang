@@ -36,7 +36,7 @@ fn with_string() {
         let a: string = "Hello";
         print_value(-a);
     "#;
-    execute_program_expect_error(program, "Cannot negate non-numeric type \'string\'");
+    execute_program_expect_error(program, "[E2015]", "Cannot negate non-numeric type \'string\'");
 }
 
 #[test]
@@ -45,7 +45,7 @@ fn with_unsigned_integer() {
         let a: u32 = 42;
         print_value(-a);
     "#;
-    execute_program_expect_error(program, "Cannot negate unsigned type");
+    execute_program_expect_error(program, "[E2015]", "Cannot negate unsigned type");
 }
 
 #[test]

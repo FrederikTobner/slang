@@ -51,6 +51,34 @@ fn with_float_literals(#[case] type_name: &str) {
     execute_program_and_assert(&program, "42");
 }
 
+#[rstest]
+#[case("")] // No type suffix
+#[case("i32")]
+#[case("i64")]
+#[case("u32")]
+#[case("u64")]
+fn integer_division_ignores_remainder(
+    #[case] type_name: &str
+) {
+    let program = format!(r#"
+    print_value(3{} / 2{});
+    "#, type_name, type_name);
+    execute_program_and_assert(&program, "1");
+}
+
+#[rstest]
+#[case("")] // No type suffix
+#[case("f32")]
+#[case("f64")]
+fn integer_division_uses_remainder(
+    #[case] type_name: &str
+) {
+    let program = format!(r#"
+    print_value(3.0{} / 2.0{});
+    "#, type_name, type_name);
+    execute_program_and_assert(&program, "1.5");
+}
+
 #[test]
 fn with_incompatible_types() {
     // Define all the types we want to test
@@ -97,7 +125,7 @@ fn with_incompatible_types() {
                 left_type, right_type
             );
             
-            execute_program_expect_error(&program, &expected_error);
+            execute_program_expect_error(&program, "[E2006]", &expected_error);
         }
     }
 }

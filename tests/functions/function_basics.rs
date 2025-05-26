@@ -1,7 +1,7 @@
 use crate::test_utils::execute_program_and_assert;
 
 #[test]
-fn test_simple_function_definition_and_call() {
+fn with_multiple_params() {
     let program = r#"
         fn add(a: i32, b: i32) -> i32 {
             return a + b;
@@ -13,7 +13,7 @@ fn test_simple_function_definition_and_call() {
 }
 
 #[test]
-fn test_function_with_no_params() {
+fn function_with_no_params() {
     let program = r#"
         fn get_magic_number() -> i32 {
             return 42;
@@ -38,7 +38,7 @@ fn test_empty_return() {
 }
 
 #[test]
-fn test_function_with_different_return_types() {
+fn with_different_return_types() {
     let program = r#"
         fn get_string() -> string {
             return "Hello world";
@@ -62,7 +62,7 @@ fn test_function_with_different_return_types() {
 }
 
 #[test]
-fn test_nested_function_calls() {
+fn nested_function_calls() {
     let program = r#"
         fn add(a: i32, b: i32)-> i32 {
             return a + b;
@@ -75,4 +75,20 @@ fn test_nested_function_calls() {
         print_value(add(multiply(3, 10), 12));
     "#;
     execute_program_and_assert(program, "42");
+}
+
+#[test]
+fn arguments_are_passed_by_value() {
+    let program = r#"
+        fn modify_value(x: i32) -> i32 {
+            x = x + 10;
+            return x;
+        }
+        
+        let mut a : i32 = 5;
+        let b = modify_value(a);
+        
+        print_value(a); // Should print 5, not 15
+    "#;
+    execute_program_and_assert(program, "5");
 }

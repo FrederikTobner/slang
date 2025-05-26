@@ -29,7 +29,7 @@ fn from_string_literal(
         let a: bool = "Hello";
         print_value(a);
     "#;
-    execute_program_expect_error(&program, "Type mismatch: variable a is bool but expression is string");
+    execute_program_expect_error(&program, "[E2005]", "Type mismatch: variable a is bool but expression is string");
 }
 
 #[rstest]
@@ -46,7 +46,7 @@ fn from_integer_literal(
         let a: bool = {};
         print_value(a);
     "#, value);
-    execute_program_expect_error(&program, &format!("Type mismatch: variable a is bool but expression is {}", _type));
+    execute_program_expect_error(&program, "[E2005]", &format!("Type mismatch: variable a is bool but expression is {}", _type));
 }
 
 
@@ -63,5 +63,13 @@ fn from_float_literal(
         let a: bool = {};
         print_value(a);
     "#, value);
-    execute_program_expect_error(&program, &format!("Type mismatch: variable a is bool but expression is {}", _type));
+    execute_program_expect_error(&program, "[E2005]", &format!("Type mismatch: variable a is bool but expression is {}", _type));
+}
+
+#[test]
+fn using_boolean_type_as_name() {
+    let program = r#"
+        let bool: bool = true;
+    "#;
+    execute_program_expect_error(&program, "[E2003]", "Symbol \'bool\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.");
 }

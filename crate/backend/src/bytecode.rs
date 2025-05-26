@@ -1,6 +1,6 @@
-pub use std::io::{Read, Write};
 use crate::value::Value;
 use slang_derive::NumericEnum;
+pub use std::io::{Read, Write};
 
 /// Operation codes for the bytecode interpreter
 #[derive(Debug, PartialEq, NumericEnum)]
@@ -118,12 +118,10 @@ impl Chunk {
         }
     }
 
-
-
     /// Writes a byte to the chunk
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `byte` - The byte to write
     /// * `line` - The source code line number
     pub fn write_byte(&mut self, byte: u8, line: usize) {
@@ -132,9 +130,9 @@ impl Chunk {
     }
 
     /// Writes an opcode to the chunk
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `op` - The opcode to write
     /// * `line` - The source code line number
     pub fn write_op(&mut self, op: OpCode, line: usize) {
@@ -142,13 +140,13 @@ impl Chunk {
     }
 
     /// Adds a constant to the chunk's constant pool
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `value` - The constant value to add
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// The index of the constant in the constant pool
     pub fn add_constant(&mut self, value: Value) -> usize {
         self.constants.push(value);
@@ -156,13 +154,13 @@ impl Chunk {
     }
 
     /// Adds an identifier to the chunk's identifier pool
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `name` - The identifier name to add
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// The index of the identifier in the identifier pool
     pub fn add_identifier(&mut self, name: String) -> usize {
         for (i, id) in self.identifiers.iter().enumerate() {
@@ -175,13 +173,13 @@ impl Chunk {
     }
 
     /// Serializes the chunk to binary data
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `writer` - The writer to write the binary data to
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// IO result indicating success or failure
     pub fn serialize(&self, writer: &mut dyn Write) -> std::io::Result<()> {
         let code_len = self.code.len() as u32;
@@ -264,13 +262,13 @@ impl Chunk {
     }
 
     /// Deserializes a chunk from binary data
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `reader` - The reader to read the binary data from
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// The deserialized chunk or an IO error
     pub fn deserialize(reader: &mut dyn Read) -> std::io::Result<Self> {
         let mut chunk = Chunk::new();
@@ -291,7 +289,7 @@ impl Chunk {
 
         for _ in 0..constants_len {
             let mut type_tag = [0u8; 1];
-             reader.read_exact(&mut type_tag)?;
+            reader.read_exact(&mut type_tag)?;
 
             let value = Value::deserialize_from_type_tag(type_tag[0], reader)?;
             chunk.constants.push(value);
@@ -319,124 +317,94 @@ impl Chunk {
     }
 
     /// Debugging function to print the chunk's bytecode
-    /// 
+    ///
     /// ### Arguments
     /// * `name` - The name of the chunk (for debugging purposes)
     #[cfg(feature = "print-byte_code")]
     pub fn disassemble(&self, name: &str) {
         println!("== {} ==", name);
-        
+
         let mut offset = 0;
         while offset < self.code.len() {
             offset = self.disassemble_instruction(offset);
         }
     }
-    
+
     /// Disassembles a single instruction for debugging
     #[cfg(feature = "print-byte_code")]
     pub fn disassemble_instruction(&self, offset: usize) -> usize {
         print!("{:04} ", offset);
-        
+
         // Add line info
         if offset > 0 && self.lines[offset] == self.lines[offset - 1] {
             print!("   | ");
         } else {
             print!("{:4} ", self.lines[offset]);
         }
-        
+
         let instruction = self.code[offset];
-        match OpCode::from_u8(instruction) {
-            Some(OpCode::Constant) => {
-                self.simple_instruction_with_operand("CONSTANT", offset)
-            },
-            Some(OpCode::Add) => {
-                self.simple_instruction("ADD", offset)
-            },
-            Some(OpCode::Subtract) => {
-                self.simple_instruction("SUBTRACT", offset)
-            },
-            Some(OpCode::Multiply) => {
-                self.simple_instruction("MULTIPLY", offset)
-            },
-            Some(OpCode::Divide) => {
-                self.simple_instruction("DIVIDE", offset)
-            },
-            Some(OpCode::Negate) => {
-                self.simple_instruction("NEGATE", offset)
-            },
-            Some(OpCode::Return) => {
-                self.simple_instruction("RETURN", offset)
-            },
-            Some(OpCode::Print) => {
-                self.simple_instruction("PRINT", offset)
-            },
-            Some(OpCode::GetVariable) => {
-                self.variable_instruction("GET_VARIABLE", offset)
-            },
-            Some(OpCode::SetVariable) => {
-                self.variable_instruction("SET_VARIABLE", offset)
-            },
-            Some(OpCode::Pop) => {
-                self.simple_instruction("POP", offset)
-            },
-            Some(OpCode::DefineFunction) => {
-                self.variable_instruction("DEFINE_FUNCTION", offset)
-            },
+        match OpCode::from_int(instruction) {
+            Some(OpCode::Constant) => self.simple_instruction_with_operand("CONSTANT", offset),
+            Some(OpCode::Add) => self.simple_instruction("ADD", offset),
+            Some(OpCode::Subtract) => self.simple_instruction("SUBTRACT", offset),
+            Some(OpCode::Multiply) => self.simple_instruction("MULTIPLY", offset),
+            Some(OpCode::Divide) => self.simple_instruction("DIVIDE", offset),
+            Some(OpCode::Negate) => self.simple_instruction("NEGATE", offset),
+            Some(OpCode::Return) => self.simple_instruction("RETURN", offset),
+            Some(OpCode::Print) => self.simple_instruction("PRINT", offset),
+            Some(OpCode::GetVariable) => self.variable_instruction("GET_VARIABLE", offset),
+            Some(OpCode::SetVariable) => self.variable_instruction("SET_VARIABLE", offset),
+            Some(OpCode::Pop) => self.simple_instruction("POP", offset),
+            Some(OpCode::DefineFunction) => self.variable_instruction("DEFINE_FUNCTION", offset),
             Some(OpCode::Call) => {
                 let arg_count = self.code[offset + 1];
                 println!("{:<16} {:4} args", "CALL", arg_count);
                 offset + 2
-            },
+            }
             Some(OpCode::JumpIfFalse) => {
-                let jump_offset = ((self.code[offset + 1] as usize) << 8) | (self.code[offset + 2] as usize);
-                println!("{:<16} {:4} -> {}", "JUMP_IF_FALSE", offset, offset + 3 + jump_offset);
+                let jump_offset =
+                    ((self.code[offset + 1] as usize) << 8) | (self.code[offset + 2] as usize);
+                println!(
+                    "{:<16} {:4} -> {}",
+                    "JUMP_IF_FALSE",
+                    offset,
+                    offset + 3 + jump_offset
+                );
                 offset + 3
-            },
+            }
             Some(OpCode::Jump) => {
-                let jump_offset = ((self.code[offset + 1] as usize) << 8) | (self.code[offset + 2] as usize);
-                println!("{:<16} {:4} -> {}", "JUMP", offset, offset + 3 + jump_offset);
+                let jump_offset =
+                    ((self.code[offset + 1] as usize) << 8) | (self.code[offset + 2] as usize);
+                println!(
+                    "{:<16} {:4} -> {}",
+                    "JUMP",
+                    offset,
+                    offset + 3 + jump_offset
+                );
                 offset + 3
-            },
-            Some(OpCode::BoolNot) => {
-                self.simple_instruction("BOOL_NOT", offset)
-            },
-            Some(OpCode::BoolAnd) => {
-                self.simple_instruction("BOOL_AND", offset)
-            },
-            Some(OpCode::BoolOr) => {
-                self.simple_instruction("BOOL_OR", offset)
-            },
-            Some(OpCode::Greater) => {
-                self.simple_instruction("GREATER", offset)
-            },
-            Some(OpCode::Less) => {
-                self.simple_instruction("LESS", offset)
-            },
-            Some(OpCode::GreaterEqual) => {
-                self.simple_instruction("GREATER_EQUAL", offset)
-            },
-            Some(OpCode::LessEqual) => {
-                self.simple_instruction("LESS_EQUAL", offset)
-            },
-            Some(OpCode::Equal) => {
-                self.simple_instruction("EQUAL", offset)
-            },
-            Some(OpCode::NotEqual) => {
-                self.simple_instruction("NOT_EQUAL", offset)
-            },
+            }
+            Some(OpCode::BoolNot) => self.simple_instruction("BOOL_NOT", offset),
+            Some(OpCode::BoolAnd) => self.simple_instruction("BOOL_AND", offset),
+            Some(OpCode::BoolOr) => self.simple_instruction("BOOL_OR", offset),
+            Some(OpCode::Greater) => self.simple_instruction("GREATER", offset),
+            Some(OpCode::Less) => self.simple_instruction("LESS", offset),
+            Some(OpCode::GreaterEqual) => self.simple_instruction("GREATER_EQUAL", offset),
+            Some(OpCode::LessEqual) => self.simple_instruction("LESS_EQUAL", offset),
+            Some(OpCode::Equal) => self.simple_instruction("EQUAL", offset),
+            Some(OpCode::NotEqual) => self.simple_instruction("NOT_EQUAL", offset),
             None => {
                 println!("Unknown opcode: {}", instruction);
                 offset + 1
-            },
+            }
         }
     }
-    
+
     /// Helper for disassembling simple instructions
-    /// 
+    ///
     /// ### Arguments
     /// * `name` - The name of the instruction
     /// * `offset` - The offset in the bytecode
-    /// 
+    ///
     /// ### Returns
     /// The new offset after disassembling the instruction
     #[cfg(feature = "print-byte_code")]
@@ -444,34 +412,40 @@ impl Chunk {
         println!("{}", name);
         offset + 1
     }
-    
+
     /// Helper for disassembling instructions with constant operands
-    /// 
+    ///
     /// ### Arguments
     /// * `name` - The name of the instruction
     /// * `offset` - The offset in the bytecode
-    /// 
+    ///
     /// ### Returns
     /// The new offset after disassembling the instruction
     #[cfg(feature = "print-byte_code")]
     fn simple_instruction_with_operand(&self, name: &str, offset: usize) -> usize {
         let constant_index = self.code[offset + 1];
-        println!("{:<16} {:4} '{}'", name, constant_index, self.constants[constant_index as usize]);
+        println!(
+            "{:<16} {:4} '{}'",
+            name, constant_index, self.constants[constant_index as usize]
+        );
         offset + 2
     }
-    
+
     /// Helper for disassembling instructions with variable operands
-    /// 
+    ///
     /// ### Arguments
     /// * `name` - The name of the instruction
     /// * `offset` - The offset in the bytecode
-    /// 
+    ///
     /// ### Returns
     /// The new offset after disassembling the instruction
     #[cfg(feature = "print-byte_code")]
     fn variable_instruction(&self, name: &str, offset: usize) -> usize {
         let var_index = self.code[offset + 1];
-        println!("{:<16} {:4} '{}'", name, var_index, self.identifiers[var_index as usize]);
+        println!(
+            "{:<16} {:4} '{}'",
+            name, var_index, self.identifiers[var_index as usize]
+        );
         offset + 2
     }
 }

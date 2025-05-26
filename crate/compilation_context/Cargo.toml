@@ -1,5 +1,5 @@
 [package]
-name = "slang_types"
+name = "slang_compilation_context"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,9 +7,9 @@ edition = "2024"
 default = []
 
 [lib]
-name = "slang_types"
+name = "slang_compilation_context"
 path = "src/lib.rs"
 
 [dependencies]
-slang_derive = { path = "../derive" }
+slang_types = { path = "../types" }
 

@@ -920,6 +920,7 @@ dependencies = [
  "predicates",
  "rstest",
  "slang_backend",
+ "slang_compilation_context",
  "slang_frontend",
  "slang_ir",
  "slang_types",
@@ -937,6 +938,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "slang_compilation_context"
+version = "0.1.0"
+dependencies = [
+ "slang_types",
+]
+
+[[package]]
 name = "slang_derive"
 version = "0.1.0"
 dependencies = [
@@ -950,6 +958,7 @@ name = "slang_frontend"
 version = "0.1.0"
 dependencies = [
  "colored",
+ "slang_compilation_context",
  "slang_ir",
  "slang_types",
 ]

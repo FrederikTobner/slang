@@ -1,5 +1,5 @@
-use crate::token::{Token, Tokentype};
 use crate::error::LineInfo;
+use crate::token::{Token, Tokentype};
 
 pub struct Result<'a> {
     /// The list of tokens generated from the input
@@ -188,6 +188,7 @@ fn handle_identifier(state: &mut LexerState, start_pos: usize) {
 
     let token_type = match identifier.as_str() {
         "let" => Tokentype::Let,
+        "mut" => Tokentype::Mut,
         "struct" => Tokentype::Struct,
         "fn" => Tokentype::Fn,
         "return" => Tokentype::Return,

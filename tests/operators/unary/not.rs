@@ -60,6 +60,7 @@ fn with_integer(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
+        "[E2015]",
         &format!(
             "Boolean not operator '!' can only be applied to boolean types, but got {}",
             type_name
@@ -80,6 +81,7 @@ fn with_float(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
+        "[E2015]",
         &format!(
             "Boolean not operator '!' can only be applied to boolean types, but got {}",
             type_name

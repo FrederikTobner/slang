@@ -76,21 +76,19 @@ fn extract_name_attribute(variant: &Variant) -> Option<String> {
         .attrs
         .iter()
         .find(|attr| attr.path().is_ident("name"))
-        .map(|attr| {
-            match &attr.meta {
-                Meta::NameValue(MetaNameValue { value, .. }) => {
-                    if let Expr::Lit(ExprLit {
-                        lit: Lit::Str(lit_str),
-                        ..
-                    }) = value
-                    {
-                        lit_str.value()
-                    } else {
-                        panic!("name attribute must have a string literal value");
-                    }
+        .map(|attr| match &attr.meta {
+            Meta::NameValue(MetaNameValue { value, .. }) => {
+                if let Expr::Lit(ExprLit {
+                    lit: Lit::Str(lit_str),
+                    ..
+                }) = value
+                {
+                    lit_str.value()
+                } else {
+                    panic!("name attribute must have a string literal value");
                 }
-                _ => panic!("name attribute must be in the form #[name = \"value\"]"),
             }
+            _ => panic!("name attribute must be in the form #[name = \"value\"]"),
         })
 }
 
@@ -99,7 +97,7 @@ fn extract_name_attribute(variant: &Variant) -> Option<String> {
 /// - `from_int<T: Into<usize>>(value: T) -> Option<Self>`: Converts a numeric value to the corresponding enum variant
 /// - `to_int(&self) -> usize`: Converts the enum variant back to its numeric value
 ///
-/// # Examples
+/// ### Examples
 ///
 /// Basic usage:
 ///
@@ -150,7 +148,7 @@ pub fn derive_numeric_enum(input: TokenStream) -> TokenStream {
     let mut next_discriminant = 0usize;
 
     let mut variant_values = Vec::new();
-    
+
     for variant in variants.iter() {
         let variant_name = &variant.ident;
 
@@ -173,10 +171,10 @@ pub fn derive_numeric_enum(input: TokenStream) -> TokenStream {
             next_discriminant += 1;
             value
         };
-        
+
         variant_values.push((variant_name, value));
     }
-    
+
     let from_int_arms = variant_values.iter().map(|(variant_name, value)| {
         quote! {
             #value => Some(#enum_name::#variant_name)
