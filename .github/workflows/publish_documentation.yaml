@@ -158,17 +158,14 @@ jobs:
         EOF
         
     - name: Setup Pages
-      if: github.ref == 'refs/heads/master'
       uses: actions/configure-pages@v4
       
     - name: Upload artifact
-      if: github.ref == 'refs/heads/master' 
       uses: actions/upload-pages-artifact@v3
       with:
         path: target/doc
 
   deploy:
-    if: github.ref == 'refs/heads/master' 
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
