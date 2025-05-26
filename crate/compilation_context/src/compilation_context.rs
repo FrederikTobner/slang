@@ -27,7 +27,7 @@ impl CompilationContext {
         let type_registry = TypeRegistry::new_instance();
         let mut symbol_table = SymbolTable::new();
 
-        let mut cache_and_define_symbol = |ptype: PrimitiveType| {
+        let mut define_primitive = |ptype: PrimitiveType| {
             let type_id = TypeId(ptype as usize);
             symbol_table
                 .define(ptype.name().to_string(), SymbolKind::Type, type_id.clone())
@@ -40,17 +40,17 @@ impl CompilationContext {
             type_id
         };
 
-        cache_and_define_symbol(PrimitiveType::Bool);
-        cache_and_define_symbol(PrimitiveType::I32);
-        cache_and_define_symbol(PrimitiveType::I64);
-        cache_and_define_symbol(PrimitiveType::U32);
-        cache_and_define_symbol(PrimitiveType::U64);
-        cache_and_define_symbol(PrimitiveType::F32);
-        cache_and_define_symbol(PrimitiveType::F64);
-        cache_and_define_symbol(PrimitiveType::String);
-        cache_and_define_symbol(PrimitiveType::UnspecifiedInt);
-        cache_and_define_symbol(PrimitiveType::UnspecifiedFloat);
-        cache_and_define_symbol(PrimitiveType::Unknown);
+        define_primitive(PrimitiveType::Bool);
+        define_primitive(PrimitiveType::I32);
+        define_primitive(PrimitiveType::I64);
+        define_primitive(PrimitiveType::U32);
+        define_primitive(PrimitiveType::U64);
+        define_primitive(PrimitiveType::F32);
+        define_primitive(PrimitiveType::F64);
+        define_primitive(PrimitiveType::String);
+        define_primitive(PrimitiveType::UnspecifiedInt);
+        define_primitive(PrimitiveType::UnspecifiedFloat);
+        define_primitive(PrimitiveType::Unknown);
 
         CompilationContext {
             type_registry,

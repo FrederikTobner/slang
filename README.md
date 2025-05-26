@@ -29,13 +29,14 @@ The codebase follows a modular architecture with clear separation of concerns:
 ```plaintext
 slang/
 ├── crate/
-│   ├── backend/    # Compilation to bytecode and VM execution
-│   ├── derive/     # Procedural macros for code generation
-│   ├── frontend/   # Lexer, parser, and type checker
-│   ├── ir/         # AST definitions and visitors
-│   └── types/      # Type system
-├── src/            # CLI application
-└── tests/          # End-to-end and integration tests
+│   ├── backend/                # Compilation to bytecode and VM execution
+│   ├── compilation_context/    # Compilation context to store symbols and types from the currently compilation unit
+│   ├── derive/                 # Procedural macros for code generation
+│   ├── frontend/               # Lexer, parser, and type checker
+│   ├── ir/                     # AST definitions and visitors
+│   └── types/                  # Type system
+├── src/                        # CLI application
+└── tests/                      # End-to-end and integration tests
 ```
 
 ## Usage
