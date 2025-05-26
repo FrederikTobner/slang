@@ -1,0 +1,201 @@
+name: Publish Documentation
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  # Allow manual triggering of the workflow
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install libasound2-dev libudev-dev
+      
+    - name: Set PKG_CONFIG_PATH
+      run: echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+      
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: /home/runner/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-registry-
+
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: /home/runner/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-index-
+
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-docs-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-build-docs-
+          ${{ runner.os }}-cargo-build-
+          
+    - name: Generate documentation
+      run: |
+        cargo doc --workspace --no-deps --document-private-items
+        
+    - name: Create index.html for GitHub Pages
+      run: |
+        cat > target/doc/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Slang Documentation</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    max-width: 800px;
+                    margin: 2rem auto;
+                    padding: 0 1rem;
+                    line-height: 1.6;
+                }
+                h1 {
+                    color: #333;
+                    border-bottom: 2px solid #007acc;
+                    padding-bottom: 0.5rem;
+                }
+                .crate-list {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 1rem;
+                    margin-top: 2rem;
+                }
+                .crate-card {
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    padding: 1rem;
+                    background: #f9f9f9;
+                    transition: box-shadow 0.2s;
+                }
+                .crate-card:hover {
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+                .crate-name {
+                    font-size: 1.2rem;
+                    font-weight: bold;
+                    color: #007acc;
+                    text-decoration: none;
+                }
+                .crate-name:hover {
+                    text-decoration: underline;
+                }
+                .crate-description {
+                    margin-top: 0.5rem;
+                    color: #666;
+                    font-size: 0.9rem;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>Slang Documentation</h1>
+            <p>Slang is a statically typed scripting language for learning purposes written in Rust.</p>
+            
+            <div class="crate-list">
+                <div class="crate-card">
+                    <a href="slang/index.html" class="crate-name">slang</a>
+                    <div class="crate-description">Main crate - CLI interface and project coordination</div>
+                </div>
+                <div class="crate-card">
+                    <a href="slang_frontend/index.html" class="crate-name">slang_frontend</a>
+                    <div class="crate-description">Frontend - Lexing, parsing, AST construction, and type checking</div>
+                </div>
+                <div class="crate-card">
+                    <a href="slang_ir/index.html" class="crate-name">slang_ir</a>
+                    <div class="crate-description">Intermediate representation and AST structures</div>
+                </div>
+                <div class="crate-card">
+                    <a href="slang_backend/index.html" class="crate-name">slang_backend</a>
+                    <div class="crate-description">Backend - Bytecode generation and virtual machine execution</div>
+                </div>
+                <div class="crate-card">
+                    <a href="slang_types/index.html" class="crate-name">slang_types</a>
+                    <div class="crate-description">Type system definitions and utilities</div>
+                </div>
+                <div class="crate-card">
+                    <a href="slang_derive/index.html" class="crate-name">slang_derive</a>
+                    <div class="crate-description">Procedural macros and derive implementations</div>
+                </div>
+                <div class="crate-card">
+                    <a href="slang_compilation_context/index.html" class="crate-name">slang_compilation_context</a>
+                    <div class="crate-description">Compilation context and shared utilities</div>
+                </div>
+            </div>
+            
+            <h2>About the Project</h2>
+            <p>This documentation is automatically generated from the source code and deployed via GitHub Actions. 
+            The Slang language demonstrates various language implementation concepts including:</p>
+            <ul>
+                <li>Lexical analysis and parsing</li>
+                <li>Abstract syntax tree construction</li>
+                <li>Static type checking and semantic analysis</li>
+                <li>Bytecode generation</li>
+                <li>Virtual machine execution</li>
+                <li>Interactive REPL</li>
+            </ul>
+            
+            <p><a href="https://github.com/your-username/slang">View on GitHub</a></p>
+        </body>
+        </html>
+        EOF
+        
+    - name: Setup Pages
+      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      uses: actions/configure-pages@v3
+      
+    - name: Upload artifact
+      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: target/doc
+
+  deploy:
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build-docs
+    
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
