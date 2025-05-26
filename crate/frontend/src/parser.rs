@@ -476,6 +476,9 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed variable declaration or an error message
     fn let_statement(&mut self) -> Result<Statement, ParseError> {
+        // Check for optional 'mut' keyword
+        let is_mutable = self.match_token(&Tokentype::Mut);
+        
         if !self.check(&Tokentype::Identifier) {
             return Err(self.error("Expected identifier after 'let'"));
         }
@@ -560,6 +563,7 @@ impl<'a> Parser<'a> {
 
         Ok(Statement::Let(LetStatement {
             name,
+            is_mutable,
             value: expr,
             expr_type: var_type,
             location,
@@ -599,15 +603,17 @@ impl<'a> Parser<'a> {
         let mut expr = self.logical_and()?;
 
         while self.match_token(&Tokentype::Or) {
-            let token = self.previous();
-            let location = self.source_location_from_token(token);
+            let left_location = expr.location();
             let right = self.logical_and()?;
+            let right_location = right.location();
+            let span_location = left_location.span_to(&right_location);
+            
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator: BinaryOperator::Or,
                 right: Box::new(right),
                 expr_type: TypeId(PrimitiveType::Bool as usize),
-                location,
+                location: span_location,
             });
         }
 
@@ -623,15 +629,17 @@ impl<'a> Parser<'a> {
         let mut expr = self.equality()?;
 
         while self.match_token(&Tokentype::And) {
-            let token = self.previous();
-            let location = self.source_location_from_token(token);
+            let left_location = expr.location();
             let right = self.equality()?;
+            let right_location = right.location();
+            let span_location = left_location.span_to(&right_location);
+            
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator: BinaryOperator::And,
                 right: Box::new(right),
                 expr_type: TypeId(PrimitiveType::Bool as usize),
-                location,
+                location: span_location,
             });
         }
 
@@ -647,20 +655,23 @@ impl<'a> Parser<'a> {
         let mut expr = self.comparison()?;
 
         while self.match_any(&[Tokentype::EqualEqual, Tokentype::NotEqual]) {
+            let left_location = expr.location();
             let token = self.previous();
             let operator = match token.token_type {
                 Tokentype::EqualEqual => BinaryOperator::Equal,
                 Tokentype::NotEqual => BinaryOperator::NotEqual,
                 _ => unreachable!(),
             };
-            let location = self.source_location_from_token(token);
             let right = self.comparison()?;
+            let right_location = right.location();
+            let span_location = left_location.span_to(&right_location);
+            
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
                 expr_type: TypeId(PrimitiveType::Bool as usize),
-                location,
+                location: span_location,
             });
         }
 
@@ -681,6 +692,7 @@ impl<'a> Parser<'a> {
             Tokentype::Less,
             Tokentype::LessEqual,
         ]) {
+            let left_location = expr.location();
             let token = self.previous();
             let operator = match token.token_type {
                 Tokentype::Greater => BinaryOperator::GreaterThan,
@@ -689,14 +701,16 @@ impl<'a> Parser<'a> {
                 Tokentype::LessEqual => BinaryOperator::LessThanOrEqual,
                 _ => unreachable!(),
             };
-            let location = self.source_location_from_token(token);
             let right = self.term()?;
+            let right_location = right.location();
+            let span_location = left_location.span_to(&right_location);
+            
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
                 expr_type: TypeId(PrimitiveType::Bool as usize),
-                location,
+                location: span_location,
             });
         }
 
@@ -712,20 +726,23 @@ impl<'a> Parser<'a> {
         let mut expr = self.factor()?;
 
         while self.match_any(&[Tokentype::Plus, Tokentype::Minus]) {
+            let left_location = expr.location();
             let token = self.previous();
             let operator = match token.token_type {
                 Tokentype::Plus => BinaryOperator::Add,
                 Tokentype::Minus => BinaryOperator::Subtract,
                 _ => unreachable!(),
             };
-            let location = self.source_location_from_token(token);
             let right = self.factor()?;
+            let right_location = right.location();
+            let span_location = left_location.span_to(&right_location);
+            
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
                 expr_type: TypeId(PrimitiveType::Unknown as usize),
-                location,
+                location: span_location,
             });
         }
 
@@ -741,20 +758,23 @@ impl<'a> Parser<'a> {
         let mut expr = self.unary()?;
 
         while self.match_any(&[Tokentype::Multiply, Tokentype::Divide]) {
+            let left_location = expr.location();
             let token = self.previous();
             let operator = match token.token_type {
                 Tokentype::Multiply => BinaryOperator::Multiply,
                 Tokentype::Divide => BinaryOperator::Divide,
                 _ => unreachable!(),
             };
-            let location = self.source_location_from_token(token);
             let right = self.unary()?;
+            let right_location = right.location();
+            let span_location = left_location.span_to(&right_location);
+            
             expr = Expression::Binary(BinaryExpr {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
                 expr_type: TypeId(PrimitiveType::Unknown as usize),
-                location,
+                location: span_location,
             });
         }
 
@@ -769,25 +789,31 @@ impl<'a> Parser<'a> {
     fn unary(&mut self) -> Result<Expression, ParseError> {
         if self.match_token(&Tokentype::Minus) {
             let token = self.previous();
-            let location = self.source_location_from_token(token);
+            let operator_location = self.source_location_from_token(token);
             let right = self.primary()?;
+            let right_location = right.location();
+            let span_location = operator_location.span_to(&right_location);
+            
             return Ok(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Negate,
                 right: Box::new(right),
                 expr_type: TypeId(PrimitiveType::Unknown as usize),
-                location,
+                location: span_location,
             }));
         }
 
         if self.match_token(&Tokentype::Not) {
             let token = self.previous();
-            let location = self.source_location_from_token(token);
+            let operator_location = self.source_location_from_token(token);
             let right = self.primary()?;
+            let right_location = right.location();
+            let span_location = operator_location.span_to(&right_location);
+            
             return Ok(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Not,
                 right: Box::new(right),
                 expr_type: TypeId(PrimitiveType::Bool as usize),
-                location,
+                location: span_location,
             }));
         }
 
@@ -907,9 +933,9 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed function call expression or an error message
     fn finish_call(&mut self, name: String) -> Result<Expression, ParseError> {
-        // Store the token position of the function name for the location
-        let token = self.previous();
-        let location = self.source_location_from_token(token);
+        // Store the token position of the function name for the start location
+        let name_token = self.previous();
+        let start_location = self.source_location_from_token(name_token);
 
         let mut arguments = Vec::new();
 
@@ -930,11 +956,16 @@ impl<'a> Parser<'a> {
             return Err(self.error("Expected ')' after function arguments"));
         }
 
+        // Get the location of the closing paren to create a span
+        let closing_paren_token = self.previous();
+        let end_location = self.source_location_from_token(closing_paren_token);
+        let span_location = start_location.span_to(&end_location);
+
         Ok(Expression::Call(FunctionCallExpr {
             name,
             arguments,
             expr_type: TypeId(PrimitiveType::Unknown as usize),
-            location,
+            location: span_location,
         }))
     }
 

@@ -18,11 +18,20 @@ use slang_types::{PrimitiveType, TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
 /// Contains either a valid TypeId or a SemanticAnalysisError
 pub type SemanticResult = Result<TypeId, SemanticAnalysisError>;
 
+/// Information about a variable in a scope
+#[derive(Clone)]
+struct VariableInfo {
+    /// Type ID of the variable
+    type_id: TypeId,
+    /// Whether the variable is mutable
+    is_mutable: bool,
+}
+
 /// A scope represents a lexical scope for variables in the program.
-/// Each scope contains a mapping of variable names to their types.
+/// Each scope contains a mapping of variable names to their types and mutability.
 struct Scope {
-    /// Map of variable names to their type IDs in this scope
-    variables: HashMap<String, TypeId>,
+    /// Map of variable names to their variable information in this scope
+    variables: HashMap<String, VariableInfo>,
 }
 
 impl Scope {
@@ -112,9 +121,13 @@ impl<'a> SemanticAnalyzer<'a> {
     /// ### Arguments
     /// name - The name of the variable
     /// type_id - The type ID of the variable
-    fn define_variable(&mut self, name: String, type_id: TypeId) {
+    /// is_mutable - Whether the variable is mutable
+    fn define_variable(&mut self, name: String, type_id: TypeId, is_mutable: bool) {
         if let Some(scope) = self.scopes.last_mut() {
-            scope.variables.insert(name, type_id);
+            scope.variables.insert(name, VariableInfo {
+                type_id,
+                is_mutable,
+            });
         }
     }
 
@@ -124,15 +137,15 @@ impl<'a> SemanticAnalyzer<'a> {
     /// name - The name of the variable to look up
     ///
     /// ### Returns
-    /// The type ID of the variable if found, or None if not found
-    fn resolve_variable(&self, name: &str) -> Option<TypeId> {
+    /// The variable information if found, or None if not found
+    fn resolve_variable(&self, name: &str) -> Option<VariableInfo> {
         for scope in self.scopes.iter().rev() {
-            if let Some(type_id) = scope.variables.get(name) {
-                return Some(type_id.clone());
+            if let Some(var_info) = scope.variables.get(name) {
+                return Some(var_info.clone());
             }
         }
         None
-    }
+    } 
 
     /// Checks if a type is an integer type
     ///
@@ -710,7 +723,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
 
         self.begin_scope();
         for param in &fn_decl.parameters {
-            self.define_variable(param.name.clone(), param.param_type.clone());
+            self.define_variable(param.name.clone(), param.param_type.clone(), true);
         }
 
         let result = self.visit_block_statement(&fn_decl.body);
@@ -921,27 +934,35 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
         let final_type = self.determine_let_statement_type(let_stmt, expr_type)?;
         let final_type = self.finalize_inferred_type(final_type);
 
-        self.define_variable(let_stmt.name.clone(), final_type.clone());
+        self.define_variable(let_stmt.name.clone(), final_type.clone(), let_stmt.is_mutable);
         Ok(final_type)
     }
 
     fn visit_assignment_statement(&mut self, assign_stmt: &slang_ir::ast::AssignmentStatement) -> SemanticResult {
         // Check if the variable exists
-        if let Some(var_type) = self.resolve_variable(&assign_stmt.name) {
+        if let Some(var_info) = self.resolve_variable(&assign_stmt.name) {
+            // Check if the variable is mutable
+            if !var_info.is_mutable {
+                return Err(SemanticAnalysisError::AssignmentToImmutableVariable {
+                    name: assign_stmt.name.clone(),
+                    location: assign_stmt.location.clone(),
+                });
+            }
+
             // Check if the assigned value's type matches the variable's type
             let expr_type = self.visit_expression(&assign_stmt.value)?;
             
-            if var_type == expr_type {
-                Ok(var_type)
+            if var_info.type_id == expr_type {
+                Ok(var_info.type_id)
             } else {
                 // Allow assignment of unspecified integers/floats to concrete types
                 if expr_type == TypeId(slang_types::types::PrimitiveType::UnspecifiedInt as usize) {
-                    Ok(var_type)
+                    Ok(var_info.type_id)
                 } else if expr_type == TypeId(slang_types::types::PrimitiveType::UnspecifiedFloat as usize) {
-                    Ok(var_type)
+                    Ok(var_info.type_id)
                 } else {
                     Err(SemanticAnalysisError::TypeMismatch {
-                        expected: var_type,
+                        expected: var_info.type_id,
                         actual: expr_type,
                         context: Some(format!("assignment to variable '{}'", assign_stmt.name)),
                         location: assign_stmt.location.clone(),
@@ -961,8 +982,8 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
         name: &str,
         location: &SourceLocation,
     ) -> SemanticResult {
-        if let Some(type_id) = self.resolve_variable(name) {
-            Ok(type_id)
+        if let Some(var_info) = self.resolve_variable(name) {
+            Ok(var_info.type_id)
         } else if self.context.lookup_symbol(name).is_some() {
             Err(SemanticAnalysisError::UndefinedVariable {
                 name: name.to_string(),

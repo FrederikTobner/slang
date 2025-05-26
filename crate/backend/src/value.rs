@@ -320,7 +320,7 @@ impl fmt::Display for Value {
             Value::U64(i) => write!(f, "{}", i),
             Value::F32(flo) => write!(f, "{}", flo),
             Value::F64(flo) => write!(f, "{}", flo),
-            Value::String(s) => write!(f, "\"{}\"", s),
+            Value::String(s) => write!(f, "{}", s),
             Value::Boolean(b) => write!(f, "{}", b),
             Value::Function(func) => write!(f, "<fn {}>", func.name),
             Value::NativeFunction(func) => write!(f, "<native fn {}>", func.name),

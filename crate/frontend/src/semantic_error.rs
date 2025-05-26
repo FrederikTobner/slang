@@ -1,7 +1,7 @@
 use crate::error::CompilerError;
-use slang_ir::source_location::SourceLocation;
-use slang_types::types::TypeId;
-use slang_compilation_context::compilation_context::CompilationContext;
+use slang_ir::SourceLocation;
+use slang_types::TypeId;
+use slang_compilation_context::CompilationContext;
 
 /// Represents different categories of semantic analysis errors
 /// that occur during static analysis of the program.
@@ -161,6 +161,14 @@ pub enum SemanticAnalysisError {
         /// The operand type
         operand_type: TypeId,
         /// The source location where the invalid unary operation occurred
+        location: SourceLocation,
+    },
+
+    /// Assignment to an immutable variable
+    AssignmentToImmutableVariable {
+        /// The name of the immutable variable
+        name: String,
+        /// The source location where the assignment attempt occurred
         location: SourceLocation,
     },
 
@@ -362,6 +370,10 @@ impl SemanticAnalysisError {
                 }
             }
 
+            SemanticAnalysisError::AssignmentToImmutableVariable { name, .. } => {
+                format!("Cannot assign to immutable variable '{}'", name)
+            }
+
             SemanticAnalysisError::InvalidExpression { message, .. } => message.clone(),
         }
     }
@@ -384,6 +396,7 @@ impl SemanticAnalysisError {
             SemanticAnalysisError::MissingReturnValue { location, .. } => location,
             SemanticAnalysisError::UndefinedFunction { location, .. } => location,
             SemanticAnalysisError::InvalidUnaryOperation { location, .. } => location,
+            SemanticAnalysisError::AssignmentToImmutableVariable { location, .. } => location,
             SemanticAnalysisError::InvalidExpression { location, .. } => location,
         }
     }
@@ -423,6 +436,7 @@ impl SemanticAnalysisError {
             SemanticAnalysisError::MissingReturnValue { .. } => Some("return".len()),
             SemanticAnalysisError::UndefinedFunction { name, .. } => Some(name.len()),
             SemanticAnalysisError::InvalidUnaryOperation { operator, .. } => Some(operator.len()),
+            SemanticAnalysisError::AssignmentToImmutableVariable { name, .. } => Some(name.len()),
             SemanticAnalysisError::InvalidExpression { .. } => None,
         }
     }

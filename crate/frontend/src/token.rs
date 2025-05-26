@@ -9,6 +9,7 @@ pub enum Tokentype {
     StringLiteral,  // "hello world"
     BooleanLiteral, // true, false
     Let,            // let
+    Mut,            // mut
     Plus,           // +
     Minus,          // -
     Multiply,       // *
@@ -48,6 +49,7 @@ impl Display for Tokentype {
             Tokentype::StringLiteral => "string literal",
             Tokentype::BooleanLiteral => "boolean literal",
             Tokentype::Let => "let keyword",
+            Tokentype::Mut => "mut keyword",
             Tokentype::Plus => "'+'",
             Tokentype::Minus => "'-'",
             Tokentype::Multiply => "'*'",

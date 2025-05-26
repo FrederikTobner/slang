@@ -237,6 +237,8 @@ pub struct BinaryExpr {
 pub struct LetStatement {
     /// Name of the variable
     pub name: String,
+    /// Whether the variable is mutable
+    pub is_mutable: bool,
     /// Initial value for the variable
     pub value: Expression,
     /// Type of the variable
