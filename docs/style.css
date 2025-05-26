@@ -1,0 +1,49 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    line-height: 1.6;
+}
+
+h1 {
+    color: #333;
+    border-bottom: 2px solid #007acc;
+    padding-bottom: 0.5rem;
+}
+
+.crate-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.crate-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    background: #f9f9f9;
+    transition: box-shadow 0.2s;
+}
+
+.crate-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.crate-name {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #007acc;
+    text-decoration: none;
+}
+
+.crate-name:hover {
+    text-decoration: underline;
+}
+
+.crate-description {
+    margin-top: 0.5rem;
+    color: #666;
+    font-size: 0.9rem;
+}
