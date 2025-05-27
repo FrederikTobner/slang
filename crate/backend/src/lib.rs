@@ -1,6 +1,6 @@
 // Re-exported modules
 pub mod bytecode;
-pub mod compiler;
+pub mod codegen;
 pub mod value;
 pub mod vm;
 

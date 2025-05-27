@@ -4,7 +4,7 @@ Grammar of the slang language in the extended backus naur format:
 
 ```ebnf
 /* Program structure */
-program = { statement | comment } ;
+program = { statement ";" | comment } ;
 
 /* Comments */
 comment = single_line_comment | multi_line_comment ;
@@ -19,9 +19,10 @@ statement = let_statement
           | type_definition_statement
           | function_declaration_statement
           | block_statement
-          | return_statement ;
+          | return_statement
+          | if_statement ;
 
-let_statement = "let", identifier, [ ":", type ], "=", expression, ";" ;
+let_statement = "let", ["mut"], identifier, [ ":", type ], "=", expression, ";" ;
 
 expression_statement = expression, ";" ;
 
@@ -38,6 +39,8 @@ parameter = identifier, ":", type ;
 block_statement = "{", { statement }, "}" ;
 
 return_statement = "return", [ expression ], ";" ;
+
+if_statement = "if", expression, block_statement, [ "else", ( if_statement | block_statement ) ] ;
 
 /* Expressions */
 expression = logical_or ;
@@ -59,9 +62,12 @@ unary = [ "-" | "!" ], primary ;
 primary = literal
         | identifier
         | call_expression
+        | if_expression
         | "(", expression, ")" ;
 
 call_expression = identifier, "(", [ argument_list ], ")" ;
+
+if_expression = "if", expression, "{", expression, "}", "else", "{", expression, "}" ;
 
 argument_list = expression, { ",", expression } ;
 

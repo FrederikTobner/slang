@@ -36,6 +36,8 @@ pub enum Tokentype {
     RightParen,     // )
     Arrow,          // ->
     Return,         // return
+    If,             // if
+    Else,           // else
     
     Eof,            // End of file
 }
@@ -75,7 +77,9 @@ impl Display for Tokentype {
             Tokentype::LeftParen => "'('",
             Tokentype::RightParen => "')'",
             Tokentype::Arrow => "'->'",
-            Tokentype::Return => "return keyword", 
+            Tokentype::Return => "return keyword",
+            Tokentype::If => "if keyword",
+            Tokentype::Else => "else keyword", 
             Tokentype::Eof  => "<EOF>",
         })
     }

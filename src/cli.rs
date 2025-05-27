@@ -1,15 +1,13 @@
-use crate::error::{SlangResult, CliError};
+use crate::error::{CliResult, CliError};
 use crate::exit;
 use clap::{Parser as ClapParser, Subcommand};
 use colored::Colorize;
 use slang_backend::bytecode::Chunk;
-use slang_backend::compiler;
+use slang_backend::codegen;
 use slang_backend::vm::VM;
 use slang_frontend::error::{CompileResult, report_errors};
-use slang_frontend::lexer;
-use slang_frontend::parser;
-use slang_frontend::semantic_analyzer;
-use slang_compilation_context::compilation_context::CompilationContext;
+use slang_frontend::{lexer, parser, semantic_analyzer};
+use slang_shared::compilation_context::CompilationContext;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
@@ -208,7 +206,7 @@ fn compile_source_to_bytecode(source: &str) -> CompileResult<Chunk> {
         printer.print(&statements);
     }
     semantic_analyzer::execute(&statements, &mut context)?;
-    compiler::compile(&statements)
+    codegen::generate_bytecode(&statements)
         .map_err(|err_msg| vec![slang_frontend::error::CompilerError::new(slang_frontend::error_codes::ErrorCode::GenericCompileError, err_msg, 0, 0, 0, None)])
 }
 
@@ -243,7 +241,7 @@ fn resolve_output_path(input: &str, output: Option<String>) -> String {
 /// ### Returns
 ///
 /// The file contents or an error message
-fn read_source_file(path: &str) -> SlangResult<String> {
+fn read_source_file(path: &str) -> CliResult<String> {
     fs::read_to_string(path).map_err(|e| CliError::from_io_error(e, path))
 }
 
@@ -257,7 +255,7 @@ fn read_source_file(path: &str) -> SlangResult<String> {
 /// ### Returns
 ///
 /// Ok(()) if successful, or an error message
-fn write_bytecode(chunk: &Chunk, output_path: &str) -> SlangResult<()> {
+fn write_bytecode(chunk: &Chunk, output_path: &str) -> CliResult<()> {
     let path = Path::new(output_path);
 
     let file = File::create(path).map_err(|e| CliError::Io {
@@ -318,7 +316,7 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> SlangResult<()> {
 /// ### Returns
 ///
 /// The bytecode chunk or an error message
-fn read_bytecode_file(input_path: &str) -> SlangResult<Chunk> {
+fn read_bytecode_file(input_path: &str) -> CliResult<Chunk> {
     let file = File::open(input_path).map_err(|e| CliError::Io {
         source: e,
         path: input_path.to_string(),

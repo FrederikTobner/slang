@@ -1,6 +1,6 @@
 # End-to-End Tests
 
-This directory contains comprehensive end-to-end tests for the Slang programming language interpreter. These tests validate the complete compilation and execution pipeline, from source code parsing through bytecode generation to final program execution.
+This directory contains end-to-end tests for the Slang programming language interpreter. These tests validate the complete compilation and execution pipeline, from source code parsing through bytecode generation to final program execution.
 
 ## Overview
 
@@ -34,7 +34,6 @@ Tests fundamental language constructs:
 - **`basic.rs`** - Parentheses, operator precedence, nested blocks
 - **`comments.rs`** - Comment parsing and handling
 - **`errors.rs`** - Syntax error detection and reporting
-- **`source_location_spanning.rs`** - Source location tracking for error reporting
 
 ### Function Tests (`functions/`)
 
@@ -47,7 +46,7 @@ Validates function-related features:
 
 Comprehensive operator testing organized by type:
 
-- **`binary/mathematical/`** - Arithmetic operators (+, -, *, /, %)
+- **`binary/arithmetic/`** - Arithmetic operators (+, -, *, /, %)
 - **`binary/logical/`** - Logical operators (&&, ||)
 - **`binary/relational/`** - Comparison operators (<, >, ==, !=, <=, >=)
 - **`unary/`** - Unary operators (-, !, etc.)
@@ -57,6 +56,7 @@ Comprehensive operator testing organized by type:
 Tests different statement types:
 
 - **`assignment/`** - Variable assignment operations
+- **`conditional/`** - Conditional statements and expressions (if/else)
 - **`variable_declaration/`** - Variable declaration with and without initialization
 
 ### Type Tests (`types/`)
@@ -84,6 +84,12 @@ cargo test --test e2e_tests functions
 
 # Run only operator tests
 cargo test --test e2e_tests operators
+
+# Run only statement tests
+cargo test --test e2e_tests statement
+
+# Run only conditional tests
+cargo test --test e2e_tests conditional
 ```
 
 ### Run Individual Tests
@@ -124,7 +130,7 @@ This test:
 
 1. Defines a Slang program with a function that adds two numbers
 2. Calls the function with arguments 20 and 22
-3. Verifies the output is "42"
+3. Verifies that the pattern "42" occurs in stdout
 
 ## Error Testing
 
@@ -136,9 +142,15 @@ fn undefined_variable() {
     let program = r#"
         print_value(y); 
     "#;
-    execute_program_expect_error(program, "Undefined variable: y");
+    execute_program_expect_error(program, "[E1234]" "Undefined variable: y");
 }
 ```
+
+This test:
+
+1. Calls the print_value function with the undefined variable y
+2. Executes the programm and asserts that the output contains the sppecified error code "[E1234]"
+3. Verifies that the pattern "Undefined variable: y" occurs in stderr
 
 ## Dependencies
 
@@ -148,19 +160,9 @@ The tests use the following crates:
 - `predicates` - For flexible output matching
 - `tempfile` - For creating temporary test files
 
-## Adding New Tests
-
-When adding new language features or fixing bugs:
-
-1. Create tests in the appropriate category directory
-2. Use the test utilities for consistency
-3. Include both positive tests (expected behavior) and negative tests (error cases)
-4. Ensure tests are isolated and don't depend on external state
-5. Add descriptive test names that clearly indicate what is being tested
-
 ## Integration with CI/CD
 
-These end-to-end tests serve as the primary validation mechanism for the Slang interpreter and should be run:
+These end-to-end tests serve as the primary validation mechanism for the Slang compiler and should be run:
 
 - Before merging any pull requests
 - As part of the continuous integration pipeline

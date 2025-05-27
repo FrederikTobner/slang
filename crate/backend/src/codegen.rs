@@ -1,13 +1,13 @@
 use crate::bytecode::{Chunk, Function, OpCode};
 use crate::value::Value;
 use slang_ir::ast::{
-    BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
-    LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
+    BinaryExpr, BinaryOperator, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
 };
 use slang_ir::Visitor;
 
 /// Compiles AST nodes into bytecode instructions
-struct Compiler {
+struct CodeGenerator {
     /// The bytecode chunk being constructed
     pub chunk: Chunk,
     /// Current line number for debugging information
@@ -20,15 +20,15 @@ struct Compiler {
     local_scopes: Vec<Vec<String>>,
 }
 
-pub fn compile(statements: &[Statement]) -> Result<Chunk, String> {
-    let compiler = Compiler::new();
+pub fn generate_bytecode(statements: &[Statement]) -> Result<Chunk, String> {
+    let compiler = CodeGenerator::new();
     compiler.compile(statements)
 }
 
-impl Compiler {
+impl CodeGenerator {
     /// Creates a new compiler with an empty chunk
     fn new() -> Self {
-        Compiler {
+        CodeGenerator {
             chunk: Chunk::new(),
             line: 1,
             variables: Vec::new(),
@@ -136,7 +136,7 @@ impl Compiler {
     }
 }
 
-impl Visitor<Result<(), String>> for Compiler {
+impl Visitor<Result<(), String>> for CodeGenerator {
     fn visit_statement(&mut self, stmt: &Statement) -> Result<(), String> {
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
@@ -148,6 +148,7 @@ impl Visitor<Result<(), String>> for Compiler {
             }
             Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(expr) => self.visit_return_statement(expr),
+            Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
         }
     }
 
@@ -246,16 +247,11 @@ impl Visitor<Result<(), String>> for Compiler {
     }
 
     fn visit_assignment_statement(&mut self, assign_stmt: &slang_ir::ast::AssignmentStatement) -> Result<(), String> {
-        // Visit the expression to put its value on the stack
         self.visit_expression(&assign_stmt.value)?;
-
-        // Get the variable index for the assignment target
         let var_index = self.chunk.add_identifier(assign_stmt.name.clone());
         if var_index > 255 {
             return Err("Too many variables in one scope".to_string());
         }
-
-        // Emit the assignment instruction - same as SetVariable since VM handles both
         self.emit_op(OpCode::SetVariable);
         self.emit_byte(var_index as u8);
 
@@ -269,6 +265,7 @@ impl Visitor<Result<(), String>> for Compiler {
             Expression::Variable(name, location) => self.visit_variable_expression(name, location),
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
+            Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
         }
     }
 
@@ -405,6 +402,48 @@ impl Visitor<Result<(), String>> for Compiler {
     ) -> Result<(), String> {
         // Type definitions don't generate code at runtime
         // They're just for the type checker
+        Ok(())
+    }
+
+    fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) -> Result<(), String> {
+        self.visit_expression(&cond_expr.condition)?;
+        
+        let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
+        self.emit_op(OpCode::Pop); // Pop the condition value
+        self.visit_expression(&cond_expr.then_branch)?;
+        
+        let jump_over_else = self.emit_jump(OpCode::Jump);
+        self.patch_jump(jump_to_else);
+        self.emit_op(OpCode::Pop); // Pop the condition value
+        self.visit_expression(&cond_expr.else_branch)?;
+        
+        self.patch_jump(jump_over_else);
+        
+        Ok(())
+    }
+
+    fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> Result<(), String> {
+        self.visit_expression(&if_stmt.condition)?;
+        
+        let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
+        self.emit_op(OpCode::Pop); 
+        
+        self.visit_block_statement(&if_stmt.then_branch)?;
+        
+        if let Some(else_branch) = &if_stmt.else_branch {
+            let jump_over_else = self.emit_jump(OpCode::Jump);
+            
+            self.patch_jump(jump_to_else);
+            self.emit_op(OpCode::Pop); 
+            
+            self.visit_block_statement(else_branch)?;
+            
+            self.patch_jump(jump_over_else);
+        } else {
+            self.patch_jump(jump_to_else);
+            self.emit_op(OpCode::Pop); 
+        }
+        
         Ok(())
     }
 }

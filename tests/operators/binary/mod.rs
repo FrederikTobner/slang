@@ -1,3 +1,3 @@
-mod mathematical;
+mod arithmetic;
 mod logical;
 mod relational;

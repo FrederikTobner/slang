@@ -920,9 +920,9 @@ dependencies = [
  "predicates",
  "rstest",
  "slang_backend",
- "slang_compilation_context",
  "slang_frontend",
  "slang_ir",
+ "slang_shared",
  "slang_types",
  "tempfile",
  "zip",
@@ -935,13 +935,6 @@ dependencies = [
  "slang_derive",
  "slang_frontend",
  "slang_ir",
-]
-
-[[package]]
-name = "slang_compilation_context"
-version = "0.1.0"
-dependencies = [
- "slang_types",
 ]
 
 [[package]]
@@ -958,13 +951,20 @@ name = "slang_frontend"
 version = "0.1.0"
 dependencies = [
  "colored",
- "slang_compilation_context",
  "slang_ir",
+ "slang_shared",
  "slang_types",
 ]
 
 [[package]]
 name = "slang_ir"
+version = "0.1.0"
+dependencies = [
+ "slang_types",
+]
+
+[[package]]
+name = "slang_shared"
 version = "0.1.0"
 dependencies = [
  "slang_types",

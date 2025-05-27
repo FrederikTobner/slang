@@ -3,13 +3,12 @@ use std::collections::HashMap;
 use crate::error::{CompileResult, CompilerError};
 use crate::semantic_error::SemanticAnalysisError;
 
-use slang_compilation_context::CompilationContext;
-use slang_compilation_context::SymbolKind;
+use slang_shared::{CompilationContext, SymbolKind};
 use slang_ir::SourceLocation;
 use slang_ir::Visitor;
 use slang_ir::ast::{
-    BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
-    LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
+    BinaryExpr, BinaryOperator, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    IfStatement, LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator,
 };
 use slang_types::{PrimitiveType, TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
@@ -340,7 +339,6 @@ impl<'a> SemanticAnalyzer<'a> {
             }
         }
 
-        // Original check for regular literals
         if let Expression::Literal(lit) = expr {
             if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
                 let value_in_range = self.context.check_value_in_range(n, target_type);
@@ -661,7 +659,7 @@ impl<'a> SemanticAnalyzer<'a> {
     pub fn analyze(&mut self, statements: &[Statement]) -> CompileResult<()> {
         for stmt in statements {
             if let Err(error) = stmt.accept(self) {
-                let compiler_error = error.to_compiler_error(self.context); // Pass self.context
+                let compiler_error = error.to_compiler_error(self.context); 
                 if !self.errors.iter().any(|e| {
                     e.message == compiler_error.message
                         && e.line == compiler_error.line
@@ -692,6 +690,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             }
             Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(opt_expr) => self.visit_return_statement(opt_expr),
+            Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
         }
     }
 
@@ -1077,11 +1076,9 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                         return Ok(operand_type);
                     }
 
-                    // For unsigned types, we need to reject negation entirely
                     if operand_type == TypeId(PrimitiveType::U32 as usize)
                         || operand_type == TypeId(PrimitiveType::U64 as usize)
                     {
-                        // Attempting to negate an unsigned type
                         return Err(SemanticAnalysisError::InvalidUnaryOperation {
                             operator: "-".to_string(),
                             operand_type: operand_type.clone(),
@@ -1116,6 +1113,61 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
+            Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
         }
+    }
+
+    fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) -> SemanticResult {
+        let condition_type = self.visit_expression(&cond_expr.condition)?;
+        if condition_type != TypeId(PrimitiveType::Bool as usize) {
+            return Err(SemanticAnalysisError::TypeMismatch {
+                expected: TypeId(PrimitiveType::Bool as usize),
+                actual: condition_type,
+                context: Some("if condition".to_string()),
+                location: cond_expr.condition.location(),
+            });
+        }
+
+        let then_type = self.visit_expression(&cond_expr.then_branch)?;
+        let else_type = self.visit_expression(&cond_expr.else_branch)?;
+
+        if then_type == TypeId(PrimitiveType::Unknown as usize) {
+            Ok(else_type)
+        } else if else_type == TypeId(PrimitiveType::Unknown as usize) {
+            Ok(then_type)
+        } else if then_type == else_type {
+            Ok(then_type)
+        } else {
+            Err(SemanticAnalysisError::TypeMismatch {
+                expected: then_type,
+                actual: else_type,
+                context: Some("conditional expression branches must have the same type".to_string()),
+                location: cond_expr.location.clone(),
+            })
+        }
+    }
+
+    fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> SemanticResult {
+        let condition_type = self.visit_expression(&if_stmt.condition)?;
+        if condition_type != TypeId(PrimitiveType::Bool as usize) {
+            return Err(SemanticAnalysisError::TypeMismatch {
+                expected: TypeId(PrimitiveType::Bool as usize),
+                actual: condition_type,
+                context: Some("if condition".to_string()),
+                location: if_stmt.condition.location(),
+            });
+        }
+
+        self.begin_scope();
+        self.visit_block_statement(&if_stmt.then_branch)?;
+        self.end_scope();
+
+        if let Some(else_branch) = &if_stmt.else_branch {
+            self.begin_scope();
+            self.visit_block_statement(else_branch)?;
+            self.end_scope();
+        }
+
+        Ok(TypeId(PrimitiveType::Unknown as usize))
     }
 }

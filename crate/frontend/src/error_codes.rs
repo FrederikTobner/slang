@@ -71,9 +71,11 @@ pub enum ErrorCode {
     InvalidSyntax = 1029,
     /// Encountered unknow type during parsing
     UnknownType = 1030,
+    /// Expected 'else' keyword after if expression
+    ExpectedElse = 1031,
 
     // Semantic Analysis Errors (2000-2999)
-    
+
     /// Variable used before being defined
     UndefinedVariable = 2001,
     /// Variable redefinition in the same scope
@@ -154,6 +156,7 @@ impl ErrorCode {
             ErrorCode::NestedFunction => "Nested function definitions not allowed",
             ErrorCode::InvalidSyntax => "Invalid syntax",
             ErrorCode::UnknownType => "Unknow type",
+            ErrorCode::ExpectedElse => "Expected 'else' after if expression",
 
             // Semantic Analysis Errors
             ErrorCode::UndefinedVariable => "Undefined variable",

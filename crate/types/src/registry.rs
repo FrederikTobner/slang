@@ -93,6 +93,14 @@ impl TypeRegistry {
     }
 
     /// Registers a new type in the registry
+    /// 
+    /// ### Arguments
+    /// 
+    /// * `name` - The name of the type
+    /// * `kind` - The kind of the type (e.g., Integer, Float, etc.)
+    /// 
+    /// ### Returns
+    /// A TypeId representing the newly registered type
     pub fn register_type(&mut self, name: &str, kind: TypeKind) -> TypeId {
         let id = TypeId::new();
         let type_info = TypeInfo {
@@ -100,23 +108,24 @@ impl TypeRegistry {
             name: name.to_string(),
             kind,
         };
-
         self.types.insert(id.clone(), type_info);
-
         id
     }
 
-        /// Registers a new type in the registry
-    pub fn register_primitive_type(&mut self, name: &str, kind: TypeKind, id: TypeId) -> TypeId {
+    /// Registers a primitive type in the registry
+    /// 
+    /// ### Arguments
+    /// 
+    /// * `name` - The name of the primitive type
+    /// * `kind` - The kind of the primitive type (e.g., Integer, Float, etc.)
+    /// * `id` - The TypeId for the primitive type
+    fn register_primitive_type(&mut self, name: &str, kind: TypeKind, id: TypeId) {
         let type_info = TypeInfo {
             id: id.clone(),
             name: name.to_string(),
             kind,
         };
-
         self.types.insert(id.clone(), type_info);
-
-        id
     }
 
     /// Gets type information for a given TypeId

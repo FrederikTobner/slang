@@ -67,6 +67,12 @@ impl CliError {
 }
 
 impl fmt::Display for CliError {
+    /// Formats the error for display
+    /// ### Arguments
+    /// * `f` - The formatter to write the error to
+    ///
+    /// ### Returns
+    /// A Result indicating success or failure of formatting
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CliError::Io { source, path, .. } => {
@@ -90,6 +96,10 @@ impl fmt::Display for CliError {
 }
 
 impl Error for CliError {
+    /// Get the source error if available
+    /// 
+    /// ### Returns
+    ///  An Option containing the source error if it exists, otherwise None
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             CliError::Io { source, .. } => Some(source),
@@ -101,4 +111,4 @@ impl Error for CliError {
 }
 
 /// Type alias for Result with SlangError as the error type
-pub type SlangResult<T> = Result<T, CliError>;
+pub type CliResult<T> = Result<T, CliError>;

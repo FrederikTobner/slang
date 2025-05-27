@@ -192,6 +192,8 @@ fn handle_identifier(state: &mut LexerState, start_pos: usize) {
         "struct" => Tokentype::Struct,
         "fn" => Tokentype::Fn,
         "return" => Tokentype::Return,
+        "if" => Tokentype::If,
+        "else" => Tokentype::Else,
         "true" | "false" => Tokentype::BooleanLiteral,
         _ => Tokentype::Identifier,
     };
@@ -247,7 +249,7 @@ fn handle_number(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `self` - The current lexer state
 fn handle_string(state: &mut LexerState) {
-    state.advance(); // Skip opening quote
+    state.advance(); 
     let mut string = String::new();
     let start_pos = state.current_pos;
 
@@ -322,7 +324,7 @@ fn handle_slash(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `self` - The current lexer state
 fn handle_line_comment(state: &mut LexerState) {
-    state.advance(); // Skip the second '/'
+    state.advance(); 
 
     while let Some(&c) = state.peek() {
         if c == '\n' {
@@ -339,7 +341,7 @@ fn handle_line_comment(state: &mut LexerState) {
 /// ### Arguments
 /// * `self` - The current lexer state
 fn handle_block_comment(state: &mut LexerState) {
-    state.advance(); // Skip the '*'
+    state.advance();
 
     let mut nesting = 1;
     while nesting > 0 {

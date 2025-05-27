@@ -7,7 +7,7 @@ edition = "2024"
 colored = "2.0.4"
 slang_ir = { path = "../ir" }
 slang_types = { path = "../types" }
-slang_compilation_context = { path = "../compilation_context" }
+slang_shared = { path = "../shared" }
 
 [features]
 default = []

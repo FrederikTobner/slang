@@ -2,7 +2,7 @@ use crate::error::CompilerError;
 use crate::error_codes::ErrorCode;
 use slang_ir::SourceLocation;
 use slang_types::TypeId;
-use slang_compilation_context::CompilationContext;
+use slang_shared::CompilationContext;
 
 /// Represents different categories of semantic analysis errors
 /// that occur during static analysis of the program.
