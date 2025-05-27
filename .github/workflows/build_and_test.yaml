@@ -57,3 +57,5 @@ jobs:
       run: cargo test --verbose --package slang_derive
     - name: Run frontend tests
       run: cargo test --verbose --package slang_frontend
+    - name: Run shared tests
+      run: cargo test --verbose --package slang_shared

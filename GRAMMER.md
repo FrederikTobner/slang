@@ -4,7 +4,7 @@ Grammar of the slang language in the extended backus naur format:
 
 ```ebnf
 /* Program structure */
-program = { statement | comment } ;
+program = { statement ";" | comment } ;
 
 /* Comments */
 comment = single_line_comment | multi_line_comment ;

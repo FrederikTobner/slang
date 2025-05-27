@@ -40,7 +40,7 @@ pub struct Symbol {
 /// 
 /// ### Example
 /// ```
-/// use slang_compilation_context::{SymbolTable, SymbolKind};
+/// use slang_shared::{SymbolTable, SymbolKind};
 /// use slang_types::TypeId;
 /// 
 /// let mut table = SymbolTable::new();
@@ -67,7 +67,7 @@ impl SymbolTable {
     /// 
     /// ### Example
     /// ```
-    /// use slang_compilation_context::SymbolTable;
+    /// use slang_shared::SymbolTable;
     /// 
     /// let table = SymbolTable::new();
     /// assert!(table.lookup("nonexistent").is_none());
@@ -95,7 +95,7 @@ impl SymbolTable {
     /// 
     /// ### Example
     /// ```
-    /// use slang_compilation_context::{SymbolTable, SymbolKind};
+    /// use slang_shared::{SymbolTable, SymbolKind};
     /// use slang_types::TypeId;
     /// 
     /// let mut table = SymbolTable::new();
@@ -162,7 +162,7 @@ impl SymbolTable {
     /// 
     /// ### Example
     /// ```
-    /// use slang_compilation_context::{SymbolTable, SymbolKind};
+    /// use slang_shared::{SymbolTable, SymbolKind};
     /// use slang_types::TypeId;
     /// 
     /// let mut table = SymbolTable::new();
