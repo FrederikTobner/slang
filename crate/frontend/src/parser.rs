@@ -69,7 +69,7 @@ pub struct Parser<'a> {
     /// Errors collected during parsing
     errors: Vec<CompilerError>,
     /// Compilation context for type information
-    context: &'a mut CompilationContext, // Changed to mutable
+    context: &'a mut CompilationContext, 
 }
 
 pub fn parse<'a>(
@@ -116,7 +116,7 @@ impl<'a> Parser<'a> {
                 Ok(stmt) => statements.push(stmt),
                 Err(e) => {
                     self.errors.push(e.to_compiler_error(self.line_info));
-                    self.synchronize(); // Skip to next valid statement boundary
+                    self.synchronize(); 
                 }
             }
         }
@@ -242,7 +242,6 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed function declaration or an error message
     fn function_declaration_statement(&mut self) -> Result<Statement, ParseError> {
-        // Parse function name
         if !self.check(&Tokentype::Identifier) {
             return Err(self.error(ErrorCode::ExpectedIdentifier, &format!(
                 "Expected function name found {}",
@@ -407,7 +406,7 @@ impl<'a> Parser<'a> {
                 )
                 .to_compiler_error(self.line_info);
                 self.errors.push(error);
-                unknown_type.clone() // Return unknown_type on error
+                unknown_type.clone() 
             }
         };
 
@@ -491,7 +490,7 @@ impl<'a> Parser<'a> {
         let name = token.lexeme.clone();
         let location =
             slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
-        let mut var_type = TypeId(PrimitiveType::Unknown as usize); // Default to unknown type
+        let mut var_type = TypeId(PrimitiveType::Unknown as usize); 
 
         if self.match_token(&Tokentype::Colon) {
             if !self.check(&Tokentype::Identifier) {
@@ -534,7 +533,7 @@ impl<'a> Parser<'a> {
                     )
                     .to_compiler_error(self.line_info);
                     self.errors.push(error);
-                    unknown_type.clone() // Return unknown_type on error
+                    unknown_type.clone() 
                 }
             };
 
@@ -1052,7 +1051,6 @@ impl<'a> Parser<'a> {
             }
         }
 
-        // Unspecified integer literal
         Ok(Expression::Literal(LiteralExpr {
             value: LiteralValue::UnspecifiedInteger(base_value),
             expr_type: TypeId(PrimitiveType::UnspecifiedInt as usize) ,
@@ -1089,7 +1087,6 @@ impl<'a> Parser<'a> {
                 TYPE_NAME_UNKNOWN
             )));
         }
-        // Use context to resolve type by name
         if let Some(symbol) = self.context.lookup_symbol(&type_name) {
             if symbol.kind == SymbolKind::Type {
                 Ok(symbol.type_id.clone())
@@ -1232,7 +1229,6 @@ impl<'a> Parser<'a> {
             return Err(self.error(ErrorCode::ExpectedIdentifier, "Expected identifier for assignment"));
         }
 
-        // Get the position before advancing
         let token_pos = self.peek().pos;
         let (line, column) = self.line_info.get_line_col(token_pos);
 
@@ -1304,7 +1300,7 @@ impl<'a> Parser<'a> {
             condition: Box::new(condition),
             then_branch: Box::new(then_branch),
             else_branch: Box::new(else_branch),
-            expr_type: TypeId(PrimitiveType::Unknown as usize), // Will be resolved by semantic analyzer
+            expr_type: TypeId(PrimitiveType::Unknown as usize), 
             location,
         }))
     }

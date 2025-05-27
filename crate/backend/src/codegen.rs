@@ -247,16 +247,11 @@ impl Visitor<Result<(), String>> for CodeGenerator {
     }
 
     fn visit_assignment_statement(&mut self, assign_stmt: &slang_ir::ast::AssignmentStatement) -> Result<(), String> {
-        // Visit the expression to put its value on the stack
         self.visit_expression(&assign_stmt.value)?;
-
-        // Get the variable index for the assignment target
         let var_index = self.chunk.add_identifier(assign_stmt.name.clone());
         if var_index > 255 {
             return Err("Too many variables in one scope".to_string());
         }
-
-        // Emit the assignment instruction - same as SetVariable since VM handles both
         self.emit_op(OpCode::SetVariable);
         self.emit_byte(var_index as u8);
 
@@ -411,60 +406,42 @@ impl Visitor<Result<(), String>> for CodeGenerator {
     }
 
     fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) -> Result<(), String> {
-        // Generate code for condition
         self.visit_expression(&cond_expr.condition)?;
         
-        // Jump to else branch if condition is false
         let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
         self.emit_op(OpCode::Pop); // Pop the condition value
-        
-        // Generate code for then branch
         self.visit_expression(&cond_expr.then_branch)?;
         
-        // Jump over else branch
         let jump_over_else = self.emit_jump(OpCode::Jump);
-        
-        // Patch the jump to else branch
         self.patch_jump(jump_to_else);
         self.emit_op(OpCode::Pop); // Pop the condition value
-        
-        // Generate code for else branch
         self.visit_expression(&cond_expr.else_branch)?;
         
-        // Patch the jump over else branch
         self.patch_jump(jump_over_else);
         
         Ok(())
     }
 
     fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> Result<(), String> {
-        // Generate code for condition
         self.visit_expression(&if_stmt.condition)?;
         
-        // Jump to else branch if condition is false
         let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
-        self.emit_op(OpCode::Pop); // Pop the condition value
+        self.emit_op(OpCode::Pop); 
         
-        // Generate code for then branch
         self.visit_block_statement(&if_stmt.then_branch)?;
         
         if let Some(else_branch) = &if_stmt.else_branch {
-            // Jump over else branch
             let jump_over_else = self.emit_jump(OpCode::Jump);
             
-            // Patch the jump to else branch
             self.patch_jump(jump_to_else);
-            self.emit_op(OpCode::Pop); // Pop the condition value
+            self.emit_op(OpCode::Pop); 
             
-            // Generate code for else branch
             self.visit_block_statement(else_branch)?;
             
-            // Patch the jump over else branch
             self.patch_jump(jump_over_else);
         } else {
-            // Patch the jump to end if no else branch
             self.patch_jump(jump_to_else);
-            self.emit_op(OpCode::Pop); // Pop the condition value
+            self.emit_op(OpCode::Pop); 
         }
         
         Ok(())
