@@ -82,6 +82,8 @@ pub enum Expression {
     Unary(UnaryExpr),
     /// A function call
     Call(FunctionCallExpr),
+    /// A conditional expression (if/else)
+    Conditional(ConditionalExpr),
 }
 
 impl Expression {
@@ -92,6 +94,7 @@ impl Expression {
             Expression::Variable(_, loc) => *loc,
             Expression::Unary(e) => e.location,
             Expression::Call(e) => e.location,
+            Expression::Conditional(e) => e.location,
         }
     }
 }
@@ -113,6 +116,8 @@ pub enum Statement {
     Block(Vec<Statement>),
     /// Return statement
     Return(Option<Expression>),
+    /// Conditional statement (if/else)
+    If(IfStatement),
 }
 
 /// A function call expression
@@ -124,6 +129,21 @@ pub struct FunctionCallExpr {
     pub arguments: Vec<Expression>,
     /// Type of the function call expression
     #[allow(dead_code)]
+    pub expr_type: TypeId,
+    /// Source code location information
+    pub location: SourceLocation,
+}
+
+/// A conditional expression (if/else)
+#[derive(Debug)]
+pub struct ConditionalExpr {
+    /// Condition to evaluate
+    pub condition: Box<Expression>,
+    /// Expression to evaluate if condition is true
+    pub then_branch: Box<Expression>,
+    /// Expression to evaluate if condition is false (always present for expressions)
+    pub else_branch: Box<Expression>,
+    /// Type of the conditional expression
     pub expr_type: TypeId,
     /// Source code location information
     pub location: SourceLocation,
@@ -258,6 +278,19 @@ pub struct AssignmentStatement {
     pub location: SourceLocation,
 }
 
+/// A conditional statement (if/else)
+#[derive(Debug)]
+pub struct IfStatement {
+    /// Condition to evaluate
+    pub condition: Expression,
+    /// Block of statements to execute if condition is true
+    pub then_branch: Vec<Statement>,
+    /// Optional block of statements to execute if condition is false
+    pub else_branch: Option<Vec<Statement>>,
+    /// Source code location information
+    pub location: SourceLocation,
+}
+
 impl Statement {
     /// Accepts a visitor for this statement
     /// 
@@ -279,6 +312,7 @@ impl Statement {
             }
             Statement::Block(stmts) => visitor.visit_block_statement(stmts),
             Statement::Return(expr) => visitor.visit_return_statement(expr),
+            Statement::If(if_stmt) => visitor.visit_if_statement(if_stmt),
         }
     }
 }
@@ -300,6 +334,7 @@ impl Expression {
             }
             Expression::Unary(unary) => visitor.visit_unary_expression(unary),
             Expression::Call(call) => visitor.visit_call_expression(call),
+            Expression::Conditional(cond) => visitor.visit_conditional_expression(cond),
         }
     }
 }

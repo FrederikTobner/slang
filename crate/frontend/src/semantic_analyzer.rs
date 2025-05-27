@@ -7,8 +7,8 @@ use slang_shared::{CompilationContext, SymbolKind};
 use slang_ir::SourceLocation;
 use slang_ir::Visitor;
 use slang_ir::ast::{
-    BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
-    LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
+    BinaryExpr, BinaryOperator, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    IfStatement, LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator,
 };
 use slang_types::{PrimitiveType, TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
@@ -691,6 +691,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             }
             Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(opt_expr) => self.visit_return_statement(opt_expr),
+            Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
         }
     }
 
@@ -1115,6 +1116,68 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
+            Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
         }
+    }
+
+    fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) -> SemanticResult {
+        // Type check the condition - it must be a boolean
+        let condition_type = self.visit_expression(&cond_expr.condition)?;
+        if condition_type != TypeId(PrimitiveType::Bool as usize) {
+            return Err(SemanticAnalysisError::TypeMismatch {
+                expected: TypeId(PrimitiveType::Bool as usize),
+                actual: condition_type,
+                context: Some("if condition".to_string()),
+                location: cond_expr.condition.location(),
+            });
+        }
+
+        // Type check both branches
+        let then_type = self.visit_expression(&cond_expr.then_branch)?;
+        let else_type = self.visit_expression(&cond_expr.else_branch)?;
+
+        // For expressions, both branches must have the same type or one must be unknown
+        if then_type == TypeId(PrimitiveType::Unknown as usize) {
+            Ok(else_type)
+        } else if else_type == TypeId(PrimitiveType::Unknown as usize) {
+            Ok(then_type)
+        } else if then_type == else_type {
+            Ok(then_type)
+        } else {
+            Err(SemanticAnalysisError::TypeMismatch {
+                expected: then_type,
+                actual: else_type,
+                context: Some("conditional expression branches must have the same type".to_string()),
+                location: cond_expr.location.clone(),
+            })
+        }
+    }
+
+    fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> SemanticResult {
+        // Type check the condition - it must be a boolean
+        let condition_type = self.visit_expression(&if_stmt.condition)?;
+        if condition_type != TypeId(PrimitiveType::Bool as usize) {
+            return Err(SemanticAnalysisError::TypeMismatch {
+                expected: TypeId(PrimitiveType::Bool as usize),
+                actual: condition_type,
+                context: Some("if condition".to_string()),
+                location: if_stmt.condition.location(),
+            });
+        }
+
+        // Visit the then branch
+        self.begin_scope();
+        self.visit_block_statement(&if_stmt.then_branch)?;
+        self.end_scope();
+
+        // Visit the optional else branch
+        if let Some(else_branch) = &if_stmt.else_branch {
+            self.begin_scope();
+            self.visit_block_statement(else_branch)?;
+            self.end_scope();
+        }
+
+        // If statements don't return a value
+        Ok(TypeId(PrimitiveType::Unknown as usize))
     }
 }

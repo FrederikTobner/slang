@@ -56,6 +56,7 @@ Comprehensive operator testing organized by type:
 Tests different statement types:
 
 - **`assignment/`** - Variable assignment operations
+- **`conditional/`** - Conditional statements and expressions (if/else)
 - **`variable_declaration/`** - Variable declaration with and without initialization
 
 ### Type Tests (`types/`)
@@ -83,6 +84,12 @@ cargo test --test e2e_tests functions
 
 # Run only operator tests
 cargo test --test e2e_tests operators
+
+# Run only statement tests
+cargo test --test e2e_tests statement
+
+# Run only conditional tests
+cargo test --test e2e_tests conditional
 ```
 
 ### Run Individual Tests
@@ -152,7 +159,6 @@ The tests use the following crates:
 - `assert_cmd` - For running the Slang binary and asserting on process behavior
 - `predicates` - For flexible output matching
 - `tempfile` - For creating temporary test files
-
 
 ## Integration with CI/CD
 

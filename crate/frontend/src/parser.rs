@@ -4,8 +4,8 @@ use crate::error_codes::ErrorCode;
 use crate::token::{Token, Tokentype};
 use slang_shared::{CompilationContext, SymbolKind};
 use slang_ir::ast::{
-    BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
-    LetStatement, LiteralExpr, LiteralValue, Parameter, Statement, TypeDefinitionStmt, UnaryExpr,
+    BinaryExpr, BinaryOperator, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    IfStatement, LetStatement, LiteralExpr, LiteralValue, Parameter, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator,
 };
 use slang_ir::SourceLocation;
@@ -187,6 +187,8 @@ impl<'a> Parser<'a> {
             self.function_declaration_statement()
         } else if self.match_token(&Tokentype::Return) {
             self.return_statement()
+        } else if self.match_token(&Tokentype::If) {
+            self.if_statement()
         } else if self.match_token(&Tokentype::LeftBrace) {
             self.block_statement()
         } else if self.check(&Tokentype::Identifier) && self.check_next(&Tokentype::Equal) {
@@ -850,6 +852,10 @@ impl<'a> Parser<'a> {
             }));
         }
 
+        if self.match_token(&Tokentype::If) {
+            return self.conditional_expression();
+        }
+
         if self.match_token(&Tokentype::LeftParen) {
             let expr = self.expression()?;
             if !self.match_token(&Tokentype::RightParen) {
@@ -1247,6 +1253,117 @@ impl<'a> Parser<'a> {
         Ok(Statement::Assignment(slang_ir::ast::AssignmentStatement {
             name,
             value,
+            location,
+        }))
+    }
+
+    /// Parses a conditional expression (if/else expression)
+    ///
+    /// ### Returns
+    ///
+    /// The parsed conditional expression or an error message
+    fn conditional_expression(&mut self) -> Result<Expression, ParseError> {
+        let if_token_pos = self.previous().pos;
+        let (line, column) = self.line_info.get_line_col(if_token_pos);
+        
+        let condition = self.expression()?;
+        
+        if !self.match_token(&Tokentype::LeftBrace) {
+            return Err(self.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after if condition"));
+        }
+        
+        let then_branch = self.expression()?;
+        
+        if !self.match_token(&Tokentype::RightBrace) {
+            return Err(self.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after if expression"));
+        }
+        
+        if !self.match_token(&Tokentype::Else) {
+            return Err(self.error(ErrorCode::ExpectedElse, "Expected 'else' after if expression"));
+        }
+        
+        if !self.match_token(&Tokentype::LeftBrace) {
+            return Err(self.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after else"));
+        }
+        
+        let else_branch = self.expression()?;
+        
+        if !self.match_token(&Tokentype::RightBrace) {
+            return Err(self.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after else expression"));
+        }
+        
+        let end_pos = self.previous().pos + self.previous().lexeme.len();
+        let location = slang_ir::source_location::SourceLocation::new(
+            if_token_pos, 
+            line, 
+            column, 
+            end_pos - if_token_pos
+        );
+        
+        Ok(Expression::Conditional(ConditionalExpr {
+            condition: Box::new(condition),
+            then_branch: Box::new(then_branch),
+            else_branch: Box::new(else_branch),
+            expr_type: TypeId(PrimitiveType::Unknown as usize), // Will be resolved by semantic analyzer
+            location,
+        }))
+    }
+
+    /// Parses an if statement (if/else statement)
+    ///
+    /// ### Returns
+    ///
+    /// The parsed if statement or an error message
+    fn if_statement(&mut self) -> Result<Statement, ParseError> {
+        let if_token_pos = self.previous().pos;
+        let (line, column) = self.line_info.get_line_col(if_token_pos);
+        
+        let condition = self.expression()?;
+        
+        if !self.match_token(&Tokentype::LeftBrace) {
+            return Err(self.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after if condition"));
+        }
+        
+        let mut then_branch = Vec::new();
+        while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
+            then_branch.push(self.statement()?);
+        }
+        
+        if !self.match_token(&Tokentype::RightBrace) {
+            return Err(self.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after if body"));
+        }
+        
+        let else_branch = if self.match_token(&Tokentype::Else) {
+            if !self.match_token(&Tokentype::LeftBrace) {
+                return Err(self.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after else"));
+            }
+            
+            let mut else_statements = Vec::new();
+            while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
+                else_statements.push(self.statement()?);
+            }
+            
+            if !self.match_token(&Tokentype::RightBrace) {
+                return Err(self.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after else body"));
+            }
+            
+            Some(else_statements)
+        } else {
+            None
+        };
+        
+        let end_pos = self.previous().pos + self.previous().lexeme.len();
+        let location = slang_ir::source_location::SourceLocation::new(
+            if_token_pos, 
+            line, 
+            column, 
+            end_pos - if_token_pos
+        );
+        
+        Ok(Statement::If(IfStatement {
+            condition,
+            then_branch,
+            else_branch,
             location,
         }))
     }

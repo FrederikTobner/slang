@@ -1,8 +1,8 @@
 use crate::bytecode::{Chunk, Function, OpCode};
 use crate::value::Value;
 use slang_ir::ast::{
-    BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
-    LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
+    BinaryExpr, BinaryOperator, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
 };
 use slang_ir::Visitor;
 
@@ -148,6 +148,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
             }
             Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(expr) => self.visit_return_statement(expr),
+            Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
         }
     }
 
@@ -269,6 +270,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
             Expression::Variable(name, location) => self.visit_variable_expression(name, location),
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
+            Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
         }
     }
 
@@ -405,6 +407,66 @@ impl Visitor<Result<(), String>> for CodeGenerator {
     ) -> Result<(), String> {
         // Type definitions don't generate code at runtime
         // They're just for the type checker
+        Ok(())
+    }
+
+    fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) -> Result<(), String> {
+        // Generate code for condition
+        self.visit_expression(&cond_expr.condition)?;
+        
+        // Jump to else branch if condition is false
+        let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
+        self.emit_op(OpCode::Pop); // Pop the condition value
+        
+        // Generate code for then branch
+        self.visit_expression(&cond_expr.then_branch)?;
+        
+        // Jump over else branch
+        let jump_over_else = self.emit_jump(OpCode::Jump);
+        
+        // Patch the jump to else branch
+        self.patch_jump(jump_to_else);
+        self.emit_op(OpCode::Pop); // Pop the condition value
+        
+        // Generate code for else branch
+        self.visit_expression(&cond_expr.else_branch)?;
+        
+        // Patch the jump over else branch
+        self.patch_jump(jump_over_else);
+        
+        Ok(())
+    }
+
+    fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> Result<(), String> {
+        // Generate code for condition
+        self.visit_expression(&if_stmt.condition)?;
+        
+        // Jump to else branch if condition is false
+        let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
+        self.emit_op(OpCode::Pop); // Pop the condition value
+        
+        // Generate code for then branch
+        self.visit_block_statement(&if_stmt.then_branch)?;
+        
+        if let Some(else_branch) = &if_stmt.else_branch {
+            // Jump over else branch
+            let jump_over_else = self.emit_jump(OpCode::Jump);
+            
+            // Patch the jump to else branch
+            self.patch_jump(jump_to_else);
+            self.emit_op(OpCode::Pop); // Pop the condition value
+            
+            // Generate code for else branch
+            self.visit_block_statement(else_branch)?;
+            
+            // Patch the jump over else branch
+            self.patch_jump(jump_over_else);
+        } else {
+            // Patch the jump to end if no else branch
+            self.patch_jump(jump_to_else);
+            self.emit_op(OpCode::Pop); // Pop the condition value
+        }
+        
         Ok(())
     }
 }

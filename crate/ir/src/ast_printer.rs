@@ -1,6 +1,6 @@
 use crate::ast::{
-    BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
-    LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
+    BinaryExpr, BinaryOperator, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    IfStatement, LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator, AssignmentStatement,
 };
 use crate::Visitor;
@@ -52,6 +52,7 @@ impl Visitor<()> for ASTPrinter {
             }
             Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(expr) => self.visit_return_statement(expr),
+            Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
         }
     }
 
@@ -137,6 +138,7 @@ impl Visitor<()> for ASTPrinter {
             Expression::Variable(name, location) => self.visit_variable_expression(name, location),
             Expression::Unary(unary) => self.visit_unary_expression(unary),
             Expression::Call(call) => self.visit_call_expression(call),
+            Expression::Conditional(cond) => self.visit_conditional_expression(cond),
         }
     }
 
@@ -209,5 +211,55 @@ impl Visitor<()> for ASTPrinter {
         _location: &crate::source_location::SourceLocation,
     ) {
         println!("{}Var: {}", self.indent(), name);
+    }
+
+    fn visit_if_statement(&mut self, if_stmt: &IfStatement) {
+        println!("{}If Statement:", self.indent());
+        
+        self.indent_level += 1;
+        println!("{}Condition:", self.indent());
+        self.indent_level += 1;
+        self.visit_expression(&if_stmt.condition);
+        self.indent_level -= 1;
+        
+        println!("{}Then Branch:", self.indent());
+        self.indent_level += 1;
+        for stmt in &if_stmt.then_branch {
+            self.visit_statement(stmt);
+        }
+        self.indent_level -= 1;
+        
+        if let Some(else_branch) = &if_stmt.else_branch {
+            println!("{}Else Branch:", self.indent());
+            self.indent_level += 1;
+            for stmt in else_branch {
+                self.visit_statement(stmt);
+            }
+            self.indent_level -= 1;
+        }
+        
+        self.indent_level -= 1;
+    }
+
+    fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) {
+        println!("{}Conditional Expression:", self.indent());
+        
+        self.indent_level += 1;
+        println!("{}Condition:", self.indent());
+        self.indent_level += 1;
+        self.visit_expression(&cond_expr.condition);
+        self.indent_level -= 1;
+        
+        println!("{}Then:", self.indent());
+        self.indent_level += 1;
+        self.visit_expression(&cond_expr.then_branch);
+        self.indent_level -= 1;
+        
+        println!("{}Else:", self.indent());
+        self.indent_level += 1;
+        self.visit_expression(&cond_expr.else_branch);
+        self.indent_level -= 1;
+        
+        self.indent_level -= 1;
     }
 }

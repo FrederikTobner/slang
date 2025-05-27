@@ -192,6 +192,8 @@ fn handle_identifier(state: &mut LexerState, start_pos: usize) {
         "struct" => Tokentype::Struct,
         "fn" => Tokentype::Fn,
         "return" => Tokentype::Return,
+        "if" => Tokentype::If,
+        "else" => Tokentype::Else,
         "true" | "false" => Tokentype::BooleanLiteral,
         _ => Tokentype::Identifier,
     };
