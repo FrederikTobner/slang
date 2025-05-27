@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use crate::error::{CompileResult, CompilerError};
 use crate::semantic_error::SemanticAnalysisError;
 
-use slang_compilation_context::CompilationContext;
-use slang_compilation_context::SymbolKind;
+use slang_shared::{CompilationContext, SymbolKind};
 use slang_ir::SourceLocation;
 use slang_ir::Visitor;
 use slang_ir::ast::{

@@ -17,7 +17,7 @@ The backend crate is responsible for compiling the AST to bytecode and executing
 
 The backend consists of several key components:
 
-- **Compiler (`compiler.rs`)**: Translates AST into bytecode instructions
+- **CodeGenerator (`codegen.rs`)**: Translates AST into bytecode instructions
 - **Virtual Machine (`vm.rs`)**: The core execution engine that interprets Slang bytecode
 - **Bytecode (`bytecode.rs`)**: Definitions of bytecode instructions and chunks
 - **Value System (`value.rs`)**: Runtime value representations and operations

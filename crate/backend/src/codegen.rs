@@ -7,7 +7,7 @@ use slang_ir::ast::{
 use slang_ir::Visitor;
 
 /// Compiles AST nodes into bytecode instructions
-struct Compiler {
+struct CodeGenerator {
     /// The bytecode chunk being constructed
     pub chunk: Chunk,
     /// Current line number for debugging information
@@ -20,15 +20,15 @@ struct Compiler {
     local_scopes: Vec<Vec<String>>,
 }
 
-pub fn compile(statements: &[Statement]) -> Result<Chunk, String> {
-    let compiler = Compiler::new();
+pub fn generate_bytecode(statements: &[Statement]) -> Result<Chunk, String> {
+    let compiler = CodeGenerator::new();
     compiler.compile(statements)
 }
 
-impl Compiler {
+impl CodeGenerator {
     /// Creates a new compiler with an empty chunk
     fn new() -> Self {
-        Compiler {
+        CodeGenerator {
             chunk: Chunk::new(),
             line: 1,
             variables: Vec::new(),
@@ -136,7 +136,7 @@ impl Compiler {
     }
 }
 
-impl Visitor<Result<(), String>> for Compiler {
+impl Visitor<Result<(), String>> for CodeGenerator {
     fn visit_statement(&mut self, stmt: &Statement) -> Result<(), String> {
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),

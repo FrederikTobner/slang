@@ -2,8 +2,7 @@ use crate::error::LineInfo;
 use crate::error::{CompileResult, CompilerError};
 use crate::error_codes::ErrorCode;
 use crate::token::{Token, Tokentype};
-use slang_compilation_context::CompilationContext;
-use slang_compilation_context::SymbolKind;
+use slang_shared::{CompilationContext, SymbolKind};
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, Expression, FunctionCallExpr, FunctionDeclarationStmt,
     LetStatement, LiteralExpr, LiteralValue, Parameter, Statement, TypeDefinitionStmt, UnaryExpr,
@@ -309,7 +308,7 @@ impl<'a> Parser<'a> {
             }
 
             let type_id_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
-                if symbol.kind == slang_compilation_context::symbol_table::SymbolKind::Type {
+                if symbol.kind == SymbolKind::Type {
                     Some(symbol.type_id.clone())
                 } else {
                     None

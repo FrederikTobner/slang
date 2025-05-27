@@ -11,7 +11,7 @@ members = [
         "crate/backend",
         "crate/types",
         "crate/derive",
-        "crate/compilation_context",
+        "crate/shared",
 ]
 
 [features]
@@ -28,8 +28,8 @@ slang_frontend = { path = "crate/frontend", features = [] }
 slang_ir = { path = "crate/ir", features = [] }
 slang_backend = { path = "crate/backend", features = [] }
 slang_types = { path = "crate/types", features = [] }
-slang_compilation_context = { path = "crate/compilation_context", features = [
-] }
+slang_shared = { path = "crate/shared", features = [] }
+
 
 [dev-dependencies]
 assert_cmd = "2.0.12"

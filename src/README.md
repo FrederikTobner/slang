@@ -26,11 +26,11 @@ The main application consists of several key modules:
 
 The compiler orchestrates a multi-stage compilation process:
 
-1. **Lexical Analysis** - Tokenize source code using `slang_frontend::lexer`
-2. **Parsing** - Generate Abstract Syntax Tree using `slang_frontend::parser`
-3. **Semantic Analysis** - Type checking and symbol resolution using `slang_frontend::semantic_analyzer`
-4. **Code Generation** - Generate bytecode using `slang_backend::compiler`
-5. **Execution** - Run bytecode using `slang_backend::vm`
+1. **Lexical Analysis** - Tokenize source code
+2. **Parsing** - Generate Abstract Syntax Tree
+3. **Semantic Analysis** - Type checking and symbol resolution
+4. **Code Generation** - Generate bytecode
+5. **Execution** - Run bytecode using a VM
 
 ## Command-Line Interface
 
