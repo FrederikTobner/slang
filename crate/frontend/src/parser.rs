@@ -4,7 +4,7 @@ use crate::error_codes::ErrorCode;
 use crate::token::{Token, Tokentype};
 use slang_shared::{CompilationContext, SymbolKind};
 use slang_ir::ast::{
-    BinaryExpr, BinaryOperator, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
     IfStatement, LetStatement, LiteralExpr, LiteralValue, Parameter, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator,
 };
@@ -1268,11 +1268,7 @@ impl<'a> Parser<'a> {
             return Err(self.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after if condition"));
         }
         
-        let then_branch = self.expression()?;
-        
-        if !self.match_token(&Tokentype::RightBrace) {
-            return Err(self.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after if expression"));
-        }
+        let then_branch = self.parse_block_expression()?;
         
         if !self.match_token(&Tokentype::Else) {
             return Err(self.error(ErrorCode::ExpectedElse, "Expected 'else' after if expression"));
@@ -1282,11 +1278,7 @@ impl<'a> Parser<'a> {
             return Err(self.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after else"));
         }
         
-        let else_branch = self.expression()?;
-        
-        if !self.match_token(&Tokentype::RightBrace) {
-            return Err(self.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after else expression"));
-        }
+        let else_branch = self.parse_block_expression()?;
         
         let end_pos = self.previous().pos + self.previous().lexeme.len();
         let location = slang_ir::source_location::SourceLocation::new(
@@ -1301,6 +1293,64 @@ impl<'a> Parser<'a> {
             then_branch: Box::new(then_branch),
             else_branch: Box::new(else_branch),
             expr_type: TypeId(PrimitiveType::Unknown as usize), 
+            location,
+        }))
+    }
+
+    /// Parses a block expression - a sequence of statements with an optional return expression
+    ///
+    /// ### Returns
+    ///
+    /// The parsed block expression or an error message
+    fn parse_block_expression(&mut self) -> Result<Expression, ParseError> {
+        let start_pos = self.current;
+        let (line, column) = self.line_info.get_line_col(self.tokens[start_pos].pos);
+        
+        let mut statements = Vec::new();
+        let mut return_expr: Option<Box<Expression>> = None;
+        
+        while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
+            // Check if this could be a final expression without semicolon
+            let checkpoint = self.current;
+            
+            // Try to parse as an expression first
+            if let Ok(expr) = self.expression() {
+                // If the next token is a right brace, this is the return expression
+                if self.check(&Tokentype::RightBrace) {
+                    return_expr = Some(Box::new(expr));
+                    break;
+                }
+                // If the next token is a semicolon, this is a statement
+                else if self.match_token(&Tokentype::Semicolon) {
+                    statements.push(Statement::Expression(expr));
+                } else {
+                    // Reset and parse as a statement instead
+                    self.current = checkpoint;
+                    statements.push(self.statement()?);
+                }
+            } else {
+                // Reset and parse as a statement
+                self.current = checkpoint;
+                statements.push(self.statement()?);
+            }
+        }
+        
+        if !self.match_token(&Tokentype::RightBrace) {
+            return Err(self.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after block"));
+        }
+        
+        let end_pos = self.previous().pos + self.previous().lexeme.len();
+        let location = slang_ir::source_location::SourceLocation::new(
+            self.tokens[start_pos].pos,
+            line,
+            column,
+            end_pos - self.tokens[start_pos].pos
+        );
+        
+        Ok(Expression::Block(BlockExpr {
+            statements,
+            return_expr,
+            expr_type: TypeId(PrimitiveType::Unknown as usize),
             location,
         }))
     }

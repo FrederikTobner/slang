@@ -1,8 +1,8 @@
 use crate::error::CompilerError;
 use crate::error_codes::ErrorCode;
 use slang_ir::SourceLocation;
-use slang_types::TypeId;
 use slang_shared::CompilationContext;
+use slang_types::TypeId;
 
 /// Represents different categories of semantic analysis errors
 /// that occur during static analysis of the program.
@@ -471,7 +471,9 @@ impl SemanticAnalysisError {
             SemanticAnalysisError::InvalidFieldType { .. } => ErrorCode::InvalidFieldType,
             SemanticAnalysisError::TypeMismatch { .. } => ErrorCode::TypeMismatch,
             SemanticAnalysisError::OperationTypeMismatch { .. } => ErrorCode::OperationTypeMismatch,
-            SemanticAnalysisError::LogicalOperatorTypeMismatch { .. } => ErrorCode::LogicalOperatorTypeMismatch,
+            SemanticAnalysisError::LogicalOperatorTypeMismatch { .. } => {
+                ErrorCode::LogicalOperatorTypeMismatch
+            }
             SemanticAnalysisError::ValueOutOfRange { .. } => ErrorCode::ValueOutOfRange,
             SemanticAnalysisError::ArgumentCountMismatch { .. } => ErrorCode::ArgumentCountMismatch,
             SemanticAnalysisError::ArgumentTypeMismatch { .. } => ErrorCode::ArgumentTypeMismatch,
@@ -480,7 +482,9 @@ impl SemanticAnalysisError {
             SemanticAnalysisError::MissingReturnValue { .. } => ErrorCode::MissingReturnValue,
             SemanticAnalysisError::UndefinedFunction { .. } => ErrorCode::UndefinedFunction,
             SemanticAnalysisError::InvalidUnaryOperation { .. } => ErrorCode::InvalidUnaryOperation,
-            SemanticAnalysisError::AssignmentToImmutableVariable { .. } => ErrorCode::AssignmentToImmutableVariable,
+            SemanticAnalysisError::AssignmentToImmutableVariable { .. } => {
+                ErrorCode::AssignmentToImmutableVariable
+            }
             SemanticAnalysisError::InvalidExpression { .. } => ErrorCode::InvalidExpression,
         }
     }

@@ -1,5 +1,5 @@
-use colored::Colorize;
 use crate::error_codes::ErrorCode;
+use colored::Colorize;
 
 /// Represents a compiler error with a message, line number, column number, position, and token length
 #[derive(Debug)]
@@ -77,8 +77,8 @@ impl CompilerError {
         let line_num_str = format!("{}", line);
 
         let token_display_length = self.token_length.unwrap_or(1).max(1);
-        let error_marker =
-            " ".repeat(col.saturating_sub(1)) + &"^".repeat(token_display_length).bold().red().to_string();
+        let error_marker = " ".repeat(col.saturating_sub(1))
+            + &"^".repeat(token_display_length).bold().red().to_string();
 
         let indent_width = line_num_str.len() + 1;
         let indent = " ".repeat(indent_width);
@@ -99,7 +99,12 @@ impl CompilerError {
 
         result += &format!("{indent}{}\n", pipe);
         result += &format!("{} {} {}\n", line_num_str.yellow(), pipe, current_line_text);
-        result += &format!("{indent}{} {} {}\n", pipe, error_marker, self.message.bold().red());
+        result += &format!(
+            "{indent}{} {} {}\n",
+            pipe,
+            error_marker,
+            self.message.bold().red()
+        );
 
         result
     }

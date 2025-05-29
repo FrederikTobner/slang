@@ -1,5 +1,5 @@
 use crate::ast::{
-    AssignmentStatement, BinaryExpr, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, 
+    AssignmentStatement, BinaryExpr, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, 
     IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr,
 };
 
@@ -58,6 +58,9 @@ pub trait Visitor<T> {
 
     /// Visit a conditional expression (if/else)
     fn visit_conditional_expression(&mut self, expr: &ConditionalExpr) -> T;
+
+    /// Visit a block expression
+    fn visit_block_expression(&mut self, expr: &BlockExpr) -> T;
 
     /// Visit a conditional statement (if/else)
     fn visit_if_statement(&mut self, stmt: &IfStatement) -> T;

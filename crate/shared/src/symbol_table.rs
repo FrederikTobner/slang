@@ -2,7 +2,7 @@ use slang_types::types::TypeId;
 use std::collections::HashMap;
 
 /// Represents the kind of a symbol in the symbol table
-/// 
+///
 /// This enum categorizes symbols by their role in the language:
 /// - Types (built-in or user-defined)
 /// - Variables (local or global)
@@ -18,7 +18,7 @@ pub enum SymbolKind {
 }
 
 /// Represents a symbol in the symbol table
-/// 
+///
 /// A symbol contains all the information needed to identify and work with
 /// a named entity in the language, including its name, kind, and type.
 #[derive(Debug, Clone)]
@@ -32,23 +32,23 @@ pub struct Symbol {
 }
 
 /// A symbol table for managing symbols during compilation
-/// 
-/// The symbol table stores all named entities (variables, types, functions) 
+///
+/// The symbol table stores all named entities (variables, types, functions)
 /// in the current scope. It provides functionality to define new symbols
 /// and look up existing ones by name. Each symbol is associated with its
 /// kind and type information.
-/// 
+///
 /// ### Example
 /// ```
 /// use slang_shared::{SymbolTable, SymbolKind};
 /// use slang_types::TypeId;
-/// 
+///
 /// let mut table = SymbolTable::new();
 /// let type_id = TypeId::new(); // Example type ID
-/// 
+///
 /// // Define a variable symbol
 /// table.define("my_var".to_string(), SymbolKind::Variable, type_id).unwrap();
-/// 
+///
 /// // Look up the symbol
 /// let symbol = table.lookup("my_var").unwrap();
 /// assert_eq!(symbol.name, "my_var");
@@ -61,14 +61,14 @@ pub struct SymbolTable {
 
 impl SymbolTable {
     /// Creates a new empty symbol table
-    /// 
+    ///
     /// ### Returns
     /// A new SymbolTable instance with no symbols defined
-    /// 
+    ///
     /// ### Example
     /// ```
     /// use slang_shared::SymbolTable;
-    /// 
+    ///
     /// let table = SymbolTable::new();
     /// assert!(table.lookup("nonexistent").is_none());
     /// ```
@@ -79,31 +79,31 @@ impl SymbolTable {
     }
 
     /// Defines a new symbol in the symbol table
-    /// 
+    ///
     /// Attempts to add a new symbol with the given name, kind, and type.
     /// If a symbol with the same name already exists in the current scope,
     /// returns an error with a descriptive message.
-    /// 
+    ///
     /// ### Arguments
     /// * `name` - The name of the symbol to define
     /// * `kind` - The kind of symbol (Type, Variable, or Function)
     /// * `type_id` - The type ID associated with this symbol
-    /// 
+    ///
     /// ### Returns
     /// * `Ok(())` if the symbol was successfully defined
     /// * `Err(String)` with an error message if the name is already taken
-    /// 
+    ///
     /// ### Example
     /// ```
     /// use slang_shared::{SymbolTable, SymbolKind};
     /// use slang_types::TypeId;
-    /// 
+    ///
     /// let mut table = SymbolTable::new();
     /// let type_id = TypeId::new();
-    /// 
+    ///
     /// // Define a new variable
     /// assert!(table.define("x".to_string(), SymbolKind::Variable, type_id.clone()).is_ok());
-    /// 
+    ///
     /// // Try to define the same name again - should fail
     /// assert!(table.define("x".to_string(), SymbolKind::Variable, type_id).is_err());
     /// ```
@@ -148,32 +148,32 @@ impl SymbolTable {
     }
 
     /// Looks up a symbol by name in the symbol table
-    /// 
+    ///
     /// Searches for a symbol with the given name and returns a reference
     /// to it if found. This is a read-only operation that does not modify
     /// the symbol table.
-    /// 
+    ///
     /// ### Arguments
     /// * `name` - The name of the symbol to look up
-    /// 
+    ///
     /// ### Returns
     /// * `Some(&Symbol)` if a symbol with the given name exists
     /// * `None` if no symbol with the given name is found
-    /// 
+    ///
     /// ### Example
     /// ```
     /// use slang_shared::{SymbolTable, SymbolKind};
     /// use slang_types::TypeId;
-    /// 
+    ///
     /// let mut table = SymbolTable::new();
     /// let type_id = TypeId::new();
-    /// 
+    ///
     /// table.define("my_function".to_string(), SymbolKind::Function, type_id).unwrap();
-    /// 
+    ///
     /// let symbol = table.lookup("my_function").unwrap();
     /// assert_eq!(symbol.kind, SymbolKind::Function);
     /// assert_eq!(symbol.name, "my_function");
-    /// 
+    ///
     /// assert!(table.lookup("nonexistent").is_none());
     /// ```
     pub fn lookup(&self, name: &str) -> Option<&Symbol> {

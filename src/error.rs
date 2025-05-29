@@ -97,7 +97,7 @@ impl fmt::Display for CliError {
 
 impl Error for CliError {
     /// Get the source error if available
-    /// 
+    ///
     /// ### Returns
     ///  An Option containing the source error if it exists, otherwise None
     fn source(&self) -> Option<&(dyn Error + 'static)> {

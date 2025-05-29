@@ -1,8 +1,8 @@
 /// Comprehensive error codes for all compilation errors in the Slang compiler.
-/// 
+///
 /// This enum provides unified error codes and descriptions for both parsing and semantic analysis errors.
 /// Each variant maps to a unique u16 code and has an associated description.
-/// 
+///
 /// Error code ranges:
 /// - 1000-1999: Parse errors (syntax and structural issues)
 /// - 2000-2999: Semantic analysis errors (type checking, scope resolution)
@@ -10,7 +10,6 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ErrorCode {
     // Parse Errors (1000-1999)
-
     /// Expected a semicolon after a statement
     ExpectedSemicolon = 1001,
     /// Expected a closing brace
@@ -75,7 +74,6 @@ pub enum ErrorCode {
     ExpectedElse = 1031,
 
     // Semantic Analysis Errors (2000-2999)
-
     /// Variable used before being defined
     UndefinedVariable = 2001,
     /// Variable redefinition in the same scope
@@ -112,7 +110,6 @@ pub enum ErrorCode {
     InvalidExpression = 2017,
 
     // Generic Compile Errors (3000-3999)
-
     /// Generic compile error not categorized
     GenericCompileError = 3000,
 }
