@@ -1,7 +1,7 @@
 use crate::bytecode::{Chunk, Function, OpCode};
 use crate::value::Value;
 use slang_ir::ast::{
-    BinaryExpr, BinaryOperator, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
     IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
 };
 use slang_ir::Visitor;
@@ -128,10 +128,16 @@ impl CodeGenerator {
     }
 
     fn end_scope(&mut self) {
-        if let Some(scope) = self.local_scopes.pop() {
-            for _ in 0..scope.len() {
-                self.emit_op(OpCode::Pop);
-            }
+        if let Some(_scope) = self.local_scopes.pop() {
+            // Local variables are automatically cleaned up when they go out of scope
+            // Let statements handle their own stack cleanup by popping their values
+        }
+    }
+
+    fn end_scope_preserve_top(&mut self) {
+        if let Some(_scope) = self.local_scopes.pop() {
+            // Local variables are automatically cleaned up when they go out of scope
+            // The return value (if any) is already on top of the stack
         }
     }
 }
@@ -242,6 +248,9 @@ impl Visitor<Result<(), String>> for CodeGenerator {
 
         self.emit_op(OpCode::SetVariable);
         self.emit_byte(var_index as u8);
+        
+        // Pop the value from the stack since let statements don't return values
+        self.emit_op(OpCode::Pop);
 
         Ok(())
     }
@@ -266,6 +275,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
             Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
+            Expression::Block(block_expr) => self.visit_block_expression(block_expr),
         }
     }
 
@@ -443,6 +453,32 @@ impl Visitor<Result<(), String>> for CodeGenerator {
             self.patch_jump(jump_to_else);
             self.emit_op(OpCode::Pop); 
         }
+        
+        Ok(())
+    }
+
+    fn visit_block_expression(&mut self, block_expr: &BlockExpr) -> Result<(), String> {
+        // Begin a new scope
+        self.begin_scope();
+        
+        // Process all statements in the block
+        for stmt in &block_expr.statements {
+            self.visit_statement(stmt)?;
+        }
+        
+        // Handle the return expression
+        if let Some(return_expr) = &block_expr.return_expr {
+            // Generate code for the return expression
+            self.visit_expression(return_expr)?;
+            // The value is already on the stack and will be the block's result
+        } else {
+            // If no return expression, push a unit value (boolean false as placeholder)
+            self.emit_constant(Value::Boolean(false));
+        }
+        
+        // End scope but preserve the return value
+        // We need a special version of end_scope that keeps the top value
+        self.end_scope_preserve_top();
         
         Ok(())
     }

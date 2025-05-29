@@ -84,6 +84,8 @@ pub enum Expression {
     Call(FunctionCallExpr),
     /// A conditional expression (if/else)
     Conditional(ConditionalExpr),
+    /// A block expression with statements and optional return value
+    Block(BlockExpr),
 }
 
 impl Expression {
@@ -95,6 +97,7 @@ impl Expression {
             Expression::Unary(e) => e.location,
             Expression::Call(e) => e.location,
             Expression::Conditional(e) => e.location,
+            Expression::Block(e) => e.location,
         }
     }
 }
@@ -144,6 +147,19 @@ pub struct ConditionalExpr {
     /// Expression to evaluate if condition is false (always present for expressions)
     pub else_branch: Box<Expression>,
     /// Type of the conditional expression
+    pub expr_type: TypeId,
+    /// Source code location information
+    pub location: SourceLocation,
+}
+
+/// A block expression containing statements and an optional return value
+#[derive(Debug)]
+pub struct BlockExpr {
+    /// Statements in the block
+    pub statements: Vec<Statement>,
+    /// Optional final expression that becomes the return value (without semicolon)
+    pub return_expr: Option<Box<Expression>>,
+    /// Type of the block expression
     pub expr_type: TypeId,
     /// Source code location information
     pub location: SourceLocation,
@@ -335,6 +351,7 @@ impl Expression {
             Expression::Unary(unary) => visitor.visit_unary_expression(unary),
             Expression::Call(call) => visitor.visit_call_expression(call),
             Expression::Conditional(cond) => visitor.visit_conditional_expression(cond),
+            Expression::Block(block) => visitor.visit_block_expression(block),
         }
     }
 }

@@ -7,7 +7,7 @@ use slang_shared::{CompilationContext, SymbolKind};
 use slang_ir::SourceLocation;
 use slang_ir::Visitor;
 use slang_ir::ast::{
-    BinaryExpr, BinaryOperator, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
     IfStatement, LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator,
 };
@@ -1114,6 +1114,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
             Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
+            Expression::Block(block_expr) => self.visit_block_expression(block_expr),
         }
     }
 
@@ -1145,6 +1146,30 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                 location: cond_expr.location.clone(),
             })
         }
+    }
+
+    fn visit_block_expression(&mut self, block_expr: &BlockExpr) -> SemanticResult {
+        // Create a new scope for the block
+        self.begin_scope();
+        
+        // Process all statements in the block
+        for stmt in &block_expr.statements {
+            self.visit_statement(stmt)?;
+        }
+        
+        // Determine the return type of the block
+        let block_type = if let Some(return_expr) = &block_expr.return_expr {
+            // If there's a return expression, use its type
+            self.visit_expression(return_expr)?
+        } else {
+            // If no return expression, the block returns unit type (represented as Unknown for now)
+            TypeId(PrimitiveType::Unknown as usize)
+        };
+        
+        // End the block scope
+        self.end_scope();
+        
+        Ok(block_type)
     }
 
     fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> SemanticResult {

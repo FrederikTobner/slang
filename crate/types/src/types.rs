@@ -43,7 +43,6 @@ pub enum PrimitiveType {
 }
 
 impl PrimitiveType {
-
     /// Check if this is a numeric type (integer or float)
     pub fn is_numeric(&self) -> bool {
         self.is_integer() || self.is_float()
@@ -106,7 +105,8 @@ impl Default for TypeId {
 impl TypeId {
     /// Creates a new unique type identifier
     pub fn new() -> Self {
-        static NEXT_ID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(PrimitiveType::Unknown as usize + 1);
+        static NEXT_ID: std::sync::atomic::AtomicUsize =
+            std::sync::atomic::AtomicUsize::new(PrimitiveType::Unknown as usize + 1);
         TypeId(NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
     }
 }

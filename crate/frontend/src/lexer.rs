@@ -249,7 +249,7 @@ fn handle_number(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `self` - The current lexer state
 fn handle_string(state: &mut LexerState) {
-    state.advance(); 
+    state.advance();
     let mut string = String::new();
     let start_pos = state.current_pos;
 
@@ -324,7 +324,7 @@ fn handle_slash(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `self` - The current lexer state
 fn handle_line_comment(state: &mut LexerState) {
-    state.advance(); 
+    state.advance();
 
     while let Some(&c) = state.peek() {
         if c == '\n' {

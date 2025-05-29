@@ -1,5 +1,5 @@
 use crate::ast::{
-    BinaryExpr, BinaryOperator, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
+    BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
     IfStatement, LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator, AssignmentStatement,
 };
@@ -139,6 +139,7 @@ impl Visitor<()> for ASTPrinter {
             Expression::Unary(unary) => self.visit_unary_expression(unary),
             Expression::Call(call) => self.visit_call_expression(call),
             Expression::Conditional(cond) => self.visit_conditional_expression(cond),
+            Expression::Block(block) => self.visit_block_expression(block),
         }
     }
 
@@ -259,6 +260,30 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level += 1;
         self.visit_expression(&cond_expr.else_branch);
         self.indent_level -= 1;
+        
+        self.indent_level -= 1;
+    }
+
+    fn visit_block_expression(&mut self, block_expr: &BlockExpr) {
+        println!("{}Block Expression:", self.indent());
+        
+        self.indent_level += 1;
+        
+        if !block_expr.statements.is_empty() {
+            println!("{}Statements:", self.indent());
+            self.indent_level += 1;
+            for stmt in &block_expr.statements {
+                self.visit_statement(stmt);
+            }
+            self.indent_level -= 1;
+        }
+        
+        if let Some(return_expr) = &block_expr.return_expr {
+            println!("{}Return Expression:", self.indent());
+            self.indent_level += 1;
+            self.visit_expression(return_expr);
+            self.indent_level -= 1;
+        }
         
         self.indent_level -= 1;
     }

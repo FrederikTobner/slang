@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use crate::types::{FloatType, IntegerType};
 use crate::{PrimitiveType, TypeId, TypeInfo, TypeKind};
-use crate::types::{IntegerType, FloatType};
+use std::collections::HashMap;
 
 /// Registry that stores all available types in the language
 pub struct TypeRegistry {
@@ -93,12 +93,12 @@ impl TypeRegistry {
     }
 
     /// Registers a new type in the registry
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `name` - The name of the type
     /// * `kind` - The kind of the type (e.g., Integer, Float, etc.)
-    /// 
+    ///
     /// ### Returns
     /// A TypeId representing the newly registered type
     pub fn register_type(&mut self, name: &str, kind: TypeKind) -> TypeId {
@@ -113,9 +113,9 @@ impl TypeRegistry {
     }
 
     /// Registers a primitive type in the registry
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `name` - The name of the primitive type
     /// * `kind` - The kind of the primitive type (e.g., Integer, Float, etc.)
     /// * `id` - The TypeId for the primitive type
@@ -129,10 +129,10 @@ impl TypeRegistry {
     }
 
     /// Gets type information for a given TypeId
-    /// 
+    ///
     /// ### Arguments
     /// * `id` - The TypeId to look up
-    /// 
+    ///
     /// ### Returns
     /// An Option containing the TypeInfo if found, or None if not found
     pub fn get_type_info(&self, id: &TypeId) -> Option<&TypeInfo> {
@@ -140,10 +140,10 @@ impl TypeRegistry {
     }
 
     /// Try to get the primitive type for a given TypeId
-    /// 
+    ///
     /// ### Arguments
     /// * `id` - The TypeId to look up
-    /// 
+    ///
     /// ### Returns
     /// An Option containing the PrimitiveType if found, or None if not found
     pub fn get_primitive_type(&self, id: &TypeId) -> Option<PrimitiveType> {
@@ -152,10 +152,10 @@ impl TypeRegistry {
     }
 
     /// Check if a type is a primitive type
-    /// 
+    ///
     /// ### Arguments
     /// * `id` - The TypeId to check
-    /// 
+    ///
     /// ### Returns
     /// A boolean indicating whether the type is a primitive type
     pub fn is_primitive_type(&self, id: &TypeId) -> bool {
@@ -163,11 +163,11 @@ impl TypeRegistry {
     }
 
     /// Checks if a value is within the valid range for a given type
-    /// 
+    ///
     /// ### Arguments
     /// * `value` - The value to check
     /// * `type_id` - The TypeId of the type to check against
-    /// 
+    ///
     /// ### Returns
     /// A boolean indicating whether the value is within the valid range
     pub fn check_value_in_range(&self, value: &i64, type_id: &TypeId) -> bool {
@@ -194,11 +194,11 @@ impl TypeRegistry {
     }
 
     /// Checks if a float value is within the valid range for a given type
-    /// 
+    ///
     /// ### Arguments
     /// * `value` - The float value to check
     /// * `type_id` - The TypeId of the type to check against
-    /// 
+    ///
     /// ### Returns
     /// A boolean indicating whether the float value is within the valid range
     pub fn check_float_value_in_range(&self, value: &f64, type_id: &TypeId) -> bool {
@@ -217,4 +217,3 @@ impl TypeRegistry {
         }
     }
 }
-

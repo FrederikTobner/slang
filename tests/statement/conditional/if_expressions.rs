@@ -7,11 +7,14 @@ use rstest::rstest;
 #[case("u32")]
 #[case("u64")]
 fn with_integer_types(#[case] type_name: &str) {
-    let program = format!(r#"
+    let program = format!(
+        r#"
         let a: {} = 50;
         let b: {} = 8;
         print_value(if a > b {{ a - b }} else {{ b - a }});
-    "#, type_name, type_name);
+    "#,
+        type_name, type_name
+    );
     execute_program_and_assert(&program, "42");
 }
 
@@ -19,11 +22,14 @@ fn with_integer_types(#[case] type_name: &str) {
 #[case("f32")]
 #[case("f64")]
 fn with_float_types(#[case] type_name: &str) {
-    let program = format!(r#"
+    let program = format!(
+        r#"
         let a: {} = 50.0;
         let b: {} = 8.0;
         print_value(if a > b {{ a - b }} else {{ b - a }});
-    "#, type_name, type_name);
+    "#,
+        type_name, type_name
+    );
     execute_program_and_assert(&program, "42");
 }
 
@@ -60,6 +66,22 @@ fn nested() {
         print_value(result);
     "#;
     execute_program_and_assert(program, "50");
+}
+
+#[test]
+fn block_with_multiple_statements() {
+    let program = r#"
+        let x: i32 = 5;
+        let result: i32 = if x > 3 {
+            let a: i32 = x + 2;
+            let b: i32 = a * 2;
+            b
+        } else {
+           x - 1 
+        };
+        print_value(result);
+    "#;
+    execute_program_and_assert(program, "14");
 }
 
 #[test]
