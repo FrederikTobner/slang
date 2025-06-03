@@ -14,7 +14,7 @@ fn mismatched_brackets() {
     let program = r#"
         fn test() {
     "#;
-    execute_program_expect_error(program, "[E1002]", "Expected \'}\' after function body");
+    execute_program_expect_error(program, "[E1002]", "Expected \'}\' after block");
 }
 
 #[test]

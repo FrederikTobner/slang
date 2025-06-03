@@ -301,7 +301,7 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        let body = self.parse_block_expression_as_block_expr_with_context("Expected '}' after function body")?;
+        let body = self.parse_block_expression()?;
 
         Ok(Statement::FunctionDeclaration(FunctionDeclarationStmt {
             name,
@@ -796,7 +796,8 @@ impl<'a> Parser<'a> {
         }
 
         if self.match_token(&Tokentype::LeftBrace) {
-            return self.parse_block_expression();
+            let blockexpr = self.parse_block_expression()?;
+            return Ok(Expression::Block(blockexpr));
         }
 
         if self.match_token(&Tokentype::Identifier) {
@@ -1278,8 +1279,8 @@ impl<'a> Parser<'a> {
 
         Ok(Expression::Conditional(ConditionalExpr {
             condition: Box::new(condition),
-            then_branch: Box::new(then_branch),
-            else_branch: Box::new(else_branch),
+            then_branch: Box::new(Expression::Block(then_branch)),
+            else_branch: Box::new(Expression::Block(else_branch)),
             expr_type: TypeId(PrimitiveType::Unknown as usize),
             location,
         }))
@@ -1290,7 +1291,7 @@ impl<'a> Parser<'a> {
     /// ### Returns
     ///
     /// The parsed block expression or an error message
-    fn parse_block_expression(&mut self) -> Result<Expression, ParseError> {
+    fn parse_block_expression(&mut self) -> Result<BlockExpr, ParseError> {
         let start_pos = self.current;
         let (line, column) = self.line_info.get_line_col(self.tokens[start_pos].pos);
 
@@ -1318,70 +1319,6 @@ impl<'a> Parser<'a> {
 
         if !self.match_token(&Tokentype::RightBrace) {
             return Err(self.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after block"));
-        }
-
-        let end_pos = self.previous().pos + self.previous().lexeme.len();
-        let location = slang_ir::source_location::SourceLocation::new(
-            self.tokens[start_pos].pos,
-            line,
-            column,
-            end_pos - self.tokens[start_pos].pos,
-        );
-
-        Ok(Expression::Block(BlockExpr {
-            statements,
-            return_expr,
-            expr_type: TypeId(PrimitiveType::Unknown as usize),
-            location,
-        }))
-    }
-
-    /// Parses block expression content and returns a BlockExpr
-    ///
-    /// ### Returns
-    ///
-    /// The parsed block expression struct or an error message
-    fn parse_block_expression_as_block_expr(&mut self) -> Result<BlockExpr, ParseError> {
-        self.parse_block_expression_as_block_expr_with_context("Expected '}' after block")
-    }
-
-    /// Parses block expression content and returns a BlockExpr with custom error context
-    ///
-    /// ### Arguments
-    ///
-    /// * `error_context` - The error message to show if closing brace is missing
-    ///
-    /// ### Returns
-    ///
-    /// The parsed block expression struct or an error message
-    fn parse_block_expression_as_block_expr_with_context(&mut self, error_context: &str) -> Result<BlockExpr, ParseError> {
-        let start_pos = self.current;
-        let (line, column) = self.line_info.get_line_col(self.tokens[start_pos].pos);
-
-        let mut statements = Vec::new();
-        let mut return_expr: Option<Box<Expression>> = None;
-
-        while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
-            let checkpoint = self.current;
-
-            if let Ok(expr) = self.expression() {
-                if self.check(&Tokentype::RightBrace) {
-                    return_expr = Some(Box::new(expr));
-                    break;
-                } else if self.match_token(&Tokentype::Semicolon) {
-                    statements.push(Statement::Expression(expr));
-                } else {
-                    self.current = checkpoint;
-                    statements.push(self.statement()?);
-                }
-            } else {
-                self.current = checkpoint;
-                statements.push(self.statement()?);
-            }
-        }
-
-        if !self.match_token(&Tokentype::RightBrace) {
-            return Err(self.error(ErrorCode::ExpectedClosingBrace, error_context));
         }
 
         let end_pos = self.previous().pos + self.previous().lexeme.len();
@@ -1424,7 +1361,6 @@ impl<'a> Parser<'a> {
             if !self.match_token(&Tokentype::LeftBrace) {
                 return Err(self.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after else"));
             }
-
             Some(self.parse_block_expression()?)
         } else {
             None
