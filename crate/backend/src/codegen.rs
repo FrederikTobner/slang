@@ -143,21 +143,9 @@ impl Visitor<Result<(), String>> for CodeGenerator {
             Statement::FunctionDeclaration(fn_decl) => {
                 self.visit_function_declaration_statement(fn_decl)
             }
-            Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(expr) => self.visit_return_statement(expr),
             Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
         }
-    }
-
-    fn visit_block_statement(&mut self, stmts: &[Statement]) -> Result<(), String> {
-        self.begin_scope();
-
-        for stmt in stmts {
-            stmt.accept(self)?;
-        }
-
-        self.end_scope();
-        Ok(())
     }
 
     fn visit_function_declaration_statement(
@@ -180,8 +168,16 @@ impl Visitor<Result<(), String>> for CodeGenerator {
             }
         }
 
-        for stmt in &fn_decl.body {
+        for stmt in &fn_decl.body.statements {
             stmt.accept(self)?;
+        }
+
+        // Handle the optional return expression
+        if let Some(return_expr) = &fn_decl.body.return_expr {
+            return_expr.accept(self)?;
+        } else {
+            // If no return expression, push unit value
+            self.emit_constant(Value::Unit);
         }
 
         self.emit_op(OpCode::Return);
@@ -435,7 +431,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
         self.emit_op(OpCode::Pop);
 
-        self.visit_block_statement(&if_stmt.then_branch)?;
+        self.visit_block_expression(&if_stmt.then_branch)?;
 
         if let Some(else_branch) = &if_stmt.else_branch {
             let jump_over_else = self.emit_jump(OpCode::Jump);
@@ -443,7 +439,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
             self.patch_jump(jump_to_else);
             self.emit_op(OpCode::Pop);
 
-            self.visit_block_statement(else_branch)?;
+            self.visit_block_expression(else_branch)?;
 
             self.patch_jump(jump_over_else);
         } else {

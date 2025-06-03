@@ -712,7 +712,6 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
             Statement::FunctionDeclaration(fn_decl) => {
                 self.visit_function_declaration_statement(fn_decl)
             }
-            Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(opt_expr) => self.visit_return_statement(opt_expr),
             Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
         }
@@ -741,22 +740,11 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
             self.define_variable(param.name.clone(), param.param_type.clone(), true);
         }
 
-        let result = self.visit_block_statement(&fn_decl.body);
+        let result = self.visit_block_expression(&fn_decl.body);
 
         self.current_return_type = previous_return_type;
         self.end_scope();
         result.and(Ok(fn_decl.return_type.clone()))
-    }
-
-    fn visit_block_statement(&mut self, stmts: &[Statement]) -> SemanticResult {
-        self.begin_scope();
-        for stmt in stmts {
-            stmt.accept(self)?;
-        }
-
-        self.end_scope();
-        // TODO: Use the type of the last statement in the block if the statement is a return expression
-        Ok(TypeId(PrimitiveType::Unknown as usize))
     }
 
     fn visit_return_statement(&mut self, opt_expr: &Option<Expression>) -> SemanticResult {
@@ -1205,14 +1193,10 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
             });
         }
 
-        self.begin_scope();
-        self.visit_block_statement(&if_stmt.then_branch)?;
-        self.end_scope();
+        self.visit_block_expression(&if_stmt.then_branch)?;
 
         if let Some(else_branch) = &if_stmt.else_branch {
-            self.begin_scope();
-            self.visit_block_statement(else_branch)?;
-            self.end_scope();
+            self.visit_block_expression(else_branch)?;
         }
 
         Ok(TypeId(PrimitiveType::Unit as usize))

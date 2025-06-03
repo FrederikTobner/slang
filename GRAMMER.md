@@ -18,7 +18,6 @@ statement = let_statement
           | expression_statement
           | type_definition_statement
           | function_declaration_statement
-          | block_statement
           | return_statement
           | if_statement ;
 
@@ -30,17 +29,15 @@ type_definition_statement = "struct", identifier, "{", { field_definition, [ ","
 
 field_definition = identifier, ":", type ;
 
-function_declaration_statement = "fn", identifier, "(", [ parameter_list ], ")", [ "->", type ], block_statement ;
+function_declaration_statement = "fn", identifier, "(", [ parameter_list ], ")", [ "->", type ], block_expression ;
 
 parameter_list = parameter, { ",", parameter } ;
 
 parameter = identifier, ":", type ;
 
-block_statement = "{", { statement }, "}" ;
-
 return_statement = "return", [ expression ], ";" ;
 
-if_statement = "if", expression, block_statement, [ "else", ( if_statement | block_statement ) ] ;
+if_statement = "if", expression, block_expression, [ "else", ( if_statement | block_expression ) ] ;
 
 /* Expressions */
 expression = logical_or ;
@@ -63,11 +60,14 @@ primary = literal
         | identifier
         | call_expression
         | if_expression
+        | block_expression
         | "(", expression, ")" ;
 
 call_expression = identifier, "(", [ argument_list ], ")" ;
 
 if_expression = "if", expression, "{", expression, "}", "else", "{", expression, "}" ;
+
+block_expression = "{", { statement }, [ expression ], "}" ;
 
 argument_list = expression, { ",", expression } ;
 

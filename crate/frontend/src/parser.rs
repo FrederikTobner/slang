@@ -205,32 +205,11 @@ impl<'a> Parser<'a> {
             self.return_statement()
         } else if self.match_token(&Tokentype::If) {
             self.if_statement()
-        } else if self.match_token(&Tokentype::LeftBrace) {
-            self.block_statement()
         } else if self.check(&Tokentype::Identifier) && self.check_next(&Tokentype::Equal) {
             self.assignment_statement()
         } else {
             self.expression_statement()
         }
-    }
-
-    /// Parses a block statement (a group of statements in braces)
-    ///
-    /// ### Returns
-    ///
-    /// The parsed block statement or an error message
-    fn block_statement(&mut self) -> Result<Statement, ParseError> {
-        let mut statements = Vec::new();
-
-        while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
-            statements.push(self.statement()?);
-        }
-
-        if !self.match_token(&Tokentype::RightBrace) {
-            return Err(self.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after block"));
-        }
-
-        Ok(Statement::Block(statements))
     }
 
     /// Parses a return statement
@@ -322,17 +301,7 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        let mut body = Vec::new();
-        while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
-            body.push(self.statement()?);
-        }
-
-        if !self.match_token(&Tokentype::RightBrace) {
-            return Err(self.error(
-                ErrorCode::ExpectedClosingBrace,
-                "Expected '}' after function body",
-            ));
-        }
+        let body = self.parse_block_expression_as_block_expr_with_context("Expected '}' after function body")?;
 
         Ok(Statement::FunctionDeclaration(FunctionDeclarationStmt {
             name,
@@ -503,11 +472,19 @@ impl<'a> Parser<'a> {
     fn expression_statement(&mut self) -> Result<Statement, ParseError> {
         let expr = self.expression()?;
 
-        if !self.match_token(&Tokentype::Semicolon) {
-            return Err(self.error(
-                ErrorCode::ExpectedSemicolon,
-                "Expected ';' after expression",
-            ));
+        // Block expressions don't need semicolons when used as statements
+        match &expr {
+            Expression::Block(_) => {
+                // No semicolon required for block expressions
+            }
+            _ => {
+                if !self.match_token(&Tokentype::Semicolon) {
+                    return Err(self.error(
+                        ErrorCode::ExpectedSemicolon,
+                        "Expected ';' after expression",
+                    ));
+                }
+            }
         }
 
         Ok(Statement::Expression(expr))
@@ -1359,6 +1336,70 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    /// Parses block expression content and returns a BlockExpr
+    ///
+    /// ### Returns
+    ///
+    /// The parsed block expression struct or an error message
+    fn parse_block_expression_as_block_expr(&mut self) -> Result<BlockExpr, ParseError> {
+        self.parse_block_expression_as_block_expr_with_context("Expected '}' after block")
+    }
+
+    /// Parses block expression content and returns a BlockExpr with custom error context
+    ///
+    /// ### Arguments
+    ///
+    /// * `error_context` - The error message to show if closing brace is missing
+    ///
+    /// ### Returns
+    ///
+    /// The parsed block expression struct or an error message
+    fn parse_block_expression_as_block_expr_with_context(&mut self, error_context: &str) -> Result<BlockExpr, ParseError> {
+        let start_pos = self.current;
+        let (line, column) = self.line_info.get_line_col(self.tokens[start_pos].pos);
+
+        let mut statements = Vec::new();
+        let mut return_expr: Option<Box<Expression>> = None;
+
+        while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
+            let checkpoint = self.current;
+
+            if let Ok(expr) = self.expression() {
+                if self.check(&Tokentype::RightBrace) {
+                    return_expr = Some(Box::new(expr));
+                    break;
+                } else if self.match_token(&Tokentype::Semicolon) {
+                    statements.push(Statement::Expression(expr));
+                } else {
+                    self.current = checkpoint;
+                    statements.push(self.statement()?);
+                }
+            } else {
+                self.current = checkpoint;
+                statements.push(self.statement()?);
+            }
+        }
+
+        if !self.match_token(&Tokentype::RightBrace) {
+            return Err(self.error(ErrorCode::ExpectedClosingBrace, error_context));
+        }
+
+        let end_pos = self.previous().pos + self.previous().lexeme.len();
+        let location = slang_ir::source_location::SourceLocation::new(
+            self.tokens[start_pos].pos,
+            line,
+            column,
+            end_pos - self.tokens[start_pos].pos,
+        );
+
+        Ok(BlockExpr {
+            statements,
+            return_expr,
+            expr_type: TypeId(PrimitiveType::Unknown as usize),
+            location,
+        })
+    }
+
     /// Parses an if statement (if/else statement)
     ///
     /// ### Returns
@@ -1377,36 +1418,14 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        let mut then_branch = Vec::new();
-        while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
-            then_branch.push(self.statement()?);
-        }
-
-        if !self.match_token(&Tokentype::RightBrace) {
-            return Err(self.error(
-                ErrorCode::ExpectedClosingBrace,
-                "Expected '}' after if body",
-            ));
-        }
+        let then_branch = self.parse_block_expression()?;
 
         let else_branch = if self.match_token(&Tokentype::Else) {
             if !self.match_token(&Tokentype::LeftBrace) {
                 return Err(self.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after else"));
             }
 
-            let mut else_statements = Vec::new();
-            while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
-                else_statements.push(self.statement()?);
-            }
-
-            if !self.match_token(&Tokentype::RightBrace) {
-                return Err(self.error(
-                    ErrorCode::ExpectedClosingBrace,
-                    "Expected '}' after else body",
-                ));
-            }
-
-            Some(else_statements)
+            Some(self.parse_block_expression()?)
         } else {
             None
         };

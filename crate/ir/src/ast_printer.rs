@@ -50,7 +50,6 @@ impl Visitor<()> for ASTPrinter {
             Statement::FunctionDeclaration(fn_decl) => {
                 self.visit_function_declaration_statement(fn_decl)
             }
-            Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(expr) => self.visit_return_statement(expr),
             Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
         }
@@ -77,19 +76,8 @@ impl Visitor<()> for ASTPrinter {
 
         println!("{}Body:", self.indent());
         self.indent_level += 1;
-        for stmt in &fn_decl.body {
-            self.visit_statement(stmt);
-        }
+        self.visit_block_expression(&fn_decl.body);
         self.indent_level -= 2;
-    }
-
-    fn visit_block_statement(&mut self, stmts: &[Statement]) {
-        println!("{}Block:", self.indent());
-        self.indent_level += 1;
-        for stmt in stmts {
-            self.visit_statement(stmt);
-        }
-        self.indent_level -= 1;
     }
 
     fn visit_return_statement(&mut self, expr: &Option<Expression>) {
@@ -226,17 +214,13 @@ impl Visitor<()> for ASTPrinter {
 
         println!("{}Then Branch:", self.indent());
         self.indent_level += 1;
-        for stmt in &if_stmt.then_branch {
-            self.visit_statement(stmt);
-        }
+        self.visit_block_expression(&if_stmt.then_branch);
         self.indent_level -= 1;
 
         if let Some(else_branch) = &if_stmt.else_branch {
             println!("{}Else Branch:", self.indent());
             self.indent_level += 1;
-            for stmt in else_branch {
-                self.visit_statement(stmt);
-            }
+            self.visit_block_expression(else_branch);
             self.indent_level -= 1;
         }
 

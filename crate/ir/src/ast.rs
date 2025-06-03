@@ -115,8 +115,6 @@ pub enum Statement {
     TypeDefinition(TypeDefinitionStmt),
     /// Function declaration
     FunctionDeclaration(FunctionDeclarationStmt),
-    /// Block of statements
-    Block(Vec<Statement>),
     /// Return statement
     Return(Option<Expression>),
     /// Conditional statement (if/else)
@@ -185,8 +183,8 @@ pub struct FunctionDeclarationStmt {
     pub parameters: Vec<Parameter>,
     /// Function return type
     pub return_type: TypeId,
-    /// Function body (list of statements)
-    pub body: Vec<Statement>,
+    /// Function body (block expression)
+    pub body: BlockExpr,
     /// Source code location information
     pub location: SourceLocation,
 }
@@ -301,10 +299,10 @@ pub struct AssignmentStatement {
 pub struct IfStatement {
     /// Condition to evaluate
     pub condition: Expression,
-    /// Block of statements to execute if condition is true
-    pub then_branch: Vec<Statement>,
-    /// Optional block of statements to execute if condition is false
-    pub else_branch: Option<Vec<Statement>>,
+    /// Block expression to execute if condition is true
+    pub then_branch: BlockExpr,
+    /// Optional block expression to execute if condition is false
+    pub else_branch: Option<BlockExpr>,
     /// Source code location information
     pub location: SourceLocation,
 }
@@ -328,7 +326,6 @@ impl Statement {
             Statement::FunctionDeclaration(fn_decl) => {
                 visitor.visit_function_declaration_statement(fn_decl)
             }
-            Statement::Block(stmts) => visitor.visit_block_statement(stmts),
             Statement::Return(expr) => visitor.visit_return_statement(expr),
             Statement::If(if_stmt) => visitor.visit_if_statement(if_stmt),
         }
