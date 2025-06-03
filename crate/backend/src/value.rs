@@ -167,6 +167,8 @@ pub enum Value {
     String(Box<String>),
     /// Boolean value
     Boolean(bool),
+    /// Unit value (similar to Rust's ())
+    Unit,
     /// Function value
     Function(Box<Function>),
     /// Native function value
@@ -187,6 +189,7 @@ impl Value {
             Value::NativeFunction(_) => 7,
             Value::F32(_) => 8,
             Value::Boolean(_) => 9,
+            Value::Unit => 10,
         }
     }
 
@@ -303,6 +306,8 @@ impl Value {
                 reader.read_exact(&mut byte)?;
                 Ok(Value::Boolean(byte[0] != 0))
             }
+            // Unit
+            10 => Ok(Value::Unit),
             _ => Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 "Invalid value type tag",
@@ -322,6 +327,7 @@ impl fmt::Display for Value {
             Value::F64(flo) => write!(f, "{}", flo),
             Value::String(s) => write!(f, "{}", s),
             Value::Boolean(b) => write!(f, "{}", b),
+            Value::Unit => write!(f, "()"),
             Value::Function(func) => write!(f, "<fn {}>", func.name),
             Value::NativeFunction(func) => write!(f, "<native fn {}>", func.name),
         }

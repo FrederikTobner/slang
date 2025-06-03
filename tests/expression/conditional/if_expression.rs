@@ -188,3 +188,13 @@ fn must_have_else_branch() {
     "#;
     execute_program_expect_error(program, "[E1031]", "Expected 'else' after if expression");
 }
+
+#[test]
+fn with_unit_branches() {
+    let program = r#"
+        let x = true;
+        let result = if x { () } else { () };
+        print_value(result);
+    "#;
+    execute_program_and_assert(program, "()");
+}

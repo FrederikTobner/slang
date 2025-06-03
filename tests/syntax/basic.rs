@@ -32,3 +32,4 @@ fn test_nested_blocks() {
     "#;
     execute_program_and_assert(program, "60");
 }
+

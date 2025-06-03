@@ -253,7 +253,27 @@ impl<'a> SemanticAnalyzer<'a> {
         operator: &BinaryOperator,
         location: &SourceLocation,
     ) -> SemanticResult {
-        if left_type == right_type
+        let is_relational = matches!(
+            operator,
+            BinaryOperator::GreaterThan
+                | BinaryOperator::LessThan
+                | BinaryOperator::GreaterThanOrEqual
+                | BinaryOperator::LessThanOrEqual
+        );
+
+        if is_relational
+            && (!PrimitiveType::from_int(left_type.0).is_some_and(|f| f.is_numeric())
+                || !PrimitiveType::from_int(right_type.0).is_some_and(|f| f.is_numeric()))
+        {
+            return Err(SemanticAnalysisError::OperationTypeMismatch {
+                operator: operator.to_string(),
+                left_type: left_type.clone(),
+                right_type: right_type.clone(),
+                location: *location,
+            });
+        }
+
+        if (left_type == right_type && *left_type != TypeId(PrimitiveType::Unit as usize))
             || (*left_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
                 && self.is_integer_type(right_type))
             || (*right_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
@@ -293,6 +313,7 @@ impl<'a> SemanticAnalyzer<'a> {
         location: &SourceLocation,
     ) -> SemanticResult {
         if *type_id == TypeId(PrimitiveType::Bool as usize)
+            || *type_id == TypeId(PrimitiveType::Unit as usize)
             || (operator != &BinaryOperator::Add
                 && *type_id == TypeId(PrimitiveType::String as usize))
         {
@@ -734,6 +755,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
         }
 
         self.end_scope();
+        // TODO: Use the type of the last statement in the block if the statement is a return expression
         Ok(TypeId(PrimitiveType::Unknown as usize))
     }
 
@@ -751,14 +773,17 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
                     &expected_type,
                     &expr.location(),
                 );
-            } else if expected_type != TypeId(PrimitiveType::Unknown as usize){
+            } else if expected_type != TypeId(PrimitiveType::Unknown as usize)
+                && expected_type != TypeId(PrimitiveType::Unit as usize)
+            {
                 return Err(SemanticAnalysisError::MissingReturnValue {
                     expected: expected_type.clone(),
                     location: error_location,
                 });
             }
 
-            Ok(expected_type)
+            // Empty return is treated as returning unit
+            Ok(TypeId(PrimitiveType::Unit as usize))
         } else {
             Err(SemanticAnalysisError::ReturnOutsideFunction {
                 location: error_location,
@@ -1161,7 +1186,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
         let block_type = if let Some(return_expr) = &block_expr.return_expr {
             self.visit_expression(return_expr)?
         } else {
-            TypeId(PrimitiveType::Unknown as usize)
+            TypeId(PrimitiveType::Unit as usize)
         };
 
         self.end_scope();
@@ -1190,6 +1215,6 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
             self.end_scope();
         }
 
-        Ok(TypeId(PrimitiveType::Unknown as usize))
+        Ok(TypeId(PrimitiveType::Unit as usize))
     }
 }

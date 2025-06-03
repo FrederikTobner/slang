@@ -310,62 +310,9 @@ impl<'a> Parser<'a> {
         }
 
         let return_type = if self.match_token(&Tokentype::Arrow) {
-            if !self.check(&Tokentype::Identifier) {
-                return Err(self.error(ErrorCode::ExpectedType, "Expected return type after '->'"));
-            }
-
-            let type_name_token = self.advance();
-            let type_name = type_name_token.lexeme.clone();
-            let token_pos = type_name_token.pos;
-            let token_len = type_name_token.lexeme.len();
-
-            if type_name == TYPE_NAME_INT {
-                return Err(self.error_previous(
-                    ErrorCode::InvalidSyntax,
-                    &format!(
-                        "'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead",
-                        TYPE_NAME_INT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64
-                    ),
-                ));
-            } else if type_name == TYPE_NAME_FLOAT {
-                return Err(self.error_previous(
-                    ErrorCode::InvalidSyntax,
-                    &format!(
-                        "'{}' is not a valid type specifier. Use '{}' or '{}' instead",
-                        TYPE_NAME_FLOAT, TYPE_NAME_F32, TYPE_NAME_F64
-                    ),
-                ));
-            } else if type_name == TYPE_NAME_UNKNOWN {
-                return Err(self.error_previous(
-                    ErrorCode::InvalidSyntax,
-                    &format!("'{}' is not a valid type specifier", TYPE_NAME_UNKNOWN),
-                ));
-            }
-
-            let type_id_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
-                if symbol.kind == SymbolKind::Type {
-                    Some(symbol.type_id.clone())
-                } else {
-                    None
-                }
-            });
-
-            match type_id_option {
-                Some(type_id) => type_id,
-                None => {
-                    let error = ParseError::new(
-                        ErrorCode::UnknownType,
-                        &format!("Unknown type name: {}", type_name),
-                        token_pos,
-                        token_len,
-                    )
-                    .to_compiler_error(self.line_info);
-                    self.errors.push(error);
-                    TypeId(PrimitiveType::Unknown as usize) // Return unknown_type on error to allow parsing to continue
-                }
-            }
+            self.parse_type()?
         } else {
-            TypeId(PrimitiveType::Unknown as usize) // Default to unit type when no return type is specified
+            TypeId(PrimitiveType::Unit as usize) // Default to unit type when no return type is specified
         };
 
         if !self.match_token(&Tokentype::LeftBrace) {
@@ -420,38 +367,7 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        if !self.check(&Tokentype::Identifier) {
-            return Err(self.error(ErrorCode::ExpectedType, "Expected parameter type"));
-        }
-
-        let type_name_token = self.advance();
-        let type_name = type_name_token.lexeme.clone();
-        let token_pos = type_name_token.pos;
-        let token_len = type_name_token.lexeme.len();
-
-        let unknown_type = TypeId(PrimitiveType::Unknown as usize);
-        let param_type_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
-            if symbol.kind == SymbolKind::Type {
-                Some(symbol.type_id.clone())
-            } else {
-                None
-            }
-        });
-
-        let param_type = match param_type_option {
-            Some(type_id) => type_id,
-            None => {
-                let error = ParseError::new(
-                    ErrorCode::UnknownType,
-                    &format!("Unknown type name: {}", type_name),
-                    token_pos,
-                    token_len,
-                )
-                .to_compiler_error(self.line_info);
-                self.errors.push(error);
-                unknown_type.clone()
-            }
-        };
+        let param_type = self.parse_type()?;
 
         Ok(Parameter {
             name,
@@ -551,67 +467,7 @@ impl<'a> Parser<'a> {
         let mut var_type = TypeId(PrimitiveType::Unknown as usize);
 
         if self.match_token(&Tokentype::Colon) {
-            if !self.check(&Tokentype::Identifier) {
-                return Err(self.error(ErrorCode::ExpectedType, "Expected type name after colon"));
-            }
-            let type_name_token = self.advance();
-            let type_name = type_name_token.lexeme.clone();
-            let token_pos = type_name_token.pos;
-            let token_len = type_name_token.lexeme.len();
-
-            if type_name == TYPE_NAME_INT {
-                return Err(self.error_previous(
-                    ErrorCode::InvalidSyntax,
-                    &format!(
-                        "'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead",
-                        TYPE_NAME_INT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64
-                    ),
-                ));
-            } else if type_name == TYPE_NAME_FLOAT {
-                return Err(self.error_previous(
-                    ErrorCode::InvalidSyntax,
-                    &format!(
-                        "'{}' is not a valid type specifier. Use '{}' or '{}' instead",
-                        TYPE_NAME_FLOAT, TYPE_NAME_F32, TYPE_NAME_F64
-                    ),
-                ));
-            }
-
-            let unknown_type = TypeId(PrimitiveType::Unknown as usize);
-            let var_type_option = self.context.lookup_symbol(&type_name).and_then(|symbol| {
-                if symbol.kind == SymbolKind::Type {
-                    Some(symbol.type_id.clone())
-                } else {
-                    None
-                }
-            });
-
-            var_type = match var_type_option {
-                Some(type_id) => type_id,
-                None => {
-                    let error = ParseError::new(
-                        ErrorCode::InvalidSyntax,
-                        &format!("Unknown type name: {}", type_name),
-                        token_pos,
-                        token_len,
-                    )
-                    .to_compiler_error(self.line_info);
-                    self.errors.push(error);
-                    unknown_type.clone()
-                }
-            };
-
-            if var_type == unknown_type
-                && !self.errors.iter().any(|e| {
-                    e.message
-                        .contains(&format!("Unknown type name: {}", type_name))
-                })
-            {
-                return Err(self.error_previous(
-                    ErrorCode::InvalidSyntax,
-                    &format!("Unknown type: {}", type_name),
-                ));
-            }
+            var_type = self.parse_type()?;
         }
 
         if !self.match_token(&Tokentype::Equal) {
@@ -932,6 +788,26 @@ impl<'a> Parser<'a> {
         }
 
         if self.match_token(&Tokentype::LeftParen) {
+            // Check for unit literal ()
+            if self.check(&Tokentype::RightParen) {
+                let start_pos = self.previous().pos;
+                self.advance(); // consume the right paren
+                let end_pos = self.previous().pos + self.previous().lexeme.len();
+                let (line, column) = self.line_info.get_line_col(start_pos);
+                let location = slang_ir::source_location::SourceLocation::new(
+                    start_pos,
+                    line,
+                    column,
+                    end_pos - start_pos,
+                );
+                return Ok(Expression::Literal(LiteralExpr {
+                    value: LiteralValue::Unit,
+                    expr_type: TypeId(PrimitiveType::Unit as usize),
+                    location,
+                }));
+            }
+
+            // Otherwise it's a grouped expression
             let expr = self.expression()?;
             if !self.match_token(&Tokentype::RightParen) {
                 return Err(self.error(
@@ -940,6 +816,10 @@ impl<'a> Parser<'a> {
                 ));
             }
             return Ok(expr);
+        }
+
+        if self.match_token(&Tokentype::LeftBrace) {
+            return self.parse_block_expression();
         }
 
         if self.match_token(&Tokentype::Identifier) {
@@ -1158,6 +1038,18 @@ impl<'a> Parser<'a> {
     ///
     /// The type ID for the parsed type or an error
     fn parse_type(&mut self) -> Result<TypeId, ParseError> {
+        // Check for unit type ()
+        if self.check(&Tokentype::LeftParen) {
+            self.advance(); // consume '('
+            if !self.match_token(&Tokentype::RightParen) {
+                return Err(self.error(
+                    ErrorCode::ExpectedClosingParen,
+                    "Expected ')' for unit type",
+                ));
+            }
+            return Ok(TypeId(PrimitiveType::Unit as usize));
+        }
+
         if !self.check(&Tokentype::Identifier) {
             return Err(self.error(ErrorCode::ExpectedIdentifier, "Expected type identifier"));
         }
@@ -1435,8 +1327,7 @@ impl<'a> Parser<'a> {
                 if self.check(&Tokentype::RightBrace) {
                     return_expr = Some(Box::new(expr));
                     break;
-                }
-                else if self.match_token(&Tokentype::Semicolon) {
+                } else if self.match_token(&Tokentype::Semicolon) {
                     statements.push(Statement::Expression(expr));
                 } else {
                     self.current = checkpoint;

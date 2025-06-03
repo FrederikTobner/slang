@@ -1,12 +1,12 @@
-use crate::ast::{
-    BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
-    IfStatement, LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
-    UnaryOperator, AssignmentStatement,
-};
 use crate::Visitor;
+use crate::ast::{
+    AssignmentStatement, BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression,
+    FunctionCallExpr, FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr,
+    LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
+};
 use slang_types::{
-    TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I64,
-    TYPE_NAME_INT, TYPE_NAME_STRING, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_I32,
+    TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64,
+    TYPE_NAME_INT, TYPE_NAME_STRING, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNIT,
 };
 
 /// A visitor implementation that prints the AST in a human-readable format
@@ -173,6 +173,7 @@ impl Visitor<()> for ASTPrinter {
             }
             LiteralValue::Boolean(b) => println!("{}{}: {}", self.indent(), TYPE_NAME_BOOL, b),
             LiteralValue::String(s) => println!("{}{}: \"{}\"", self.indent(), TYPE_NAME_STRING, s),
+            LiteralValue::Unit => println!("{}{}: ()", self.indent(), TYPE_NAME_UNIT),
         }
     }
 
@@ -216,20 +217,20 @@ impl Visitor<()> for ASTPrinter {
 
     fn visit_if_statement(&mut self, if_stmt: &IfStatement) {
         println!("{}If Statement:", self.indent());
-        
+
         self.indent_level += 1;
         println!("{}Condition:", self.indent());
         self.indent_level += 1;
         self.visit_expression(&if_stmt.condition);
         self.indent_level -= 1;
-        
+
         println!("{}Then Branch:", self.indent());
         self.indent_level += 1;
         for stmt in &if_stmt.then_branch {
             self.visit_statement(stmt);
         }
         self.indent_level -= 1;
-        
+
         if let Some(else_branch) = &if_stmt.else_branch {
             println!("{}Else Branch:", self.indent());
             self.indent_level += 1;
@@ -238,37 +239,37 @@ impl Visitor<()> for ASTPrinter {
             }
             self.indent_level -= 1;
         }
-        
+
         self.indent_level -= 1;
     }
 
     fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) {
         println!("{}Conditional Expression:", self.indent());
-        
+
         self.indent_level += 1;
         println!("{}Condition:", self.indent());
         self.indent_level += 1;
         self.visit_expression(&cond_expr.condition);
         self.indent_level -= 1;
-        
+
         println!("{}Then:", self.indent());
         self.indent_level += 1;
         self.visit_expression(&cond_expr.then_branch);
         self.indent_level -= 1;
-        
+
         println!("{}Else:", self.indent());
         self.indent_level += 1;
         self.visit_expression(&cond_expr.else_branch);
         self.indent_level -= 1;
-        
+
         self.indent_level -= 1;
     }
 
     fn visit_block_expression(&mut self, block_expr: &BlockExpr) {
         println!("{}Block Expression:", self.indent());
-        
+
         self.indent_level += 1;
-        
+
         if !block_expr.statements.is_empty() {
             println!("{}Statements:", self.indent());
             self.indent_level += 1;
@@ -277,14 +278,14 @@ impl Visitor<()> for ASTPrinter {
             }
             self.indent_level -= 1;
         }
-        
+
         if let Some(return_expr) = &block_expr.return_expr {
             println!("{}Return Expression:", self.indent());
             self.indent_level += 1;
             self.visit_expression(return_expr);
             self.indent_level -= 1;
         }
-        
+
         self.indent_level -= 1;
     }
 }

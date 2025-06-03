@@ -7,11 +7,14 @@ use rstest::rstest;
 #[case("u32")]
 #[case("u64")]
 fn with_integer_variables(#[case] type_name: &str) {
-    let program = format!(r#"
+    let program = format!(
+        r#"
         let a: {} = 6;
         let b: {} = 7;
         print_value(a * b);
-    "#, type_name, type_name);
+    "#,
+        type_name, type_name
+    );
     execute_program_and_assert(&program, "42");
 }
 
@@ -19,11 +22,14 @@ fn with_integer_variables(#[case] type_name: &str) {
 #[case("f32")]
 #[case("f64")]
 fn with_float_variables(#[case] type_name: &str) {
-    let program = format!(r#"
+    let program = format!(
+        r#"
         let a: {} = 6.0;
         let b: {} = 7.0;
         print_value(a * b);
-    "#, type_name, type_name);
+    "#,
+        type_name, type_name
+    );
     execute_program_and_assert(&program, "42");
 }
 
@@ -34,9 +40,12 @@ fn with_float_variables(#[case] type_name: &str) {
 #[case("u32")]
 #[case("u64")]
 fn with_integer_literals(#[case] type_name: &str) {
-    let program = format!(r#"
+    let program = format!(
+        r#"
         print_value(6{} * 7{});
-    "#, type_name, type_name);
+    "#,
+        type_name, type_name
+    );
     execute_program_and_assert(&program, "42");
 }
 
@@ -45,44 +54,51 @@ fn with_integer_literals(#[case] type_name: &str) {
 #[case("f32")]
 #[case("f64")]
 fn with_float_literals(#[case] type_name: &str) {
-    let program = format!(r#"
+    let program = format!(
+        r#"
         print_value(6.0{} * 7.0{});
-    "#, type_name, type_name);
+    "#,
+        type_name, type_name
+    );
     execute_program_and_assert(&program, "42");
 }
 
 #[test]
 fn with_incompatible_types() {
     // Define all the types we want to test
-    let all_types =  ["i32", "i64", "u32", "u64", "f32", "f64", "bool", "string"];    
+    let all_types = ["i32", "i64", "u32", "u64", "f32", "f64", "bool", "string"];
     // Valid combinations (types that can be added together)
     let valid_combinations = [
-        ("i32", "i32"), ("i64", "i64"), ("u32", "u32"), ("u64", "u64"), 
-        ("f32", "f32"), ("f64", "f64") 
+        ("i32", "i32"),
+        ("i64", "i64"),
+        ("u32", "u32"),
+        ("u64", "u64"),
+        ("f32", "f32"),
+        ("f64", "f64"),
     ];
-    
+
     for &left_type in &all_types {
         for &right_type in &all_types {
             // Skip if it's a valid combination
             if valid_combinations.contains(&(left_type, right_type)) {
                 continue;
             }
-            
+
             // Create appropriate test values based on type
             let left_value = match left_type {
                 "f32" | "f64" => "20.0",
                 "string" => "\"hello\"",
                 "bool" => "true",
-                _ => "20"  // integers
+                _ => "20", // integers
             };
-            
+
             let right_value = match right_type {
                 "f32" | "f64" => "22.0",
                 "string" => "\"world\"",
                 "bool" => "false",
-                _ => "22"  // integers
+                _ => "22", // integers
             };
-            
+
             let program = format!(
                 r#"
                 let a: {} = {};
@@ -91,14 +107,27 @@ fn with_incompatible_types() {
                 "#,
                 left_type, left_value, right_type, right_value
             );
-            
+
             let expected_error = format!(
-                "Type mismatch: cannot apply '*' operator on {} and {}", 
+                "Type mismatch: cannot apply '*' operator on {} and {}",
                 left_type, right_type
             );
-            
+
             execute_program_expect_error(&program, "[E2006]", &expected_error);
         }
     }
 }
 
+#[test]
+fn with_unit() {
+    let program = r#"
+        let x = ();
+        let y = ();
+        print_value(x * y);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2006]",
+        "Type mismatch: cannot apply '*' operator on () and ()",
+    );
+}

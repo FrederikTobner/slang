@@ -7,4 +7,3 @@ pub use symbol_table::{SymbolKind, SymbolTable};
 
 // Internal imports
 use symbol_table::Symbol;
-

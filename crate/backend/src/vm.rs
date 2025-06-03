@@ -165,7 +165,7 @@ impl VM {
             OpCode::Return => {
                 if let Some(frame_index) = self.current_frame {
                     let return_value = if self.stack.is_empty() {
-                        Value::I32(0) // Default return value
+                        Value::Unit // Default return value for functions without explicit return
                     } else {
                         self.pop()?
                     };
@@ -174,10 +174,12 @@ impl VM {
                     let return_address = frame.return_address;
                     let stack_offset = frame.stack_offset;
 
+                    // Clear the stack back to where the function call started
                     while self.stack.len() > stack_offset {
                         self.pop()?;
                     }
 
+                    // Push the return value
                     self.stack.push(return_value);
 
                     self.ip = return_address;
@@ -266,7 +268,7 @@ impl VM {
                 }
 
                 let function_pos = self.stack.len() - 1;
-                let function_value = &self.stack[function_pos];
+                let function_value = self.stack[function_pos].clone();
 
                 match function_value {
                     Value::Function(func) => {
@@ -294,6 +296,11 @@ impl VM {
                             stack_offset: function_pos - arg_count,
                             locals,
                         };
+
+                        // Remove function and arguments from stack
+                        for _ in 0..=arg_count {
+                            self.pop()?;
+                        }
 
                         self.frames.push(frame);
                         self.current_frame = Some(self.frames.len() - 1);

@@ -230,7 +230,9 @@ pub fn derive_iterable_enum(input: TokenStream) -> TokenStream {
 
     for variant in variants.iter() {
         if !variant.fields.is_empty() {
-            panic!("IterableEnum can only be derived for enums with unit variants (no associated data)");
+            panic!(
+                "IterableEnum can only be derived for enums with unit variants (no associated data)"
+            );
         }
     }
 

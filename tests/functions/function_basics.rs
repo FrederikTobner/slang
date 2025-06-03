@@ -28,13 +28,39 @@ fn function_with_no_params() {
 fn test_empty_return() {
     let program = r#"
         fn void_function() {
-            return;
+            return ();
         }
         
         void_function();
         print_value(42); // Just to verify program continues
     "#;
     execute_program_and_assert(program, "42");
+}
+
+#[test]
+fn test_function_with_no_return() {
+    let program = r#"
+        fn no_return_function() {
+            // No return statement
+        }
+        
+        no_return_function();
+        print_value(42); // Just to verify program continues
+    "#;
+    execute_program_and_assert(program, "42");
+}
+
+#[test]
+fn with_explicit_unit_return_type() {
+    let program = r#"
+        fn return_unit() -> () {
+            return ();
+        }
+        
+        let result = return_unit();
+        print_value(result); // Should print nothing or "()" depending on implementation
+    "#;
+    execute_program_and_assert(program, "()");
 }
 
 #[test]
@@ -122,4 +148,56 @@ fn fibonacci_recursive_function() {
         print_value(fibonacci(10)); // Should print 55
     "#;
     execute_program_and_assert(program, "55");
+}
+
+#[test]
+fn unit_function_parameter() {
+    let program = r#"
+        fn test_fn(param: ()) -> () {
+            return param;
+        }
+        
+        let result = test_fn(());
+        print_value(result);
+    "#;
+    execute_program_and_assert(program, "()");
+}
+
+#[test]
+fn empty_return_statement() {
+    let program = r#"
+        fn test_fn() {
+            return;
+        }
+        
+        let result = test_fn();
+        print_value(result);
+    "#;
+    execute_program_and_assert(program, "()");
+}
+
+#[test]
+fn returns_unit_explicitly() {
+    let program = r#"
+        fn test_fn() -> () {
+            return ();
+        }
+        
+        let result = test_fn();
+        print_value(result);
+    "#;
+    execute_program_and_assert(program, "()");
+}
+
+#[test]
+fn function_returns_unit_implicitly() {
+    let program = r#"
+        fn test_fn() {
+            let x = 42;
+        }
+        
+        let result = test_fn();
+        print_value(result);
+    "#;
+    execute_program_and_assert(program, "()");
 }

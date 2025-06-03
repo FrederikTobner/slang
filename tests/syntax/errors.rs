@@ -23,7 +23,11 @@ fn mismatched_parentheses() {
         let a = 42;
         print_value(a;
     "#;
-    execute_program_expect_error(program, "[E1003]", "Expected \')\' after function arguments");
+    execute_program_expect_error(
+        program,
+        "[E1003]",
+        "Expected \')\' after function arguments",
+    );
 }
 
 #[test]
@@ -63,3 +67,4 @@ fn redefined_variable() {
     "#;
     execute_program_expect_error(program, "[E2002]", "Variable \'a\' already defined");
 }
+

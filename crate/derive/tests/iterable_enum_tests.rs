@@ -18,10 +18,10 @@ enum TestPrimitiveType {
 #[test]
 fn test_iterable_enum_functionality() {
     let all_types: Vec<TestPrimitiveType> = TestPrimitiveType::iter().collect();
-    
-    let expected_count = 11; 
+
+    let expected_count = 11;
     assert_eq!(all_types.len(), expected_count);
-    
+
     assert!(all_types.contains(&TestPrimitiveType::I32));
     assert!(all_types.contains(&TestPrimitiveType::I64));
     assert!(all_types.contains(&TestPrimitiveType::U32));
@@ -33,15 +33,18 @@ fn test_iterable_enum_functionality() {
     assert!(all_types.contains(&TestPrimitiveType::UnspecifiedInt));
     assert!(all_types.contains(&TestPrimitiveType::UnspecifiedFloat));
     assert!(all_types.contains(&TestPrimitiveType::Unknown));
-    
-    println!("IterableEnum test passed! Found {} primitive types.", all_types.len());
+
+    println!(
+        "IterableEnum test passed! Found {} primitive types.",
+        all_types.len()
+    );
 }
 
 #[test]
 fn test_iterator_is_repeatable() {
     let first_iteration: Vec<TestPrimitiveType> = TestPrimitiveType::iter().collect();
     let second_iteration: Vec<TestPrimitiveType> = TestPrimitiveType::iter().collect();
-    
+
     assert_eq!(first_iteration, second_iteration);
     assert_eq!(first_iteration.len(), 11);
 }
@@ -49,7 +52,7 @@ fn test_iterator_is_repeatable() {
 #[test]
 fn test_iterator_order_is_consistent() {
     let types: Vec<TestPrimitiveType> = TestPrimitiveType::iter().collect();
-    
+
     assert_eq!(types[0], TestPrimitiveType::I32);
     assert_eq!(types[1], TestPrimitiveType::I64);
     assert_eq!(types[2], TestPrimitiveType::U32);
@@ -69,7 +72,7 @@ fn test_iterable_enum_with_single_variant() {
     enum SingleVariant {
         Only,
     }
-    
+
     let variants: Vec<SingleVariant> = SingleVariant::iter().collect();
     assert_eq!(variants.len(), 1);
     assert_eq!(variants[0], SingleVariant::Only);
@@ -82,7 +85,7 @@ fn test_iterable_enum_with_two_variants() {
         First,
         Second,
     }
-    
+
     let variants: Vec<TwoVariants> = TwoVariants::iter().collect();
     assert_eq!(variants.len(), 2);
     assert_eq!(variants[0], TwoVariants::First);
@@ -93,10 +96,10 @@ fn test_iterable_enum_with_two_variants() {
 fn test_iterator_is_cloneable() {
     let iter1 = TestPrimitiveType::iter();
     let iter2 = iter1.clone();
-    
+
     let vec1: Vec<TestPrimitiveType> = iter1.collect();
     let vec2: Vec<TestPrimitiveType> = iter2.collect();
-    
+
     assert_eq!(vec1, vec2);
     assert_eq!(vec1.len(), 11);
 }

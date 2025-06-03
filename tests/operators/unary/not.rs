@@ -88,3 +88,16 @@ fn with_float(#[case] type_name: &str) {
         ),
     );
 }
+
+#[test]
+fn with_unit() {
+    let program = r#"
+        let x = ();
+        print_value(!x);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2015]",
+        "Boolean not operator '!' can only be applied to boolean types, but got ()",
+    );
+}

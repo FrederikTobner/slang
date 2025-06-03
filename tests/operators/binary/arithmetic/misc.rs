@@ -11,3 +11,4 @@ fn precedence() {
     "#;
     execute_program_and_assert(program, "7");
 }
+

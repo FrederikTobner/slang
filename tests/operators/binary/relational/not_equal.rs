@@ -1,15 +1,12 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use rstest::rstest;
-
 
 #[rstest]
 #[case("i32")]
 #[case("i64")]
 #[case("u32")]
 #[case("u64")]
-fn equal_integer(
-    #[case] type_name: &str,
-) {
+fn equal_integer(#[case] type_name: &str) {
     let program = format!(
         r#"
         let a: {} = 5;
@@ -27,9 +24,7 @@ fn equal_integer(
 #[case("i64")]
 #[case("u32")]
 #[case("u64")]
-fn not_equal_integer(
-    #[case] type_name: &str,
-) {
+fn not_equal_integer(#[case] type_name: &str) {
     let program = format!(
         r#"
         let a: {} = 5;
@@ -45,9 +40,7 @@ fn not_equal_integer(
 #[rstest]
 #[case("f32")]
 #[case("f64")]
-fn equal_float(
-    #[case] type_name: &str,
-) {
+fn equal_float(#[case] type_name: &str) {
     let program = format!(
         r#"
         let a: {} = 5.5;
@@ -63,9 +56,7 @@ fn equal_float(
 #[rstest]
 #[case("f32")]
 #[case("f64")]
-fn not_equal_float(
-    #[case] type_name: &str,
-) {
+fn not_equal_float(#[case] type_name: &str) {
     let program = format!(
         r#"
         let a: {} = 5.5;
@@ -104,3 +95,16 @@ fn with_strings() {
     execute_program_and_assert(program, "false\ntrue");
 }
 
+#[test]
+fn with_unit() {
+    let program = r#"
+        let x = ();
+        let y = ();
+        print_value(x != y);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2006]",
+        "Type mismatch: cannot apply '!=' operator on () and ()",
+    );
+}

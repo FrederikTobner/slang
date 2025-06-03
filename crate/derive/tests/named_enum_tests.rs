@@ -61,8 +61,14 @@ fn test_implicit_names() {
 fn test_from_str_with_explicit_names() {
     // Test from_str for explicitly named variants
     assert_eq!(TestEnum::from_str("custom_first"), Some(TestEnum::First));
-    assert_eq!(TestEnum::from_str("UPPERCASE_SECOND"), Some(TestEnum::Second));
-    assert_eq!(TestEnum::from_str("custom-fourth-with-hyphens"), Some(TestEnum::Fourth));
+    assert_eq!(
+        TestEnum::from_str("UPPERCASE_SECOND"),
+        Some(TestEnum::Second)
+    );
+    assert_eq!(
+        TestEnum::from_str("custom-fourth-with-hyphens"),
+        Some(TestEnum::Fourth)
+    );
     assert_eq!(TestEnum::from_str(""), Some(TestEnum::EmptyName));
 }
 
@@ -75,8 +81,8 @@ fn test_from_str_with_implicit_names() {
 #[test]
 fn test_from_str_with_invalid_names() {
     assert_eq!(TestEnum::from_str("not_a_valid_name"), None);
-    assert_eq!(TestEnum::from_str("First"), None); 
-    assert_eq!(TestEnum::from_str("first"), None); 
+    assert_eq!(TestEnum::from_str("First"), None);
+    assert_eq!(TestEnum::from_str("first"), None);
 }
 
 #[test]
@@ -84,11 +90,20 @@ fn test_case_sensitivity() {
     assert_eq!(CaseSensitivityEnum::Lowercase.name(), "lowercase");
     assert_eq!(CaseSensitivityEnum::Uppercase.name(), "UPPERCASE");
     assert_eq!(CaseSensitivityEnum::MixedCase.name(), "MixedCase");
-    
-    assert_eq!(CaseSensitivityEnum::from_str("lowercase"), Some(CaseSensitivityEnum::Lowercase));
-    assert_eq!(CaseSensitivityEnum::from_str("UPPERCASE"), Some(CaseSensitivityEnum::Uppercase));
-    assert_eq!(CaseSensitivityEnum::from_str("MixedCase"), Some(CaseSensitivityEnum::MixedCase));
-    
+
+    assert_eq!(
+        CaseSensitivityEnum::from_str("lowercase"),
+        Some(CaseSensitivityEnum::Lowercase)
+    );
+    assert_eq!(
+        CaseSensitivityEnum::from_str("UPPERCASE"),
+        Some(CaseSensitivityEnum::Uppercase)
+    );
+    assert_eq!(
+        CaseSensitivityEnum::from_str("MixedCase"),
+        Some(CaseSensitivityEnum::MixedCase)
+    );
+
     assert_eq!(CaseSensitivityEnum::from_str("LOWERCASE"), None);
     assert_eq!(CaseSensitivityEnum::from_str("uppercase"), None);
     assert_eq!(CaseSensitivityEnum::from_str("mixedcase"), None);
@@ -103,14 +118,35 @@ fn test_special_characters() {
     assert_eq!(SpecialNameEnum::WithHyphens.name(), "name-with-hyphens");
     assert_eq!(SpecialNameEnum::NumericPrefix.name(), "123_numeric_prefix");
     assert_eq!(SpecialNameEnum::WithUnicode.name(), "unicode_☺_char");
-    
-    assert_eq!(SpecialNameEnum::from_str("special.name"), Some(SpecialNameEnum::WithDot));
-    assert_eq!(SpecialNameEnum::from_str("snake_case_name"), Some(SpecialNameEnum::SnakeCase));
-    assert_eq!(SpecialNameEnum::from_str("camelCaseName"), Some(SpecialNameEnum::CamelCase));
-    assert_eq!(SpecialNameEnum::from_str("name with spaces"), Some(SpecialNameEnum::WithSpaces));
-    assert_eq!(SpecialNameEnum::from_str("name-with-hyphens"), Some(SpecialNameEnum::WithHyphens));
-    assert_eq!(SpecialNameEnum::from_str("123_numeric_prefix"), Some(SpecialNameEnum::NumericPrefix));
-    assert_eq!(SpecialNameEnum::from_str("unicode_☺_char"), Some(SpecialNameEnum::WithUnicode));
+
+    assert_eq!(
+        SpecialNameEnum::from_str("special.name"),
+        Some(SpecialNameEnum::WithDot)
+    );
+    assert_eq!(
+        SpecialNameEnum::from_str("snake_case_name"),
+        Some(SpecialNameEnum::SnakeCase)
+    );
+    assert_eq!(
+        SpecialNameEnum::from_str("camelCaseName"),
+        Some(SpecialNameEnum::CamelCase)
+    );
+    assert_eq!(
+        SpecialNameEnum::from_str("name with spaces"),
+        Some(SpecialNameEnum::WithSpaces)
+    );
+    assert_eq!(
+        SpecialNameEnum::from_str("name-with-hyphens"),
+        Some(SpecialNameEnum::WithHyphens)
+    );
+    assert_eq!(
+        SpecialNameEnum::from_str("123_numeric_prefix"),
+        Some(SpecialNameEnum::NumericPrefix)
+    );
+    assert_eq!(
+        SpecialNameEnum::from_str("unicode_☺_char"),
+        Some(SpecialNameEnum::WithUnicode)
+    );
 }
 
 #[test]
@@ -122,13 +158,13 @@ fn test_roundtrip_conversion() {
         TestEnum::Fourth,
         TestEnum::EmptyName,
     ];
-    
+
     for variant in variants.iter() {
         let name = variant.name();
         let roundtrip = TestEnum::from_str(name);
         assert_eq!(roundtrip, Some(*variant));
     }
-    
+
     let special_variants = [
         SpecialNameEnum::WithDot,
         SpecialNameEnum::SnakeCase,
@@ -138,7 +174,7 @@ fn test_roundtrip_conversion() {
         SpecialNameEnum::NumericPrefix,
         SpecialNameEnum::WithUnicode,
     ];
-    
+
     for variant in special_variants.iter() {
         let name = variant.name();
         let roundtrip = SpecialNameEnum::from_str(name);
@@ -162,10 +198,20 @@ fn test_unit_variants_only() {
     assert_eq!(MixedEnum::FirstUnit.name(), "first_unit");
     assert_eq!(MixedEnum::SecondUnit.name(), "second_unit");
     assert_eq!(MixedEnum::ThirdUnit.name(), "third_unit");
-    
-    assert_eq!(MixedEnum::from_str("first_unit"), Some(MixedEnum::FirstUnit));
-    assert_eq!(MixedEnum::from_str("second_unit"), Some(MixedEnum::SecondUnit));
-    assert_eq!(MixedEnum::from_str("third_unit"), Some(MixedEnum::ThirdUnit));
-    
+
+    assert_eq!(
+        MixedEnum::from_str("first_unit"),
+        Some(MixedEnum::FirstUnit)
+    );
+    assert_eq!(
+        MixedEnum::from_str("second_unit"),
+        Some(MixedEnum::SecondUnit)
+    );
+    assert_eq!(
+        MixedEnum::from_str("third_unit"),
+        Some(MixedEnum::ThirdUnit)
+    );
+
     assert_eq!(MixedEnum::from_str("invalid"), None);
 }
+

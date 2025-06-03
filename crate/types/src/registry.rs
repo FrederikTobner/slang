@@ -20,7 +20,11 @@ impl TypeRegistry {
     /// Registers all built-in types in the type registry
     fn register_built_in_types(&mut self) {
         for ptype in PrimitiveType::iter() {
-            self.register_primitive_type(ptype.name(), ptype.to_type_kind(), TypeId(ptype as usize));
+            self.register_primitive_type(
+                ptype.name(),
+                ptype.to_type_kind(),
+                TypeId(ptype as usize),
+            );
         }
     }
 

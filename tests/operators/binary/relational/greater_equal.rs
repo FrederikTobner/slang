@@ -1,15 +1,12 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use rstest::rstest;
-
 
 #[rstest]
 #[case("i32")]
 #[case("i64")]
 #[case("u32")]
 #[case("u64")]
-fn smaller_on_int(
-    #[case] type_name: &str,
-) {
+fn smaller_on_int(#[case] type_name: &str) {
     let program = format!(
         r#"
         let a: {} = 20;
@@ -26,9 +23,7 @@ fn smaller_on_int(
 #[case("i64")]
 #[case("u32")]
 #[case("u64")]
-fn equal_on_int(
-    #[case] type_name: &str,
-) {
+fn equal_on_int(#[case] type_name: &str) {
     let program = format!(
         r#"
         let a: {} = 20;
@@ -45,9 +40,7 @@ fn equal_on_int(
 #[case("i64")]
 #[case("u32")]
 #[case("u64")]
-fn greater_on_int(
-    #[case] type_name: &str,
-) {
+fn greater_on_int(#[case] type_name: &str) {
     let program = format!(
         r#"
         let a: {} = 22;
@@ -62,9 +55,7 @@ fn greater_on_int(
 #[rstest]
 #[case("f32")]
 #[case("f64")]
-fn smaller_on_float(
-    #[case] type_name: &str,
-) {
+fn smaller_on_float(#[case] type_name: &str) {
     let program = format!(
         r#"
         let a: {} = 20.0;
@@ -79,9 +70,7 @@ fn smaller_on_float(
 #[rstest]
 #[case("f32")]
 #[case("f64")]
-fn equal_on_float(
-    #[case] type_name: &str,
-) {
+fn equal_on_float(#[case] type_name: &str) {
     let program = format!(
         r#"
         let a: {} = 20.0;
@@ -96,9 +85,7 @@ fn equal_on_float(
 #[rstest]
 #[case("f32")]
 #[case("f64")]
-fn greater_on_float(
-    #[case] type_name: &str,
-) {
+fn greater_on_float(#[case] type_name: &str) {
     let program = format!(
         r#"
         let a: {} = 22.0;
@@ -109,3 +96,42 @@ fn greater_on_float(
     );
     execute_program_and_assert(&program, "true");
 }
+
+#[test]
+fn with_unit() {
+    let program = r#"
+        let x = ();
+        let y = ();
+        print_value(x >= y);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2006]",
+        "Type mismatch: cannot apply '>=' operator on () and ()",
+    );
+}
+
+#[test]
+fn with_booleans() {
+    let program = r#"
+        let result1 = true >= true;
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2006]",
+        "Type mismatch: cannot apply '>=' operator on bool and bool",
+    );
+}
+
+#[test]
+fn with_strings() {
+    let program = r#"
+        let result1 = "hello" >= "hello";
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2006]",
+        "Type mismatch: cannot apply '>=' operator on string and string",
+    );
+}
+

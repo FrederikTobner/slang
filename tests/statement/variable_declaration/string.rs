@@ -22,14 +22,19 @@ fn string_type_inference() {
 #[rstest]
 #[case("true")] // Boolean literal
 #[case("false")] // Boolean literal
-fn from_boolean_literal(
-    #[case] value: &str,
-) {
-    let program = format!(r#"
+fn from_boolean_literal(#[case] value: &str) {
+    let program = format!(
+        r#"
         let a: string = {};
         print_value(a);
-    "#, value);
-    execute_program_expect_error(&program, "[E2005]", "Type mismatch: variable a is string but expression is bool");
+    "#,
+        value
+    );
+    execute_program_expect_error(
+        &program,
+        "[E2005]",
+        "Type mismatch: variable a is string but expression is bool",
+    );
 }
 
 #[rstest]
@@ -38,32 +43,44 @@ fn from_boolean_literal(
 #[case("42i64", "i64")] // I64 literal
 #[case("42u32", "u32")] // U32 literal
 #[case("42u64", "u64")] // U64 literal
-fn from_integer_literal(
-    #[case] value: &str,
-    #[case] _type: &str,
-) {
-    let program = format!(r#"
+fn from_integer_literal(#[case] value: &str, #[case] _type: &str) {
+    let program = format!(
+        r#"
         let a: string = {};
         print_value(a);
-    "#, value);
-    execute_program_expect_error(&program, "[E2005]", &format!("Type mismatch: variable a is string but expression is {}", _type));
+    "#,
+        value
+    );
+    execute_program_expect_error(
+        &program,
+        "[E2005]",
+        &format!(
+            "Type mismatch: variable a is string but expression is {}",
+            _type
+        ),
+    );
 }
-
-
 
 #[rstest]
 #[case("3.14", "float")] // Float literal
 #[case("3.14f32", "f32")] // F32 literal
 #[case("3.14f64", "f64")] // F64 literal
-fn from_float_literal(
-    #[case] value: &str,
-    #[case] _type: &str,
-) {
-    let program = format!(r#"
+fn from_float_literal(#[case] value: &str, #[case] _type: &str) {
+    let program = format!(
+        r#"
         let a: string = {};
         print_value(a);
-    "#, value);
-    execute_program_expect_error(&program, "[E2005]", &format!("Type mismatch: variable a is string but expression is {}", _type));
+    "#,
+        value
+    );
+    execute_program_expect_error(
+        &program,
+        "[E2005]",
+        &format!(
+            "Type mismatch: variable a is string but expression is {}",
+            _type
+        ),
+    );
 }
 
 #[test]
@@ -71,5 +88,10 @@ fn using_string_type_as_name() {
     let program = r#"
         let string: bool = true;
     "#;
-    execute_program_expect_error(&program, "[E2003]", "Symbol \'string\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.");
+    execute_program_expect_error(
+        &program,
+        "[E2003]",
+        "Symbol \'string\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.",
+    );
 }
+

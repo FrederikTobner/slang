@@ -1,4 +1,4 @@
-use slang_derive::{NamedEnum, IterableEnum};
+use slang_derive::{IterableEnum, NamedEnum, NumericEnum};
 
 // Type name constants
 pub const TYPE_NAME_I32: &str = PrimitiveType::I32.name();
@@ -11,10 +11,11 @@ pub const TYPE_NAME_BOOL: &str = PrimitiveType::Bool.name();
 pub const TYPE_NAME_STRING: &str = PrimitiveType::String.name();
 pub const TYPE_NAME_INT: &str = PrimitiveType::UnspecifiedInt.name();
 pub const TYPE_NAME_FLOAT: &str = PrimitiveType::UnspecifiedFloat.name();
+pub const TYPE_NAME_UNIT: &str = PrimitiveType::Unit.name();
 pub const TYPE_NAME_UNKNOWN: &str = PrimitiveType::Unknown.name();
 
 /// Represents all primitive types in the language
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, NamedEnum, IterableEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, NamedEnum, IterableEnum, NumericEnum)]
 pub enum PrimitiveType {
     /// 32-bit signed integer
     I32,
@@ -38,6 +39,9 @@ pub enum PrimitiveType {
     /// Unspecified float type (for literals)
     #[name = "float"]
     UnspecifiedFloat,
+    /// Unit type (similar to Rust's ())
+    #[name = "()"]
+    Unit,
     /// Unknown type
     Unknown,
 }
@@ -87,6 +91,7 @@ impl PrimitiveType {
             PrimitiveType::I32 | PrimitiveType::U32 | PrimitiveType::F32 => 32,
             PrimitiveType::I64 | PrimitiveType::U64 | PrimitiveType::F64 => 64,
             PrimitiveType::Bool => 1,
+            PrimitiveType::Unit => 0,
             _ => 0,
         }
     }
@@ -136,6 +141,7 @@ impl PrimitiveType {
             }),
             PrimitiveType::String => TypeKind::String,
             PrimitiveType::Bool => TypeKind::Boolean,
+            PrimitiveType::Unit => TypeKind::Unit,
             PrimitiveType::Unknown => TypeKind::Unknown,
         }
     }
@@ -172,6 +178,8 @@ pub enum TypeKind {
     String,
     /// Boolean type
     Boolean,
+    /// Unit type (similar to Rust's ())
+    Unit,
     /// Struct type with fields
     Struct(StructType),
     /// Unknown or not yet determined type

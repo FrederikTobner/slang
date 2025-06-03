@@ -6,53 +6,53 @@ pub use std::io::{Read, Write};
 #[derive(Debug, PartialEq, NumericEnum)]
 pub enum OpCode {
     /// Push a constant onto the stack
-    Constant = 0,
+    Constant,
     /// Add the top two stack values
-    Add = 1,
+    Add,
     /// Subtract the top stack value from the second stack value
-    Subtract = 2,
+    Subtract,
     /// Multiply the top two stack values
-    Multiply = 3,
+    Multiply,
     /// Divide the second stack value by the top stack value
-    Divide = 4,
+    Divide,
     /// Negate the top stack value
-    Negate = 5,
+    Negate,
     /// Return from the current function
-    Return = 6,
+    Return,
     /// Print the top stack value
-    Print = 7,
+    Print,
     /// Push the value of a variable onto the stack
-    GetVariable = 8,
+    GetVariable,
     /// Set a variable to the top stack value
-    SetVariable = 9,
+    SetVariable,
     /// Remove the top stack value
-    Pop = 10,
+    Pop,
     /// Define a function
-    DefineFunction = 11,
+    DefineFunction,
     /// Call a function
-    Call = 12,
+    Call,
     /// Jump if the top stack value is false
-    JumpIfFalse = 13,
+    JumpIfFalse,
     /// Jump unconditionally
-    Jump = 14,
+    Jump,
     /// Negate a boolean value (logical NOT)
-    BoolNot = 15,
+    BoolNot,
     /// Boolean AND operation
-    BoolAnd = 16,
+    BoolAnd,
     /// Boolean OR operation
-    BoolOr = 17,
+    BoolOr,
     /// Greater than comparison
-    Greater = 18,
+    Greater,
     /// Less than comparison
-    Less = 19,
+    Less,
     /// Greater than or equal comparison
-    GreaterEqual = 20,
+    GreaterEqual,
     /// Less than or equal comparison
-    LessEqual = 21,
+    LessEqual,
     /// Equal comparison
-    Equal = 22,
+    Equal,
     /// Not equal comparison
-    NotEqual = 23,
+    NotEqual,
 }
 
 /// Function representation in bytecode
@@ -245,6 +245,7 @@ impl Chunk {
                 Value::Boolean(b) => {
                     writer.write_all(&[*b as u8])?;
                 }
+                Value::Unit => {}
             }
         }
 

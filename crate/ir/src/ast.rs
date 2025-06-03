@@ -251,6 +251,8 @@ pub enum LiteralValue {
     String(String),
     /// Boolean value (true or false)
     Boolean(bool),
+    /// Unit value (similar to Rust's ())
+    Unit,
 }
 
 /// A binary expression (e.g., a + b)
@@ -309,10 +311,10 @@ pub struct IfStatement {
 
 impl Statement {
     /// Accepts a visitor for this statement
-    /// 
+    ///
     /// ### Arguments
     /// * `visitor` - The visitor to accept
-    /// 
+    ///
     /// ### Returns
     /// The result of the visitor's visit method for this statement
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
@@ -338,7 +340,7 @@ impl Expression {
     ///
     /// ### Arguments
     /// * `visitor` - The visitor to accept
-    /// 
+    ///
     /// ### Returns
     /// The result of the visitor's visit method for this expression
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {

@@ -1,10 +1,11 @@
 use crate::bytecode::{Chunk, Function, OpCode};
 use crate::value::Value;
-use slang_ir::ast::{
-    BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
-    IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
-};
 use slang_ir::Visitor;
+use slang_ir::ast::{
+    BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
+    FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt,
+    UnaryExpr, UnaryOperator,
+};
 
 /// Compiles AST nodes into bytecode instructions
 struct CodeGenerator {
@@ -130,7 +131,6 @@ impl CodeGenerator {
     fn end_scope(&mut self) {
         self.local_scopes.pop();
     }
-
 }
 
 impl Visitor<Result<(), String>> for CodeGenerator {
@@ -208,7 +208,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         if let Some(expr) = expr {
             self.visit_expression(expr)?;
         } else {
-            self.emit_constant(Value::I32(0));
+            self.emit_constant(Value::Unit);
         }
         self.emit_op(OpCode::Return);
         Ok(())
@@ -239,14 +239,17 @@ impl Visitor<Result<(), String>> for CodeGenerator {
 
         self.emit_op(OpCode::SetVariable);
         self.emit_byte(var_index as u8);
-        
+
         // Pop the value from the stack since let statements don't return values
         self.emit_op(OpCode::Pop);
 
         Ok(())
     }
 
-    fn visit_assignment_statement(&mut self, assign_stmt: &slang_ir::ast::AssignmentStatement) -> Result<(), String> {
+    fn visit_assignment_statement(
+        &mut self,
+        assign_stmt: &slang_ir::ast::AssignmentStatement,
+    ) -> Result<(), String> {
         self.visit_expression(&assign_stmt.value)?;
         let var_index = self.chunk.add_identifier(assign_stmt.name.clone());
         if var_index > 255 {
@@ -316,6 +319,9 @@ impl Visitor<Result<(), String>> for CodeGenerator {
             }
             slang_ir::ast::LiteralValue::Boolean(b) => {
                 self.emit_constant(Value::Boolean(*b));
+            }
+            slang_ir::ast::LiteralValue::Unit => {
+                self.emit_constant(Value::Unit);
             }
         }
 
@@ -408,61 +414,61 @@ impl Visitor<Result<(), String>> for CodeGenerator {
 
     fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) -> Result<(), String> {
         self.visit_expression(&cond_expr.condition)?;
-        
+
         let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
-        self.emit_op(OpCode::Pop); 
+        self.emit_op(OpCode::Pop);
         self.visit_expression(&cond_expr.then_branch)?;
-        
+
         let jump_over_else = self.emit_jump(OpCode::Jump);
         self.patch_jump(jump_to_else);
-        self.emit_op(OpCode::Pop); 
+        self.emit_op(OpCode::Pop);
         self.visit_expression(&cond_expr.else_branch)?;
-        
+
         self.patch_jump(jump_over_else);
-        
+
         Ok(())
     }
 
     fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> Result<(), String> {
         self.visit_expression(&if_stmt.condition)?;
-        
+
         let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
-        self.emit_op(OpCode::Pop); 
-        
+        self.emit_op(OpCode::Pop);
+
         self.visit_block_statement(&if_stmt.then_branch)?;
-        
+
         if let Some(else_branch) = &if_stmt.else_branch {
             let jump_over_else = self.emit_jump(OpCode::Jump);
-            
+
             self.patch_jump(jump_to_else);
-            self.emit_op(OpCode::Pop); 
-            
+            self.emit_op(OpCode::Pop);
+
             self.visit_block_statement(else_branch)?;
-            
+
             self.patch_jump(jump_over_else);
         } else {
             self.patch_jump(jump_to_else);
-            self.emit_op(OpCode::Pop); 
+            self.emit_op(OpCode::Pop);
         }
-        
+
         Ok(())
     }
 
     fn visit_block_expression(&mut self, block_expr: &BlockExpr) -> Result<(), String> {
         self.begin_scope();
-        
+
         for stmt in &block_expr.statements {
             self.visit_statement(stmt)?;
         }
-        
+
         if let Some(return_expr) = &block_expr.return_expr {
             self.visit_expression(return_expr)?;
         } else {
-            self.emit_constant(Value::Boolean(false));
+            self.emit_constant(Value::Unit);
         }
-        
+
         self.end_scope();
-        
+
         Ok(())
     }
 }
