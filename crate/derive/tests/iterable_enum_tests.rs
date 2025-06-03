@@ -1,6 +1,6 @@
 use slang_derive::IterableEnum;
 
-#[derive(Debug, PartialEq, Eq, IterableEnum)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, IterableEnum)]
 enum TestPrimitiveType {
     I32,
     I64,
