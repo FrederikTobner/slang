@@ -69,6 +69,29 @@ fn nested() {
 }
 
 #[test]
+fn complex_nested() {
+    let program = r#"
+        let x: i32 = 5;
+        let y: i32 = 10;
+        let z: i32 = 15;
+        let result: i32 = if x < y {
+            if y < z {
+                let a: i32 = x + y;
+                x + y + z + a
+            } else {
+                let b: i32 = y - x;
+                y - x + b
+            }
+        } else {
+            let c: i32 = z - y;
+            z - y + c
+        };
+        print_value(result);
+    "#;
+    execute_program_and_assert(program, "45");
+}
+
+#[test]
 fn block_with_multiple_statements() {
     let program = r#"
         let x: i32 = 5;
@@ -155,6 +178,7 @@ fn must_have_same_type() {
     "#;
     execute_program_expect_error(program, "[E2005]", "Type mismatch");
 }
+
 #[test]
 fn must_have_else_branch() {
     let program = r#"

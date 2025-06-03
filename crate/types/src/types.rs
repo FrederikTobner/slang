@@ -1,4 +1,4 @@
-use slang_derive::NamedEnum;
+use slang_derive::{NamedEnum, IterableEnum};
 
 // Type name constants
 pub const TYPE_NAME_I32: &str = PrimitiveType::I32.name();
@@ -14,7 +14,7 @@ pub const TYPE_NAME_FLOAT: &str = PrimitiveType::UnspecifiedFloat.name();
 pub const TYPE_NAME_UNKNOWN: &str = PrimitiveType::Unknown.name();
 
 /// Represents all primitive types in the language
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, NamedEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, NamedEnum, IterableEnum)]
 pub enum PrimitiveType {
     /// 32-bit signed integer
     I32,
@@ -88,6 +88,55 @@ impl PrimitiveType {
             PrimitiveType::I64 | PrimitiveType::U64 | PrimitiveType::F64 => 64,
             PrimitiveType::Bool => 1,
             _ => 0,
+        }
+    }
+
+    /// Get the TypeKind for this primitive type
+    ///
+    /// This method defines the actual type characteristics for each primitive type,
+    /// separating type definition from type registration logic.
+    pub fn to_type_kind(&self) -> TypeKind {
+        match self {
+            PrimitiveType::I32 => TypeKind::Integer(IntegerType {
+                signed: true,
+                bits: 32,
+                is_unspecified: false,
+            }),
+            PrimitiveType::I64 => TypeKind::Integer(IntegerType {
+                signed: true,
+                bits: 64,
+                is_unspecified: false,
+            }),
+            PrimitiveType::U32 => TypeKind::Integer(IntegerType {
+                signed: false,
+                bits: 32,
+                is_unspecified: false,
+            }),
+            PrimitiveType::U64 => TypeKind::Integer(IntegerType {
+                signed: false,
+                bits: 64,
+                is_unspecified: false,
+            }),
+            PrimitiveType::UnspecifiedInt => TypeKind::Integer(IntegerType {
+                signed: true,
+                bits: 0,
+                is_unspecified: true,
+            }),
+            PrimitiveType::F32 => TypeKind::Float(FloatType {
+                bits: 32,
+                is_unspecified: false,
+            }),
+            PrimitiveType::F64 => TypeKind::Float(FloatType {
+                bits: 64,
+                is_unspecified: false,
+            }),
+            PrimitiveType::UnspecifiedFloat => TypeKind::Float(FloatType {
+                bits: 0,
+                is_unspecified: true,
+            }),
+            PrimitiveType::String => TypeKind::String,
+            PrimitiveType::Bool => TypeKind::Boolean,
+            PrimitiveType::Unknown => TypeKind::Unknown,
         }
     }
 }

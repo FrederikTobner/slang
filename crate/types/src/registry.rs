@@ -1,4 +1,3 @@
-use crate::types::{FloatType, IntegerType};
 use crate::{PrimitiveType, TypeId, TypeInfo, TypeKind};
 use std::collections::HashMap;
 
@@ -20,75 +19,8 @@ impl TypeRegistry {
 
     /// Registers all built-in types in the type registry
     fn register_built_in_types(&mut self) {
-        let types_to_register: &[(PrimitiveType, TypeKind)] = &[
-            (
-                PrimitiveType::I32,
-                TypeKind::Integer(IntegerType {
-                    signed: true,
-                    bits: 32,
-                    is_unspecified: false,
-                }),
-            ),
-            (
-                PrimitiveType::I64,
-                TypeKind::Integer(IntegerType {
-                    signed: true,
-                    bits: 64,
-                    is_unspecified: false,
-                }),
-            ),
-            (
-                PrimitiveType::U32,
-                TypeKind::Integer(IntegerType {
-                    signed: false,
-                    bits: 32,
-                    is_unspecified: false,
-                }),
-            ),
-            (
-                PrimitiveType::U64,
-                TypeKind::Integer(IntegerType {
-                    signed: false,
-                    bits: 64,
-                    is_unspecified: false,
-                }),
-            ),
-            (
-                PrimitiveType::UnspecifiedInt,
-                TypeKind::Integer(IntegerType {
-                    signed: true,
-                    bits: 0,
-                    is_unspecified: true,
-                }),
-            ),
-            (
-                PrimitiveType::F32,
-                TypeKind::Float(FloatType {
-                    bits: 32,
-                    is_unspecified: false,
-                }),
-            ),
-            (
-                PrimitiveType::F64,
-                TypeKind::Float(FloatType {
-                    bits: 64,
-                    is_unspecified: false,
-                }),
-            ),
-            (
-                PrimitiveType::UnspecifiedFloat,
-                TypeKind::Float(FloatType {
-                    bits: 0,
-                    is_unspecified: true,
-                }),
-            ),
-            (PrimitiveType::String, TypeKind::String),
-            (PrimitiveType::Bool, TypeKind::Boolean),
-            (PrimitiveType::Unknown, TypeKind::Unknown),
-        ];
-
-        for (ptype, kind) in types_to_register {
-            self.register_primitive_type(ptype.name(), kind.clone(), TypeId(*ptype as usize));
+        for ptype in PrimitiveType::iter() {
+            self.register_primitive_type(ptype.name(), ptype.to_type_kind(), TypeId(ptype as usize));
         }
     }
 

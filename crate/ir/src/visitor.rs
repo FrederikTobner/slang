@@ -1,6 +1,7 @@
 use crate::ast::{
-    AssignmentStatement, BinaryExpr, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt, 
-    IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt, UnaryExpr,
+    AssignmentStatement, BinaryExpr, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
+    FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt,
+    UnaryExpr,
 };
 
 /// Trait implementing the visitor pattern for traversing the AST

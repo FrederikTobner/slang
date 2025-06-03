@@ -5,10 +5,10 @@ use slang_derive::NumericEnum;
 enum TestEnum {
     Explicit1 = 10,
     Explicit2 = 20,
-    Implicit1,     // Should be 21
-    Implicit2,     // Should be 22
+    Implicit1,     // 21
+    Implicit2,     // 22
     Explicit3 = 30,
-    Implicit3,     // Should be 31
+    Implicit3,     // 31
 }
 
 #[test]

@@ -195,3 +195,58 @@ pub fn derive_numeric_enum(input: TokenStream) -> TokenStream {
 
     proc_macro::TokenStream::from(expanded)
 }
+
+/// Derive macro that generates an iterator over all enum variants.
+/// This creates a method `iter()` that returns an iterator over all possible values of the enum.
+///
+/// ### Example
+/// ```
+/// use slang_derive::IterableEnum;
+///
+/// #[derive(Debug, Copy, Clone, IterableEnum)]
+/// enum Color {
+///     Red,
+///     Green,
+///     Blue,
+/// }
+///
+/// // Iterate over all enum values
+/// for color in Color::iter() {
+///     println!("{:?}", color);
+/// }
+/// ```
+///
+/// This macro only works with enums that have no associated data (unit variants only).
+#[proc_macro_derive(IterableEnum)]
+pub fn derive_iterable_enum(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let enum_name = &input.ident;
+
+    let variants = if let Data::Enum(data_enum) = &input.data {
+        &data_enum.variants
+    } else {
+        panic!("IterableEnum can only be derived for enums");
+    };
+
+    for variant in variants.iter() {
+        if !variant.fields.is_empty() {
+            panic!("IterableEnum can only be derived for enums with unit variants (no associated data)");
+        }
+    }
+
+    let variant_names = variants.iter().map(|variant| &variant.ident);
+    let variant_count = variants.len();
+
+    let expanded = quote! {
+        impl #enum_name {
+            pub fn iter() -> impl Iterator<Item = #enum_name> + Clone {
+                const VARIANTS: [#enum_name; #variant_count] = [
+                    #(#enum_name::#variant_names),*
+                ];
+                VARIANTS.iter().copied()
+            }
+        }
+    };
+
+    proc_macro::TokenStream::from(expanded)
+}

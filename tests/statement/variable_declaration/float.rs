@@ -2,7 +2,7 @@ use crate::test_utils::{execute_program_and_assert, execute_program_expect_error
 use rstest::rstest;
 
 #[rstest]
-#[case("")]
+#[case("")] // Type is inferred
 #[case(": f32")]
 #[case(": f64")]
 fn from_literal(

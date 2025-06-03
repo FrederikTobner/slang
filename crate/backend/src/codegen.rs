@@ -128,18 +128,9 @@ impl CodeGenerator {
     }
 
     fn end_scope(&mut self) {
-        if let Some(_scope) = self.local_scopes.pop() {
-            // Local variables are automatically cleaned up when they go out of scope
-            // Let statements handle their own stack cleanup by popping their values
-        }
+        self.local_scopes.pop();
     }
 
-    fn end_scope_preserve_top(&mut self) {
-        if let Some(_scope) = self.local_scopes.pop() {
-            // Local variables are automatically cleaned up when they go out of scope
-            // The return value (if any) is already on top of the stack
-        }
-    }
 }
 
 impl Visitor<Result<(), String>> for CodeGenerator {
@@ -411,7 +402,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         _stmt: &TypeDefinitionStmt,
     ) -> Result<(), String> {
         // Type definitions don't generate code at runtime
-        // They're just for the type checker
+        // They're just used by the semantic analyzer
         Ok(())
     }
 
@@ -419,12 +410,12 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         self.visit_expression(&cond_expr.condition)?;
         
         let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
-        self.emit_op(OpCode::Pop); // Pop the condition value
+        self.emit_op(OpCode::Pop); 
         self.visit_expression(&cond_expr.then_branch)?;
         
         let jump_over_else = self.emit_jump(OpCode::Jump);
         self.patch_jump(jump_to_else);
-        self.emit_op(OpCode::Pop); // Pop the condition value
+        self.emit_op(OpCode::Pop); 
         self.visit_expression(&cond_expr.else_branch)?;
         
         self.patch_jump(jump_over_else);
@@ -458,27 +449,19 @@ impl Visitor<Result<(), String>> for CodeGenerator {
     }
 
     fn visit_block_expression(&mut self, block_expr: &BlockExpr) -> Result<(), String> {
-        // Begin a new scope
         self.begin_scope();
         
-        // Process all statements in the block
         for stmt in &block_expr.statements {
             self.visit_statement(stmt)?;
         }
         
-        // Handle the return expression
         if let Some(return_expr) = &block_expr.return_expr {
-            // Generate code for the return expression
             self.visit_expression(return_expr)?;
-            // The value is already on the stack and will be the block's result
         } else {
-            // If no return expression, push a unit value (boolean false as placeholder)
             self.emit_constant(Value::Boolean(false));
         }
         
-        // End scope but preserve the return value
-        // We need a special version of end_scope that keeps the top value
-        self.end_scope_preserve_top();
+        self.end_scope();
         
         Ok(())
     }

@@ -282,8 +282,8 @@ impl VM {
 
                         for i in 0..arg_count {
                             if i < func.locals.len() {
-                                let param_name = &func.locals[arg_count - 1 - i];
-                                let arg_value = self.stack[function_pos - 1 - i].clone();
+                                let param_name = &func.locals[i];
+                                let arg_value = self.stack[function_pos - arg_count + i].clone();
                                 locals.insert(param_name.clone(), arg_value);
                             }
                         }
@@ -291,7 +291,7 @@ impl VM {
                         let frame = CallFrame {
                             param_names: func.locals.clone(),
                             return_address: self.ip,
-                            stack_offset: function_pos,
+                            stack_offset: function_pos - arg_count,
                             locals,
                         };
 

@@ -92,3 +92,34 @@ fn arguments_are_passed_by_value() {
     "#;
     execute_program_and_assert(program, "5");
 }
+
+#[test]
+fn factorial_recursive_function() {
+    let program = r#"
+        fn factorial(n: i32) -> i32 {
+            print_value(n); // To show recursion depth
+            if n <= 1 {
+                return 1;
+            }
+            return n * factorial(n - 1);
+        }
+        
+        print_value(factorial(5));
+    "#;
+    execute_program_and_assert(program, "120");
+}
+
+#[test]
+fn fibonacci_recursive_function() {
+    let program = r#"
+        fn fibonacci(n: i32) -> i32 {
+            if n <= 1 {
+                return n;
+            }
+            return fibonacci(n - 1) + fibonacci(n - 2);
+        }
+        
+        print_value(fibonacci(10)); // Should print 55
+    "#;
+    execute_program_and_assert(program, "55");
+}
