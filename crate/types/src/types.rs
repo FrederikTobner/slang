@@ -168,7 +168,6 @@ impl TypeId {
 
 /// Represents the different kinds of types in the language
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub enum TypeKind {
     /// Integer types (signed/unsigned, different bit widths)
     Integer(IntegerType),
@@ -188,7 +187,6 @@ pub enum TypeKind {
 
 /// Represents an integer type with its properties
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct IntegerType {
     /// Whether the integer is signed or unsigned
     pub signed: bool,
@@ -200,7 +198,6 @@ pub struct IntegerType {
 
 /// Represents a floating point type with its properties
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct FloatType {
     /// The number of bits (e.g., 64 for f64)
     pub bits: u8,
@@ -210,7 +207,6 @@ pub struct FloatType {
 
 /// Represents a struct type with its fields
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct StructType {
     /// Name of the struct
     pub name: String,
@@ -227,7 +223,6 @@ impl StructType {
 
 /// Contains all information about a specific type
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct TypeInfo {
     /// Unique identifier for this type
     pub id: TypeId,

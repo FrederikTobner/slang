@@ -129,7 +129,6 @@ pub struct FunctionCallExpr {
     /// Arguments passed to the function
     pub arguments: Vec<Expression>,
     /// Type of the function call expression
-    #[allow(dead_code)]
     pub expr_type: TypeId,
     /// Source code location information
     pub location: SourceLocation,
@@ -206,7 +205,6 @@ pub struct LiteralExpr {
     /// Value of the literal
     pub value: LiteralValue,
     /// Type of the literal expression
-    #[allow(dead_code)]
     pub expr_type: TypeId,
     /// Source code location information
     pub location: SourceLocation,
@@ -220,7 +218,6 @@ pub struct UnaryExpr {
     /// The operand
     pub right: Box<Expression>,
     /// Type of the unary expression
-    #[allow(dead_code)]
     pub expr_type: TypeId,
     /// Source code location information
     pub location: SourceLocation,

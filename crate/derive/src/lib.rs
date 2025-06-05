@@ -19,7 +19,7 @@ use syn::{Data, DeriveInput, Expr, ExprLit, Lit, Meta, MetaNameValue, Variant, p
 /// }
 /// ```
 #[proc_macro_derive(NamedEnum, attributes(name))]
-pub fn derive_type_name(input: TokenStream) -> TokenStream {
+pub fn derive_named_enum(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let enum_name = &input.ident;
 

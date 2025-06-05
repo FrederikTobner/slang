@@ -10,7 +10,7 @@ Slang is designed as an educational project to demonstrate language implementati
 - Compilation to bytecode
 - Execution via a virtual machine
 - Interactive REPL
-- Support for primitive types (integers, floats, booleans, strings)
+- Support for primitive types (integers, floats, booleans, strings, unit)
 - Functions
 
 ## Usage
