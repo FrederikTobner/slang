@@ -147,6 +147,18 @@ impl PrimitiveType {
     }
 }
 
+impl From<PrimitiveType> for usize {
+    fn from(primitive: PrimitiveType) -> usize {
+        primitive as usize    
+    }
+}
+
+impl From<PrimitiveType> for TypeId {
+    fn from(primitive: PrimitiveType) -> Self {
+        TypeId(primitive as usize)
+    }
+}
+
 /// A unique identifier for a type in the type system
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeId(pub usize);

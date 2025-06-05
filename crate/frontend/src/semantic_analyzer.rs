@@ -747,15 +747,15 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
         result.and(Ok(fn_decl.return_type.clone()))
     }
 
-    fn visit_return_statement(&mut self, opt_expr: &Option<Expression>) -> SemanticResult {
-        let error_location = match opt_expr {
+    fn visit_return_statement(&mut self, return_stmt: &slang_ir::ast::ReturnStatement) -> SemanticResult {
+        let error_location = match &return_stmt.value {
             Some(expr) => expr.location(),
-            None => SourceLocation::default(),
+            None => return_stmt.location,
         };
 
         if let Some(expected_type) = &self.current_return_type {
             let expected_type = expected_type.clone();
-            if let Some(expr) = opt_expr {
+            if let Some(expr) = &return_stmt.value {
                 return self.check_return_expr_type_internal(
                     expr,
                     &expected_type,
@@ -983,17 +983,13 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
         }
     }
 
-    fn visit_variable_expression(
-        &mut self,
-        name: &str,
-        location: &SourceLocation,
-    ) -> SemanticResult {
-        if let Some(var_info) = self.resolve_variable(name) {
+    fn visit_variable_expression(&mut self, var_expr: &slang_ir::ast::VariableExpr) -> SemanticResult {
+        if let Some(var_info) = self.resolve_variable(&var_expr.name) {
             Ok(var_info.type_id)
         } else {
             Err(SemanticAnalysisError::UndefinedVariable {
-                name: name.to_string(),
-                location: *location,
+                name: var_expr.name.clone(),
+                location: var_expr.location,
             })
         }
     }
@@ -1125,7 +1121,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
     fn visit_expression(&mut self, expr: &Expression) -> SemanticResult {
         match expr {
             Expression::Literal(lit) => self.visit_literal_expression(lit),
-            Expression::Variable(name, location) => self.visit_variable_expression(name, location),
+            Expression::Variable(var) => self.visit_variable_expression(var),
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),

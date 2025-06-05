@@ -2,7 +2,8 @@ use crate::Visitor;
 use crate::ast::{
     AssignmentStatement, BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression,
     FunctionCallExpr, FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr,
-    LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
+    LiteralValue, ReturnStatement, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
+    VariableExpr,
 };
 use slang_types::{
     TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64,
@@ -80,9 +81,9 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level -= 2;
     }
 
-    fn visit_return_statement(&mut self, expr: &Option<Expression>) {
+    fn visit_return_statement(&mut self, return_stmt: &slang_ir::ast::ReturnStatement) {
         println!("{}Return:", self.indent());
-        if let Some(expr) = expr {
+        if let Some(expr) = &return_stmt.value {
             self.indent_level += 1;
             self.visit_expression(expr);
             self.indent_level -= 1;
@@ -123,7 +124,7 @@ impl Visitor<()> for ASTPrinter {
         match expr {
             Expression::Literal(lit) => self.visit_literal_expression(lit),
             Expression::Binary(bin) => self.visit_binary_expression(bin),
-            Expression::Variable(name, location) => self.visit_variable_expression(name, location),
+            Expression::Variable(var) => self.visit_variable_expression(var),
             Expression::Unary(unary) => self.visit_unary_expression(unary),
             Expression::Call(call) => self.visit_call_expression(call),
             Expression::Conditional(cond) => self.visit_conditional_expression(cond),
@@ -195,12 +196,8 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level -= 1;
     }
 
-    fn visit_variable_expression(
-        &mut self,
-        name: &str,
-        _location: &crate::source_location::SourceLocation,
-    ) {
-        println!("{}Var: {}", self.indent(), name);
+    fn visit_variable_expression(&mut self, var_expr: &VariableExpr) {
+        println!("{}Var: {}", self.indent(), var_expr.name);
     }
 
     fn visit_if_statement(&mut self, if_stmt: &IfStatement) {

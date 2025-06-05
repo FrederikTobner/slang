@@ -77,7 +77,7 @@ pub enum Expression {
     /// A binary operation (e.g., a + b)
     Binary(BinaryExpr),
     /// A variable reference
-    Variable(String, SourceLocation),
+    Variable(VariableExpr),
     /// A unary operation (e.g., -x)
     Unary(UnaryExpr),
     /// A function call
@@ -93,7 +93,7 @@ impl Expression {
         match self {
             Expression::Literal(e) => e.location,
             Expression::Binary(e) => e.location,
-            Expression::Variable(_, loc) => *loc,
+            Expression::Variable(e) => e.location,
             Expression::Unary(e) => e.location,
             Expression::Call(e) => e.location,
             Expression::Conditional(e) => e.location,
@@ -116,7 +116,7 @@ pub enum Statement {
     /// Function declaration
     FunctionDeclaration(FunctionDeclarationStmt),
     /// Return statement
-    Return(Option<Expression>),
+    Return(ReturnStatement),
     /// Conditional statement (if/else)
     If(IfStatement),
 }
@@ -206,6 +206,15 @@ pub struct LiteralExpr {
     pub value: LiteralValue,
     /// Type of the literal expression
     pub expr_type: TypeId,
+    /// Source code location information
+    pub location: SourceLocation,
+}
+
+/// A variable reference expression
+#[derive(Debug)]
+pub struct VariableExpr {
+    /// Name of the variable being referenced
+    pub name: String,
     /// Source code location information
     pub location: SourceLocation,
 }
@@ -304,6 +313,15 @@ pub struct IfStatement {
     pub location: SourceLocation,
 }
 
+/// A return statement
+#[derive(Debug)]
+pub struct ReturnStatement {
+    /// Optional expression to return
+    pub value: Option<Expression>,
+    /// Source code location information
+    pub location: SourceLocation,
+}
+
 impl Statement {
     /// Accepts a visitor for this statement
     ///
@@ -323,7 +341,7 @@ impl Statement {
             Statement::FunctionDeclaration(fn_decl) => {
                 visitor.visit_function_declaration_statement(fn_decl)
             }
-            Statement::Return(expr) => visitor.visit_return_statement(expr),
+            Statement::Return(return_stmt) => visitor.visit_return_statement(return_stmt),
             Statement::If(if_stmt) => visitor.visit_if_statement(if_stmt),
         }
     }
@@ -341,9 +359,7 @@ impl Expression {
         match self {
             Expression::Literal(lit) => visitor.visit_literal_expression(lit),
             Expression::Binary(bin) => visitor.visit_binary_expression(bin),
-            Expression::Variable(name, location) => {
-                visitor.visit_variable_expression(name, location)
-            }
+            Expression::Variable(var) => visitor.visit_variable_expression(var),
             Expression::Unary(unary) => visitor.visit_unary_expression(unary),
             Expression::Call(call) => visitor.visit_call_expression(call),
             Expression::Conditional(cond) => visitor.visit_conditional_expression(cond),

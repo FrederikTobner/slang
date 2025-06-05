@@ -218,6 +218,17 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed return statement or an error message
     fn return_statement(&mut self) -> Result<Statement, ParseError> {
+        // Capture the position of the "return" keyword
+        let return_token = self.previous();
+        let token_pos = return_token.pos;
+        let (line, column) = self.line_info.get_line_col(token_pos);
+        let location = slang_ir::source_location::SourceLocation::new(
+            token_pos,
+            line,
+            column,
+            return_token.lexeme.len(),
+        );
+
         let value = if !self.check(&Tokentype::Semicolon) {
             Some(self.expression()?)
         } else {
@@ -231,7 +242,10 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        Ok(Statement::Return(value))
+        Ok(Statement::Return(slang_ir::ast::ReturnStatement {
+            value,
+            location,
+        }))
     }
 
     /// Parses a function declaration
@@ -291,7 +305,7 @@ impl<'a> Parser<'a> {
         let return_type = if self.match_token(&Tokentype::Arrow) {
             self.parse_type()?
         } else {
-            TypeId(PrimitiveType::Unit as usize) // Default to unit type when no return type is specified
+            PrimitiveType::Unit.into()
         };
 
         if !self.match_token(&Tokentype::LeftBrace) {
@@ -433,7 +447,7 @@ impl<'a> Parser<'a> {
         let name = token.lexeme.clone();
         let location =
             slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
-        let mut var_type = TypeId(PrimitiveType::Unknown as usize);
+        let mut var_type = PrimitiveType::Unknown .into();
 
         if self.match_token(&Tokentype::Colon) {
             var_type = self.parse_type()?;
@@ -517,7 +531,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator: BinaryOperator::Or,
                 right: Box::new(right),
-                expr_type: TypeId(PrimitiveType::Bool as usize),
+                expr_type: PrimitiveType::Bool.into(),
                 location: span_location,
             });
         }
@@ -543,7 +557,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator: BinaryOperator::And,
                 right: Box::new(right),
-                expr_type: TypeId(PrimitiveType::Bool as usize),
+                expr_type: PrimitiveType::Bool.into(),
                 location: span_location,
             });
         }
@@ -575,7 +589,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: TypeId(PrimitiveType::Bool as usize),
+                expr_type: PrimitiveType::Bool.into(),
                 location: span_location,
             });
         }
@@ -614,7 +628,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: TypeId(PrimitiveType::Bool as usize),
+                expr_type: PrimitiveType::Bool.into(),
                 location: span_location,
             });
         }
@@ -646,7 +660,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: TypeId(PrimitiveType::Unknown as usize),
+                expr_type: PrimitiveType::Unknown.into(),
                 location: span_location,
             });
         }
@@ -678,7 +692,7 @@ impl<'a> Parser<'a> {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-                expr_type: TypeId(PrimitiveType::Unknown as usize),
+                expr_type: PrimitiveType::Unknown.into(),
                 location: span_location,
             });
         }
@@ -702,7 +716,7 @@ impl<'a> Parser<'a> {
             return Ok(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Negate,
                 right: Box::new(right),
-                expr_type: TypeId(PrimitiveType::Unknown as usize),
+                expr_type: PrimitiveType::Unknown.into(),
                 location: span_location,
             }));
         }
@@ -717,7 +731,7 @@ impl<'a> Parser<'a> {
             return Ok(Expression::Unary(UnaryExpr {
                 operator: UnaryOperator::Not,
                 right: Box::new(right),
-                expr_type: TypeId(PrimitiveType::Bool as usize),
+                expr_type: PrimitiveType::Bool.into(),
                 location: span_location,
             }));
         }
@@ -744,7 +758,7 @@ impl<'a> Parser<'a> {
             let value = token.lexeme.clone();
             return Ok(Expression::Literal(LiteralExpr {
                 value: LiteralValue::String(value),
-                expr_type: TypeId(PrimitiveType::String as usize),
+                expr_type: PrimitiveType::String.into(),
                 location: self.source_location_from_token(token),
             }));
         }
@@ -755,7 +769,7 @@ impl<'a> Parser<'a> {
             let bool_value = lexeme == "true";
             return Ok(Expression::Literal(LiteralExpr {
                 value: LiteralValue::Boolean(bool_value),
-                expr_type: TypeId(PrimitiveType::Bool as usize),
+                expr_type: PrimitiveType::Bool.into(),
                 location: self.source_location_from_token(token),
             }));
         }
@@ -779,12 +793,11 @@ impl<'a> Parser<'a> {
                 );
                 return Ok(Expression::Literal(LiteralExpr {
                     value: LiteralValue::Unit,
-                    expr_type: TypeId(PrimitiveType::Unit as usize),
+                    expr_type: PrimitiveType::Unit.into(),
                     location,
                 }));
             }
 
-            // Otherwise it's a grouped expression
             let expr = self.expression()?;
             if !self.match_token(&Tokentype::RightParen) {
                 return Err(self.error(
@@ -809,7 +822,10 @@ impl<'a> Parser<'a> {
 
             let token = self.previous();
             let location = self.source_location_from_token(token);
-            return Ok(Expression::Variable(name, location));
+            return Ok(Expression::Variable(slang_ir::ast::VariableExpr {
+                name,
+                location,
+            }));
         }
 
         Err(self.error(
@@ -842,7 +858,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F32(value as f32),
-                        expr_type: TypeId(PrimitiveType::F32 as usize),
+                        expr_type: PrimitiveType::F32.into(),
                         location,
                     }));
                 }
@@ -850,7 +866,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F64(value),
-                        expr_type: TypeId(PrimitiveType::F64 as usize),
+                        expr_type: PrimitiveType::F64.into(),
                         location,
                     }));
                 }
@@ -860,7 +876,7 @@ impl<'a> Parser<'a> {
 
         Ok(Expression::Literal(LiteralExpr {
             value: LiteralValue::UnspecifiedFloat(value),
-            expr_type: TypeId(PrimitiveType::UnspecifiedFloat as usize),
+            expr_type: PrimitiveType::UnspecifiedFloat.into(),
             location,
         }))
     }
@@ -908,7 +924,7 @@ impl<'a> Parser<'a> {
         Ok(Expression::Call(FunctionCallExpr {
             name,
             arguments,
-            expr_type: TypeId(PrimitiveType::Unknown as usize),
+            expr_type: PrimitiveType::Unknown.into(),
             location: span_location,
         }))
     }
@@ -943,7 +959,7 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::I32(base_value as i32),
-                        expr_type: TypeId(PrimitiveType::I32 as usize),
+                        expr_type: PrimitiveType::I32.into(),
                         location,
                     }));
                 }
@@ -951,7 +967,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::I64(base_value),
-                        expr_type: TypeId(PrimitiveType::I64 as usize),
+                        expr_type: PrimitiveType::I64.into(),
                         location,
                     }));
                 }
@@ -965,7 +981,7 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::U32(base_value as u32),
-                        expr_type: TypeId(PrimitiveType::U32 as usize),
+                        expr_type: PrimitiveType::U32.into(),
                         location,
                     }));
                 }
@@ -979,7 +995,7 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::U64(base_value as u64),
-                        expr_type: TypeId(PrimitiveType::U64 as usize),
+                        expr_type: PrimitiveType::U64.into(),
                         location,
                     }));
                 }
@@ -987,7 +1003,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F32(base_value as f32),
-                        expr_type: TypeId(PrimitiveType::F32 as usize),
+                        expr_type: PrimitiveType::F32.into(),
                         location,
                     }));
                 }
@@ -995,7 +1011,7 @@ impl<'a> Parser<'a> {
                     self.advance();
                     return Ok(Expression::Literal(LiteralExpr {
                         value: LiteralValue::F64(base_value as f64),
-                        expr_type: TypeId(PrimitiveType::F64 as usize),
+                        expr_type: PrimitiveType::F64.into(),
                         location,
                     }));
                 }
@@ -1005,7 +1021,7 @@ impl<'a> Parser<'a> {
 
         Ok(Expression::Literal(LiteralExpr {
             value: LiteralValue::UnspecifiedInteger(base_value),
-            expr_type: TypeId(PrimitiveType::UnspecifiedInt as usize),
+            expr_type: PrimitiveType::UnspecifiedInt.into(),
             location,
         }))
     }
@@ -1016,16 +1032,15 @@ impl<'a> Parser<'a> {
     ///
     /// The type ID for the parsed type or an error
     fn parse_type(&mut self) -> Result<TypeId, ParseError> {
-        // Check for unit type ()
         if self.check(&Tokentype::LeftParen) {
-            self.advance(); // consume '('
+            self.advance(); 
             if !self.match_token(&Tokentype::RightParen) {
                 return Err(self.error(
                     ErrorCode::ExpectedClosingParen,
                     "Expected ')' for unit type",
                 ));
             }
-            return Ok(TypeId(PrimitiveType::Unit as usize));
+            return Ok(PrimitiveType::Unit.into());
         }
 
         if !self.check(&Tokentype::Identifier) {
@@ -1281,7 +1296,7 @@ impl<'a> Parser<'a> {
             condition: Box::new(condition),
             then_branch: Box::new(Expression::Block(then_branch)),
             else_branch: Box::new(Expression::Block(else_branch)),
-            expr_type: TypeId(PrimitiveType::Unknown as usize),
+            expr_type: PrimitiveType::Unknown.into(),
             location,
         }))
     }
@@ -1332,7 +1347,7 @@ impl<'a> Parser<'a> {
         Ok(BlockExpr {
             statements,
             return_expr,
-            expr_type: TypeId(PrimitiveType::Unknown as usize),
+            expr_type: PrimitiveType::Unknown.into(),
             location,
         })
     }

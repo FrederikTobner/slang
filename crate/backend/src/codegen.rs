@@ -172,11 +172,9 @@ impl Visitor<Result<(), String>> for CodeGenerator {
             stmt.accept(self)?;
         }
 
-        // Handle the optional return expression
         if let Some(return_expr) = &fn_decl.body.return_expr {
             return_expr.accept(self)?;
         } else {
-            // If no return expression, push unit value
             self.emit_constant(Value::Unit);
         }
 
@@ -200,8 +198,8 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_return_statement(&mut self, expr: &Option<Expression>) -> Result<(), String> {
-        if let Some(expr) = expr {
+    fn visit_return_statement(&mut self, return_stmt: &slang_ir::ast::ReturnStatement) -> Result<(), String> {
+        if let Some(expr) = &return_stmt.value {
             self.visit_expression(expr)?;
         } else {
             self.emit_constant(Value::Unit);
@@ -236,7 +234,6 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         self.emit_op(OpCode::SetVariable);
         self.emit_byte(var_index as u8);
 
-        // Pop the value from the stack since let statements don't return values
         self.emit_op(OpCode::Pop);
 
         Ok(())
@@ -261,7 +258,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         match expr {
             Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
-            Expression::Variable(name, location) => self.visit_variable_expression(name, location),
+            Expression::Variable(var) => self.visit_variable_expression(var),
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
             Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
@@ -387,10 +384,9 @@ impl Visitor<Result<(), String>> for CodeGenerator {
 
     fn visit_variable_expression(
         &mut self,
-        name: &str,
-        _location: &slang_ir::source_location::SourceLocation,
+        var_expr: &slang_ir::ast::VariableExpr,
     ) -> Result<(), String> {
-        let var_index = self.chunk.add_identifier(name.to_string());
+        let var_index = self.chunk.add_identifier(var_expr.name.clone());
         if var_index > 255 {
             return Err("Too many variables".to_string());
         }

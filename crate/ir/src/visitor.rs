@@ -1,7 +1,7 @@
 use crate::ast::{
     AssignmentStatement, BinaryExpr, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
-    FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt,
-    UnaryExpr,
+    FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr, ReturnStatement, Statement, TypeDefinitionStmt,
+    UnaryExpr, VariableExpr,
 };
 
 /// Trait implementing the visitor pattern for traversing the AST
@@ -27,7 +27,7 @@ pub trait Visitor<T> {
     fn visit_function_declaration_statement(&mut self, stmt: &FunctionDeclarationStmt) -> T;
 
     /// Visit a return statement
-    fn visit_return_statement(&mut self, expr: &Option<Expression>) -> T;
+    fn visit_return_statement(&mut self, stmt: &ReturnStatement) -> T;
 
     /// Visit a variable assignment statement
     fn visit_assignment_statement(&mut self, stmt: &AssignmentStatement) -> T;
@@ -45,11 +45,7 @@ pub trait Visitor<T> {
     fn visit_literal_expression(&mut self, expr: &LiteralExpr) -> T;
 
     /// Visit a variable reference expression
-    fn visit_variable_expression(
-        &mut self,
-        name: &str,
-        location: &crate::source_location::SourceLocation,
-    ) -> T;
+    fn visit_variable_expression(&mut self, var_expr: &VariableExpr) -> T;
 
     /// Visit a function call expression
     fn visit_call_expression(&mut self, expr: &FunctionCallExpr) -> T;

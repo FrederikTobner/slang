@@ -89,14 +89,12 @@ pub fn repl() {
                     chunk.disassemble("REPL");
                 }
 
-                // Execute the bytecode
                 if let Err(e) = vm.interpret(&chunk) {
                     eprintln!("{}: {}", "Runtime error".red(), e);
                 }
             }
             Err(errors) => {
-                // In REPL mode, we just report errors and continue
-                report_errors(&errors, &input); // Pass the source input to report_errors
+                report_errors(&errors, &input); 
             }
         }
     }
@@ -121,7 +119,7 @@ pub fn compile_file(input: &str, output: Option<String>) {
                 }
             }
             Err(errors) => {
-                report_errors(&errors, &source); // Pass the source to report_errors
+                report_errors(&errors, &source); 
                 exit::with_code(
                     exit::Code::Software,
                     &format!(
@@ -153,7 +151,7 @@ pub fn execute_file(input: &str) {
                 }
             }
             Err(errors) => {
-                report_errors(&errors, &source); // Pass the source to report_errors
+                report_errors(&errors, &source); 
                 exit::with_code(
                     exit::Code::Software,
                     &format!(
