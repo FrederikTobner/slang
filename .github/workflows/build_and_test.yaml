@@ -49,13 +49,23 @@ jobs:
       with:
         toolchain: stable
         override: true
+        components: llvm-tools-preview
+    
+    - name: Install cargo-tarpaulin
+      run: cargo install cargo-tarpaulin
+    
     - name: Build
       run: cargo build --verbose
-    - name: Run end to end tests 
-      run: cargo test --verbose
-    - name: Run derive tests
-      run: cargo test --verbose --package slang_derive
-    - name: Run frontend tests
-      run: cargo test --verbose --package slang_frontend
-    - name: Run shared tests
-      run: cargo test --verbose --package slang_shared
+    
+    - name: Run tests with coverage
+      run: |
+        cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out xml --output-dir coverage/
+    
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: coverage/cobertura.xml
+        fail_ci_if_error: false
+        verbose: true
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
