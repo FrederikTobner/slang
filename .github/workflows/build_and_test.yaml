@@ -51,20 +51,20 @@ jobs:
         override: true
         components: llvm-tools-preview
     
-    - name: Install cargo-tarpaulin
-      run: cargo install cargo-tarpaulin
+    - name: Install cargo-llvm-cov
+      run: cargo install cargo-llvm-cov
     
     - name: Build
       run: cargo build --verbose
     
     - name: Run tests with coverage
       run: |
-        cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out xml --output-dir coverage/
+        cargo llvm-cov --all-features --workspace --lcov --output-path coverage/lcov.info
     
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4
       with:
-        file: coverage/cobertura.xml
+        file: coverage/lcov.info
         fail_ci_if_error: false
         verbose: true
       env:
