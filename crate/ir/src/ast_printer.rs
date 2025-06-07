@@ -81,7 +81,7 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level -= 2;
     }
 
-    fn visit_return_statement(&mut self, return_stmt: &slang_ir::ast::ReturnStatement) {
+    fn visit_return_statement(&mut self, return_stmt: &ReturnStatement) {
         println!("{}Return:", self.indent());
         if let Some(expr) = &return_stmt.value {
             self.indent_level += 1;
