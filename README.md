@@ -1,7 +1,7 @@
 # Slang
 
 [![Build and Test](https://github.com/FrederikTobner/slang/actions/workflows/build_and_test.yaml/badge.svg)](https://github.com/FrederikTobner/slang/actions/workflows/build_and_test.yaml)
-
+[![codecov](https://codecov.io/gh/FrederikTobner/slang/graph/badge.svg?token=QDl7nyHWUn)](https://codecov.io/gh/FrederikTobner/slang)
 Slang is a statically typed scripting language for learning purposes written in Rust.
 
 ## Overview
