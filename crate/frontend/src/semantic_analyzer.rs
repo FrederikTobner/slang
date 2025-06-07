@@ -3,14 +3,14 @@ use std::collections::HashMap;
 use crate::error::{CompileResult, CompilerError};
 use crate::semantic_error::SemanticAnalysisError;
 
-use slang_shared::{CompilationContext, SymbolKind};
 use slang_ir::SourceLocation;
 use slang_ir::Visitor;
 use slang_ir::ast::{
-    BinaryExpr, BinaryOperator, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
-    IfStatement, LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
-    UnaryOperator,
+    BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
+    FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr, LiteralValue, Statement,
+    TypeDefinitionStmt, UnaryExpr, UnaryOperator,
 };
+use slang_shared::{CompilationContext, SymbolKind};
 use slang_types::{PrimitiveType, TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
 
 /// Type alias for result of semantic analysis operations
@@ -123,10 +123,13 @@ impl<'a> SemanticAnalyzer<'a> {
     /// is_mutable - Whether the variable is mutable
     fn define_variable(&mut self, name: String, type_id: TypeId, is_mutable: bool) {
         if let Some(scope) = self.scopes.last_mut() {
-            scope.variables.insert(name, VariableInfo {
-                type_id,
-                is_mutable,
-            });
+            scope.variables.insert(
+                name,
+                VariableInfo {
+                    type_id,
+                    is_mutable,
+                },
+            );
         }
     }
 
@@ -144,7 +147,7 @@ impl<'a> SemanticAnalyzer<'a> {
             }
         }
         None
-    } 
+    }
 
     /// Checks if a type is an integer type
     ///
@@ -223,7 +226,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 operator: operator.to_string(),
                 left_type: left_type.clone(),
                 right_type: right_type.clone(),
-                location: location.clone(),
+                location: *location,
             })
         }
     }
@@ -250,7 +253,27 @@ impl<'a> SemanticAnalyzer<'a> {
         operator: &BinaryOperator,
         location: &SourceLocation,
     ) -> SemanticResult {
-        if left_type == right_type
+        let is_relational = matches!(
+            operator,
+            BinaryOperator::GreaterThan
+                | BinaryOperator::LessThan
+                | BinaryOperator::GreaterThanOrEqual
+                | BinaryOperator::LessThanOrEqual
+        );
+
+        if is_relational
+            && (!PrimitiveType::from_int(left_type.0).is_some_and(|f| f.is_numeric())
+                || !PrimitiveType::from_int(right_type.0).is_some_and(|f| f.is_numeric()))
+        {
+            return Err(SemanticAnalysisError::OperationTypeMismatch {
+                operator: operator.to_string(),
+                left_type: left_type.clone(),
+                right_type: right_type.clone(),
+                location: *location,
+            });
+        }
+
+        if (left_type == right_type && *left_type != TypeId(PrimitiveType::Unit as usize))
             || (*left_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
                 && self.is_integer_type(right_type))
             || (*right_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
@@ -266,7 +289,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 operator: operator.to_string(),
                 left_type: left_type.clone(),
                 right_type: right_type.clone(),
-                location: location.clone(),
+                location: *location,
             })
         }
     }
@@ -290,6 +313,7 @@ impl<'a> SemanticAnalyzer<'a> {
         location: &SourceLocation,
     ) -> SemanticResult {
         if *type_id == TypeId(PrimitiveType::Bool as usize)
+            || *type_id == TypeId(PrimitiveType::Unit as usize)
             || (operator != &BinaryOperator::Add
                 && *type_id == TypeId(PrimitiveType::String as usize))
         {
@@ -297,7 +321,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 operator: operator.to_string(),
                 left_type: type_id.clone(),
                 right_type: type_id.clone(),
-                location: location.clone(),
+                location: *location,
             })
         } else {
             Ok(type_id.clone())
@@ -449,7 +473,7 @@ impl<'a> SemanticAnalyzer<'a> {
             operator: bin_expr.operator.to_string(),
             left_type: left_type.clone(),
             right_type: right_type.clone(),
-            location: bin_expr.location.clone(),
+            location: bin_expr.location,
         })
     }
 
@@ -470,7 +494,7 @@ impl<'a> SemanticAnalyzer<'a> {
         if self.scopes.last().unwrap().variables.contains_key(name) {
             return Err(SemanticAnalysisError::VariableRedefinition {
                 name: name.to_string(),
-                location: location.clone(),
+                location: *location,
             });
         }
         Ok(())
@@ -535,7 +559,7 @@ impl<'a> SemanticAnalyzer<'a> {
             expected: let_stmt.expr_type.clone(),
             actual: expr_type,
             context: Some(let_stmt.name.clone()),
-            location: let_stmt.location.clone(),
+            location: let_stmt.location,
         })
     }
 
@@ -560,7 +584,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 expected: let_stmt.expr_type.clone(),
                 actual: TypeId(PrimitiveType::UnspecifiedInt as usize),
                 context: Some(let_stmt.name.clone()),
-                location: let_stmt.location.clone(),
+                location: let_stmt.location,
             })
         }
     }
@@ -586,7 +610,7 @@ impl<'a> SemanticAnalyzer<'a> {
                 expected: let_stmt.expr_type.clone(),
                 actual: TypeId(PrimitiveType::UnspecifiedFloat as usize),
                 context: Some(let_stmt.name.clone()),
-                location: let_stmt.location.clone(),
+                location: let_stmt.location,
             })
         }
     }
@@ -641,7 +665,7 @@ impl<'a> SemanticAnalyzer<'a> {
         Err(SemanticAnalysisError::ReturnTypeMismatch {
             expected: expected_type.clone(),
             actual: actual_type,
-            location: location.clone(),
+            location: *location,
         })
     }
 
@@ -659,7 +683,7 @@ impl<'a> SemanticAnalyzer<'a> {
     pub fn analyze(&mut self, statements: &[Statement]) -> CompileResult<()> {
         for stmt in statements {
             if let Err(error) = stmt.accept(self) {
-                let compiler_error = error.to_compiler_error(self.context); 
+                let compiler_error = error.to_compiler_error(self.context);
                 if !self.errors.iter().any(|e| {
                     e.message == compiler_error.message
                         && e.line == compiler_error.line
@@ -678,7 +702,7 @@ impl<'a> SemanticAnalyzer<'a> {
     }
 }
 
-impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
+impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
     fn visit_statement(&mut self, stmt: &Statement) -> SemanticResult {
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
@@ -688,7 +712,6 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             Statement::FunctionDeclaration(fn_decl) => {
                 self.visit_function_declaration_statement(fn_decl)
             }
-            Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(opt_expr) => self.visit_return_statement(opt_expr),
             Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
         }
@@ -717,47 +740,38 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             self.define_variable(param.name.clone(), param.param_type.clone(), true);
         }
 
-        let result = self.visit_block_statement(&fn_decl.body);
+        let result = self.visit_block_expression(&fn_decl.body);
 
         self.current_return_type = previous_return_type;
         self.end_scope();
         result.and(Ok(fn_decl.return_type.clone()))
     }
 
-    fn visit_block_statement(&mut self, stmts: &[Statement]) -> SemanticResult {
-        self.begin_scope();
-        for stmt in stmts {
-            if let Err(e) = stmt.accept(self) {
-                return Err(e);
-            }
-        }
-
-        self.end_scope();
-        Ok(TypeId(PrimitiveType::Unknown as usize))
-    }
-
-    fn visit_return_statement(&mut self, opt_expr: &Option<Expression>) -> SemanticResult {
-        let error_location = match opt_expr {
+    fn visit_return_statement(&mut self, return_stmt: &slang_ir::ast::ReturnStatement) -> SemanticResult {
+        let error_location = match &return_stmt.value {
             Some(expr) => expr.location(),
-            None => SourceLocation::default(),
+            None => return_stmt.location,
         };
 
         if let Some(expected_type) = &self.current_return_type {
             let expected_type = expected_type.clone();
-            if let Some(expr) = opt_expr {
+            if let Some(expr) = &return_stmt.value {
                 return self.check_return_expr_type_internal(
                     expr,
                     &expected_type,
                     &expr.location(),
                 );
-            } else if expected_type != TypeId(PrimitiveType::Unknown as usize) {
+            } else if expected_type != TypeId(PrimitiveType::Unknown as usize)
+                && expected_type != TypeId(PrimitiveType::Unit as usize)
+            {
                 return Err(SemanticAnalysisError::MissingReturnValue {
                     expected: expected_type.clone(),
                     location: error_location,
                 });
             }
 
-            Ok(expected_type)
+            // Empty return is treated as returning unit
+            Ok(TypeId(PrimitiveType::Unit as usize))
         } else {
             Err(SemanticAnalysisError::ReturnOutsideFunction {
                 location: error_location,
@@ -772,7 +786,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                     function_name: call_expr.name.clone(),
                     expected: function_semanitic.param_types.len(),
                     actual: call_expr.arguments.len(),
-                    location: call_expr.location.clone(),
+                    location: call_expr.location,
                 });
             }
 
@@ -786,7 +800,10 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
 
                 if arg_type != *param_type {
                     if arg_type == TypeId(PrimitiveType::UnspecifiedInt as usize) {
-                        if let Err(_) = self.check_unspecified_int_for_type(arg, param_type) {
+                        if self
+                            .check_unspecified_int_for_type(arg, param_type)
+                            .is_err()
+                        {
                             return Err(SemanticAnalysisError::ArgumentTypeMismatch {
                                 function_name: call_expr.name.clone(),
                                 argument_position: i + 1,
@@ -799,7 +816,10 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                     }
 
                     if arg_type == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
-                        if let Err(_) = self.check_unspecified_float_for_type(arg, param_type) {
+                        if self
+                            .check_unspecified_float_for_type(arg, param_type)
+                            .is_err()
+                        {
                             return Err(SemanticAnalysisError::ArgumentTypeMismatch {
                                 function_name: call_expr.name.clone(),
                                 argument_position: i + 1,
@@ -825,7 +845,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
         } else {
             Err(SemanticAnalysisError::UndefinedFunction {
                 name: call_expr.name.clone(),
-                location: call_expr.location.clone(),
+                location: call_expr.location,
             })
         }
     }
@@ -835,7 +855,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             return Err(SemanticAnalysisError::SymbolRedefinition {
                 name: type_def.name.clone(),
                 kind: "type".to_string(),
-                location: type_def.location.clone(),
+                location: type_def.location,
             });
         }
 
@@ -849,7 +869,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                     struct_name: type_def.name.clone(),
                     field_name: name.clone(),
                     type_id: type_id.clone(),
-                    location: type_def.location.clone(),
+                    location: type_def.location,
                 });
             }
             field_types_for_registration.push((name.clone(), type_id.clone()));
@@ -863,7 +883,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             Err(err_msg) => Err(SemanticAnalysisError::SymbolRedefinition {
                 name: type_def.name.clone(),
                 kind: format!("struct type (error: {})", err_msg),
-                location: type_def.location.clone(),
+                location: type_def.location,
             }),
         }
     }
@@ -885,7 +905,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                                 value: negative_value.to_string(),
                                 target_type: let_stmt.expr_type.clone(),
                                 is_float: false,
-                                location: let_stmt.location.clone(),
+                                location: let_stmt.location,
                             });
                         }
                     }
@@ -893,28 +913,25 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             }
         }
 
-        if let Err(e) = self.check_variable_redefinition(&let_stmt.name, &let_stmt.location) {
-            return Err(e);
-        }
-
+        self.check_variable_redefinition(&let_stmt.name, &let_stmt.location)?;
         if let Some(symbol) = self.context.lookup_symbol(&let_stmt.name) {
             if symbol.kind == SymbolKind::Type {
                 return Err(SemanticAnalysisError::SymbolRedefinition {
                     name: let_stmt.name.clone(),
                     kind: "variable (conflicts with type)".to_string(),
-                    location: let_stmt.location.clone(),
+                    location: let_stmt.location,
                 });
             } else if symbol.kind == SymbolKind::Function {
                 return Err(SemanticAnalysisError::SymbolRedefinition {
                     name: let_stmt.name.clone(),
                     kind: "variable (conflicts with function)".to_string(),
-                    location: let_stmt.location.clone(),
+                    location: let_stmt.location,
                 });
             } else {
                 return Err(SemanticAnalysisError::SymbolRedefinition {
                     name: let_stmt.name.clone(),
                     kind: "variable".to_string(),
-                    location: let_stmt.location.clone(),
+                    location: let_stmt.location,
                 });
             }
         }
@@ -923,61 +940,56 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
         let final_type = self.determine_let_statement_type(let_stmt, expr_type)?;
         let final_type = self.finalize_inferred_type(final_type);
 
-        self.define_variable(let_stmt.name.clone(), final_type.clone(), let_stmt.is_mutable);
+        self.define_variable(
+            let_stmt.name.clone(),
+            final_type.clone(),
+            let_stmt.is_mutable,
+        );
         Ok(final_type)
     }
 
-    fn visit_assignment_statement(&mut self, assign_stmt: &slang_ir::ast::AssignmentStatement) -> SemanticResult {
+    fn visit_assignment_statement(
+        &mut self,
+        assign_stmt: &slang_ir::ast::AssignmentStatement,
+    ) -> SemanticResult {
         if let Some(var_info) = self.resolve_variable(&assign_stmt.name) {
             if !var_info.is_mutable {
                 return Err(SemanticAnalysisError::AssignmentToImmutableVariable {
                     name: assign_stmt.name.clone(),
-                    location: assign_stmt.location.clone(),
+                    location: assign_stmt.location,
                 });
             }
 
             let expr_type = self.visit_expression(&assign_stmt.value)?;
-            
-            if var_info.type_id == expr_type {
+
+            if var_info.type_id == expr_type
+                || expr_type == TypeId(slang_types::types::PrimitiveType::UnspecifiedInt as usize)
+                || expr_type == TypeId(slang_types::types::PrimitiveType::UnspecifiedFloat as usize)
+            {
                 Ok(var_info.type_id)
             } else {
-                if expr_type == TypeId(slang_types::types::PrimitiveType::UnspecifiedInt as usize) {
-                    Ok(var_info.type_id)
-                } else if expr_type == TypeId(slang_types::types::PrimitiveType::UnspecifiedFloat as usize) {
-                    Ok(var_info.type_id)
-                } else {
-                    Err(SemanticAnalysisError::TypeMismatch {
-                        expected: var_info.type_id,
-                        actual: expr_type,
-                        context: Some(format!("assignment to variable '{}'", assign_stmt.name)),
-                        location: assign_stmt.location.clone(),
-                    })
-                }
+                Err(SemanticAnalysisError::TypeMismatch {
+                    expected: var_info.type_id,
+                    actual: expr_type,
+                    context: Some(format!("assignment to variable '{}'", assign_stmt.name)),
+                    location: assign_stmt.location,
+                })
             }
         } else {
             Err(SemanticAnalysisError::UndefinedVariable {
                 name: assign_stmt.name.clone(),
-                location: assign_stmt.location.clone(),
+                location: assign_stmt.location,
             })
         }
     }
 
-    fn visit_variable_expression(
-        &mut self,
-        name: &str,
-        location: &SourceLocation,
-    ) -> SemanticResult {
-        if let Some(var_info) = self.resolve_variable(name) {
+    fn visit_variable_expression(&mut self, var_expr: &slang_ir::ast::VariableExpr) -> SemanticResult {
+        if let Some(var_info) = self.resolve_variable(&var_expr.name) {
             Ok(var_info.type_id)
-        } else if self.context.lookup_symbol(name).is_some() {
-            Err(SemanticAnalysisError::UndefinedVariable {
-                name: name.to_string(),
-                location: location.clone(),
-            })
         } else {
             Err(SemanticAnalysisError::UndefinedVariable {
-                name: name.to_string(),
-                location: location.clone(),
+                name: var_expr.name.clone(),
+                location: var_expr.location,
             })
         }
     }
@@ -1039,7 +1051,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             operator: bin_expr.operator.to_string(),
             left_type: left_type.clone(),
             right_type: right_type.clone(),
-            location: bin_expr.location.clone(),
+            location: bin_expr.location,
         })
     }
 
@@ -1082,14 +1094,14 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                         return Err(SemanticAnalysisError::InvalidUnaryOperation {
                             operator: "-".to_string(),
                             operand_type: operand_type.clone(),
-                            location: unary_expr.location.clone(),
+                            location: unary_expr.location,
                         });
                     }
                 }
                 Err(SemanticAnalysisError::InvalidUnaryOperation {
                     operator: "-".to_string(),
                     operand_type: operand_type.clone(),
-                    location: unary_expr.location.clone(),
+                    location: unary_expr.location,
                 })
             }
             UnaryOperator::Not => {
@@ -1100,7 +1112,7 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
                 Err(SemanticAnalysisError::InvalidUnaryOperation {
                     operator: "!".to_string(),
                     operand_type: operand_type.clone(),
-                    location: unary_expr.location.clone(),
+                    location: unary_expr.location,
                 })
             }
         }
@@ -1109,11 +1121,12 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
     fn visit_expression(&mut self, expr: &Expression) -> SemanticResult {
         match expr {
             Expression::Literal(lit) => self.visit_literal_expression(lit),
-            Expression::Variable(name, location) => self.visit_variable_expression(name, location),
+            Expression::Variable(var) => self.visit_variable_expression(var),
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
             Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
             Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
+            Expression::Block(block_expr) => self.visit_block_expression(block_expr),
         }
     }
 
@@ -1133,18 +1146,36 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
 
         if then_type == TypeId(PrimitiveType::Unknown as usize) {
             Ok(else_type)
-        } else if else_type == TypeId(PrimitiveType::Unknown as usize) {
-            Ok(then_type)
-        } else if then_type == else_type {
+        } else if else_type == TypeId(PrimitiveType::Unknown as usize) || then_type == else_type {
             Ok(then_type)
         } else {
             Err(SemanticAnalysisError::TypeMismatch {
                 expected: then_type,
                 actual: else_type,
-                context: Some("conditional expression branches must have the same type".to_string()),
-                location: cond_expr.location.clone(),
+                context: Some(
+                    "conditional expression branches must have the same type".to_string(),
+                ),
+                location: cond_expr.location,
             })
         }
+    }
+
+    fn visit_block_expression(&mut self, block_expr: &BlockExpr) -> SemanticResult {
+        self.begin_scope();
+
+        for stmt in &block_expr.statements {
+            self.visit_statement(stmt)?;
+        }
+
+        let block_type = if let Some(return_expr) = &block_expr.return_expr {
+            self.visit_expression(return_expr)?
+        } else {
+            TypeId(PrimitiveType::Unit as usize)
+        };
+
+        self.end_scope();
+
+        Ok(block_type)
     }
 
     fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> SemanticResult {
@@ -1158,16 +1189,12 @@ impl<'a> Visitor<SemanticResult> for SemanticAnalyzer<'a> {
             });
         }
 
-        self.begin_scope();
-        self.visit_block_statement(&if_stmt.then_branch)?;
-        self.end_scope();
+        self.visit_block_expression(&if_stmt.then_branch)?;
 
         if let Some(else_branch) = &if_stmt.else_branch {
-            self.begin_scope();
-            self.visit_block_statement(else_branch)?;
-            self.end_scope();
+            self.visit_block_expression(else_branch)?;
         }
 
-        Ok(TypeId(PrimitiveType::Unknown as usize))
+        Ok(TypeId(PrimitiveType::Unit as usize))
     }
 }

@@ -1,5 +1,7 @@
 # Slang
 
+[![Build and Test](https://github.com/FrederikTobner/slang/actions/workflows/build_and_test.yaml/badge.svg)](https://github.com/FrederikTobner/slang/actions/workflows/build_and_test.yaml)
+
 Slang is a statically typed scripting language for learning purposes written in Rust.
 
 ## Overview
@@ -10,7 +12,7 @@ Slang is designed as an educational project to demonstrate language implementati
 - Compilation to bytecode
 - Execution via a virtual machine
 - Interactive REPL
-- Support for primitive types (integers, floats, booleans, strings)
+- Support for primitive types (integers, floats, booleans, strings, unit)
 - Functions
 
 ## Usage

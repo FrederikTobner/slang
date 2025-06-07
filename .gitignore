@@ -1,1 +1,5 @@
 /target
+
+# Slang specific files
+*.sl
+*.sip

@@ -12,7 +12,7 @@ fn single_line_comments() {
         
         print_value(z);
     "#;
-    
+
     execute_program_and_assert(program, "15");
 }
 
@@ -31,7 +31,7 @@ fn multi_line_comments() {
         
         print_value(z);
     "#;
-    
+
     execute_program_and_assert(program, "15");
 }
 
@@ -48,7 +48,7 @@ fn nested_multi_line_comments() {
         
         print_value(z);
     "#;
-    
+
     execute_program_and_assert(program, "15");
 }
 
@@ -64,7 +64,7 @@ fn in_expressions() {
         
         print_value(z);
     "#;
-    
+
     execute_program_and_assert(program, "65");
 }
 
@@ -91,6 +91,6 @@ fn in_complex_code() {
            the result */
         print_value(z);
     "#;
-    
+
     execute_program_and_assert(program, "30");
 }

@@ -77,13 +77,15 @@ pub enum Expression {
     /// A binary operation (e.g., a + b)
     Binary(BinaryExpr),
     /// A variable reference
-    Variable(String, SourceLocation),
+    Variable(VariableExpr),
     /// A unary operation (e.g., -x)
     Unary(UnaryExpr),
     /// A function call
     Call(FunctionCallExpr),
     /// A conditional expression (if/else)
     Conditional(ConditionalExpr),
+    /// A block expression with statements and optional return value
+    Block(BlockExpr),
 }
 
 impl Expression {
@@ -91,10 +93,11 @@ impl Expression {
         match self {
             Expression::Literal(e) => e.location,
             Expression::Binary(e) => e.location,
-            Expression::Variable(_, loc) => *loc,
+            Expression::Variable(e) => e.location,
             Expression::Unary(e) => e.location,
             Expression::Call(e) => e.location,
             Expression::Conditional(e) => e.location,
+            Expression::Block(e) => e.location,
         }
     }
 }
@@ -112,10 +115,8 @@ pub enum Statement {
     TypeDefinition(TypeDefinitionStmt),
     /// Function declaration
     FunctionDeclaration(FunctionDeclarationStmt),
-    /// Block of statements
-    Block(Vec<Statement>),
     /// Return statement
-    Return(Option<Expression>),
+    Return(ReturnStatement),
     /// Conditional statement (if/else)
     If(IfStatement),
 }
@@ -128,7 +129,6 @@ pub struct FunctionCallExpr {
     /// Arguments passed to the function
     pub arguments: Vec<Expression>,
     /// Type of the function call expression
-    #[allow(dead_code)]
     pub expr_type: TypeId,
     /// Source code location information
     pub location: SourceLocation,
@@ -144,6 +144,19 @@ pub struct ConditionalExpr {
     /// Expression to evaluate if condition is false (always present for expressions)
     pub else_branch: Box<Expression>,
     /// Type of the conditional expression
+    pub expr_type: TypeId,
+    /// Source code location information
+    pub location: SourceLocation,
+}
+
+/// A block expression containing statements and an optional return value
+#[derive(Debug)]
+pub struct BlockExpr {
+    /// Statements in the block
+    pub statements: Vec<Statement>,
+    /// Optional final expression that becomes the return value (without semicolon)
+    pub return_expr: Option<Box<Expression>>,
+    /// Type of the block expression
     pub expr_type: TypeId,
     /// Source code location information
     pub location: SourceLocation,
@@ -169,8 +182,8 @@ pub struct FunctionDeclarationStmt {
     pub parameters: Vec<Parameter>,
     /// Function return type
     pub return_type: TypeId,
-    /// Function body (list of statements)
-    pub body: Vec<Statement>,
+    /// Function body (block expression)
+    pub body: BlockExpr,
     /// Source code location information
     pub location: SourceLocation,
 }
@@ -192,8 +205,16 @@ pub struct LiteralExpr {
     /// Value of the literal
     pub value: LiteralValue,
     /// Type of the literal expression
-    #[allow(dead_code)]
     pub expr_type: TypeId,
+    /// Source code location information
+    pub location: SourceLocation,
+}
+
+/// A variable reference expression
+#[derive(Debug)]
+pub struct VariableExpr {
+    /// Name of the variable being referenced
+    pub name: String,
     /// Source code location information
     pub location: SourceLocation,
 }
@@ -206,7 +227,6 @@ pub struct UnaryExpr {
     /// The operand
     pub right: Box<Expression>,
     /// Type of the unary expression
-    #[allow(dead_code)]
     pub expr_type: TypeId,
     /// Source code location information
     pub location: SourceLocation,
@@ -235,6 +255,8 @@ pub enum LiteralValue {
     String(String),
     /// Boolean value (true or false)
     Boolean(bool),
+    /// Unit value (similar to Rust's ())
+    Unit,
 }
 
 /// A binary expression (e.g., a + b)
@@ -283,20 +305,29 @@ pub struct AssignmentStatement {
 pub struct IfStatement {
     /// Condition to evaluate
     pub condition: Expression,
-    /// Block of statements to execute if condition is true
-    pub then_branch: Vec<Statement>,
-    /// Optional block of statements to execute if condition is false
-    pub else_branch: Option<Vec<Statement>>,
+    /// Block expression to execute if condition is true
+    pub then_branch: BlockExpr,
+    /// Optional block expression to execute if condition is false
+    pub else_branch: Option<BlockExpr>,
+    /// Source code location information
+    pub location: SourceLocation,
+}
+
+/// A return statement
+#[derive(Debug)]
+pub struct ReturnStatement {
+    /// Optional expression to return
+    pub value: Option<Expression>,
     /// Source code location information
     pub location: SourceLocation,
 }
 
 impl Statement {
     /// Accepts a visitor for this statement
-    /// 
+    ///
     /// ### Arguments
     /// * `visitor` - The visitor to accept
-    /// 
+    ///
     /// ### Returns
     /// The result of the visitor's visit method for this statement
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
@@ -310,8 +341,7 @@ impl Statement {
             Statement::FunctionDeclaration(fn_decl) => {
                 visitor.visit_function_declaration_statement(fn_decl)
             }
-            Statement::Block(stmts) => visitor.visit_block_statement(stmts),
-            Statement::Return(expr) => visitor.visit_return_statement(expr),
+            Statement::Return(return_stmt) => visitor.visit_return_statement(return_stmt),
             Statement::If(if_stmt) => visitor.visit_if_statement(if_stmt),
         }
     }
@@ -322,19 +352,18 @@ impl Expression {
     ///
     /// ### Arguments
     /// * `visitor` - The visitor to accept
-    /// 
+    ///
     /// ### Returns
     /// The result of the visitor's visit method for this expression
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
         match self {
             Expression::Literal(lit) => visitor.visit_literal_expression(lit),
             Expression::Binary(bin) => visitor.visit_binary_expression(bin),
-            Expression::Variable(name, location) => {
-                visitor.visit_variable_expression(name, location)
-            }
+            Expression::Variable(var) => visitor.visit_variable_expression(var),
             Expression::Unary(unary) => visitor.visit_unary_expression(unary),
             Expression::Call(call) => visitor.visit_call_expression(call),
             Expression::Conditional(cond) => visitor.visit_conditional_expression(cond),
+            Expression::Block(block) => visitor.visit_block_expression(block),
         }
     }
 }

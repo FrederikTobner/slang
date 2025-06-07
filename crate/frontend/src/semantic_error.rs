@@ -1,8 +1,8 @@
 use crate::error::CompilerError;
 use crate::error_codes::ErrorCode;
 use slang_ir::SourceLocation;
-use slang_types::TypeId;
 use slang_shared::CompilationContext;
+use slang_types::TypeId;
 
 /// Represents different categories of semantic analysis errors
 /// that occur during static analysis of the program.
@@ -402,17 +402,17 @@ impl SemanticAnalysisError {
         }
     }
 
-    /// Determines the token length for the error, preferring the length from SourceLocation.
-    /// Falls back to heuristics if the SourceLocation length is not available or is 0.
+    /// Determines the token length for the error, using the length from SourceLocation.
+    /// Falls back to heuristics only for cases where location information may not be available.
     fn get_token_length(&self) -> Option<usize> {
         let location = self.get_location();
 
-        // Prefer the length from SourceLocation if it's meaningful
+        // Use the length from SourceLocation if it's meaningful
         if location.length > 0 {
             return Some(location.length);
         }
 
-        // Fall back to heuristics for backward compatibility
+        // Fall back to heuristics only for specific cases where location might not be available
         match self {
             SemanticAnalysisError::UndefinedVariable { name, .. } => Some(name.len()),
             SemanticAnalysisError::VariableRedefinition { name, .. } => Some(name.len()),
@@ -432,12 +432,13 @@ impl SemanticAnalysisError {
             SemanticAnalysisError::ArgumentTypeMismatch { function_name, .. } => {
                 Some(function_name.len())
             }
-            SemanticAnalysisError::ReturnOutsideFunction { .. } => Some("return".len()),
-            SemanticAnalysisError::ReturnTypeMismatch { .. } => None,
-            SemanticAnalysisError::MissingReturnValue { .. } => Some("return".len()),
             SemanticAnalysisError::UndefinedFunction { name, .. } => Some(name.len()),
             SemanticAnalysisError::InvalidUnaryOperation { operator, .. } => Some(operator.len()),
             SemanticAnalysisError::AssignmentToImmutableVariable { name, .. } => Some(name.len()),
+            // Return-related errors now have proper location information
+            SemanticAnalysisError::ReturnOutsideFunction { .. } => None,
+            SemanticAnalysisError::ReturnTypeMismatch { .. } => None,
+            SemanticAnalysisError::MissingReturnValue { .. } => None,
             SemanticAnalysisError::InvalidExpression { .. } => None,
         }
     }
@@ -471,7 +472,9 @@ impl SemanticAnalysisError {
             SemanticAnalysisError::InvalidFieldType { .. } => ErrorCode::InvalidFieldType,
             SemanticAnalysisError::TypeMismatch { .. } => ErrorCode::TypeMismatch,
             SemanticAnalysisError::OperationTypeMismatch { .. } => ErrorCode::OperationTypeMismatch,
-            SemanticAnalysisError::LogicalOperatorTypeMismatch { .. } => ErrorCode::LogicalOperatorTypeMismatch,
+            SemanticAnalysisError::LogicalOperatorTypeMismatch { .. } => {
+                ErrorCode::LogicalOperatorTypeMismatch
+            }
             SemanticAnalysisError::ValueOutOfRange { .. } => ErrorCode::ValueOutOfRange,
             SemanticAnalysisError::ArgumentCountMismatch { .. } => ErrorCode::ArgumentCountMismatch,
             SemanticAnalysisError::ArgumentTypeMismatch { .. } => ErrorCode::ArgumentTypeMismatch,
@@ -480,7 +483,9 @@ impl SemanticAnalysisError {
             SemanticAnalysisError::MissingReturnValue { .. } => ErrorCode::MissingReturnValue,
             SemanticAnalysisError::UndefinedFunction { .. } => ErrorCode::UndefinedFunction,
             SemanticAnalysisError::InvalidUnaryOperation { .. } => ErrorCode::InvalidUnaryOperation,
-            SemanticAnalysisError::AssignmentToImmutableVariable { .. } => ErrorCode::AssignmentToImmutableVariable,
+            SemanticAnalysisError::AssignmentToImmutableVariable { .. } => {
+                ErrorCode::AssignmentToImmutableVariable
+            }
             SemanticAnalysisError::InvalidExpression { .. } => ErrorCode::InvalidExpression,
         }
     }

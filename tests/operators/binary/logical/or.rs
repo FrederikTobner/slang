@@ -6,30 +6,27 @@ use rstest::rstest;
 #[case("true", "false", "true")]
 #[case("false", "true", "true")]
 #[case("false", "false", "false")]
-fn with_boolean_variables(#[case] first: &str, 
-    #[case] second: &str, 
-    #[case] expected: &str) {
+fn with_boolean_variables(#[case] first: &str, #[case] second: &str, #[case] expected: &str) {
     let program = format!(
         r#"
         let a: bool = {};
         let b: bool = {};
         print_value(a || b);
-    "#, first, second);
+    "#,
+        first, second
+    );
     execute_program_and_assert(&program, expected);
 }
-
 
 #[rstest]
 #[case("true", "true", "true")]
 #[case("true", "false", "true")]
 #[case("false", "true", "true")]
 #[case("false", "false", "false")]
-fn with_boolean_literals(#[case] first: &str, 
-    #[case] second: &str, 
-    #[case] expected: &str) {
-    let program = format!("print_value({} || {});", first, second); 
+fn with_boolean_literals(#[case] first: &str, #[case] second: &str, #[case] expected: &str) {
+    let program = format!("print_value({} || {});", first, second);
 
-        execute_program_and_assert(&program, expected);
+    execute_program_and_assert(&program, expected);
 }
 
 #[test]
@@ -39,7 +36,11 @@ fn with_non_boolean_types() {
         let b: bool = true;
         print_value(a || b);
     "#;
-    execute_program_expect_error(program, "[E2007]", "Logical operator '||' requires boolean operands, got i32 and bool");
+    execute_program_expect_error(
+        program,
+        "[E2007]",
+        "Logical operator '||' requires boolean operands, got i32 and bool",
+    );
 }
 
 #[test]

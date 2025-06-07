@@ -1,12 +1,13 @@
-use crate::ast::{
-    BinaryExpr, BinaryOperator, ConditionalExpr, Expression, FunctionCallExpr, FunctionDeclarationStmt,
-    IfStatement, LetStatement, LiteralExpr, LiteralValue, Statement, TypeDefinitionStmt, UnaryExpr,
-    UnaryOperator, AssignmentStatement,
-};
 use crate::Visitor;
+use crate::ast::{
+    AssignmentStatement, BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression,
+    FunctionCallExpr, FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr,
+    LiteralValue, ReturnStatement, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
+    VariableExpr,
+};
 use slang_types::{
-    TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I64,
-    TYPE_NAME_INT, TYPE_NAME_STRING, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_I32,
+    TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64,
+    TYPE_NAME_INT, TYPE_NAME_STRING, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNIT,
 };
 
 /// A visitor implementation that prints the AST in a human-readable format
@@ -50,7 +51,6 @@ impl Visitor<()> for ASTPrinter {
             Statement::FunctionDeclaration(fn_decl) => {
                 self.visit_function_declaration_statement(fn_decl)
             }
-            Statement::Block(stmts) => self.visit_block_statement(stmts),
             Statement::Return(expr) => self.visit_return_statement(expr),
             Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
         }
@@ -77,24 +77,13 @@ impl Visitor<()> for ASTPrinter {
 
         println!("{}Body:", self.indent());
         self.indent_level += 1;
-        for stmt in &fn_decl.body {
-            self.visit_statement(stmt);
-        }
+        self.visit_block_expression(&fn_decl.body);
         self.indent_level -= 2;
     }
 
-    fn visit_block_statement(&mut self, stmts: &[Statement]) {
-        println!("{}Block:", self.indent());
-        self.indent_level += 1;
-        for stmt in stmts {
-            self.visit_statement(stmt);
-        }
-        self.indent_level -= 1;
-    }
-
-    fn visit_return_statement(&mut self, expr: &Option<Expression>) {
+    fn visit_return_statement(&mut self, return_stmt: &slang_ir::ast::ReturnStatement) {
         println!("{}Return:", self.indent());
-        if let Some(expr) = expr {
+        if let Some(expr) = &return_stmt.value {
             self.indent_level += 1;
             self.visit_expression(expr);
             self.indent_level -= 1;
@@ -135,10 +124,11 @@ impl Visitor<()> for ASTPrinter {
         match expr {
             Expression::Literal(lit) => self.visit_literal_expression(lit),
             Expression::Binary(bin) => self.visit_binary_expression(bin),
-            Expression::Variable(name, location) => self.visit_variable_expression(name, location),
+            Expression::Variable(var) => self.visit_variable_expression(var),
             Expression::Unary(unary) => self.visit_unary_expression(unary),
             Expression::Call(call) => self.visit_call_expression(call),
             Expression::Conditional(cond) => self.visit_conditional_expression(cond),
+            Expression::Block(block) => self.visit_block_expression(block),
         }
     }
 
@@ -172,6 +162,7 @@ impl Visitor<()> for ASTPrinter {
             }
             LiteralValue::Boolean(b) => println!("{}{}: {}", self.indent(), TYPE_NAME_BOOL, b),
             LiteralValue::String(s) => println!("{}{}: \"{}\"", self.indent(), TYPE_NAME_STRING, s),
+            LiteralValue::Unit => println!("{}{}: ()", self.indent(), TYPE_NAME_UNIT),
         }
     }
 
@@ -205,61 +196,77 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level -= 1;
     }
 
-    fn visit_variable_expression(
-        &mut self,
-        name: &str,
-        _location: &crate::source_location::SourceLocation,
-    ) {
-        println!("{}Var: {}", self.indent(), name);
+    fn visit_variable_expression(&mut self, var_expr: &VariableExpr) {
+        println!("{}Var: {}", self.indent(), var_expr.name);
     }
 
     fn visit_if_statement(&mut self, if_stmt: &IfStatement) {
         println!("{}If Statement:", self.indent());
-        
+
         self.indent_level += 1;
         println!("{}Condition:", self.indent());
         self.indent_level += 1;
         self.visit_expression(&if_stmt.condition);
         self.indent_level -= 1;
-        
+
         println!("{}Then Branch:", self.indent());
         self.indent_level += 1;
-        for stmt in &if_stmt.then_branch {
-            self.visit_statement(stmt);
-        }
+        self.visit_block_expression(&if_stmt.then_branch);
         self.indent_level -= 1;
-        
+
         if let Some(else_branch) = &if_stmt.else_branch {
             println!("{}Else Branch:", self.indent());
             self.indent_level += 1;
-            for stmt in else_branch {
-                self.visit_statement(stmt);
-            }
+            self.visit_block_expression(else_branch);
             self.indent_level -= 1;
         }
-        
+
         self.indent_level -= 1;
     }
 
     fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) {
         println!("{}Conditional Expression:", self.indent());
-        
+
         self.indent_level += 1;
         println!("{}Condition:", self.indent());
         self.indent_level += 1;
         self.visit_expression(&cond_expr.condition);
         self.indent_level -= 1;
-        
+
         println!("{}Then:", self.indent());
         self.indent_level += 1;
         self.visit_expression(&cond_expr.then_branch);
         self.indent_level -= 1;
-        
+
         println!("{}Else:", self.indent());
         self.indent_level += 1;
         self.visit_expression(&cond_expr.else_branch);
         self.indent_level -= 1;
-        
+
+        self.indent_level -= 1;
+    }
+
+    fn visit_block_expression(&mut self, block_expr: &BlockExpr) {
+        println!("{}Block Expression:", self.indent());
+
+        self.indent_level += 1;
+
+        if !block_expr.statements.is_empty() {
+            println!("{}Statements:", self.indent());
+            self.indent_level += 1;
+            for stmt in &block_expr.statements {
+                self.visit_statement(stmt);
+            }
+            self.indent_level -= 1;
+        }
+
+        if let Some(return_expr) = &block_expr.return_expr {
+            println!("{}Return Expression:", self.indent());
+            self.indent_level += 1;
+            self.visit_expression(return_expr);
+            self.indent_level -= 1;
+        }
+
         self.indent_level -= 1;
     }
 }

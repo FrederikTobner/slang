@@ -7,11 +7,14 @@ use rstest::rstest;
 #[case("u32")]
 #[case("u64")]
 fn with_integer_types(#[case] type_name: &str) {
-    let program = format!(r#"
+    let program = format!(
+        r#"
         let a: {} = 50;
         let b: {} = 8;
         print_value(if a > b {{ a - b }} else {{ b - a }});
-    "#, type_name, type_name);
+    "#,
+        type_name, type_name
+    );
     execute_program_and_assert(&program, "42");
 }
 
@@ -19,11 +22,14 @@ fn with_integer_types(#[case] type_name: &str) {
 #[case("f32")]
 #[case("f64")]
 fn with_float_types(#[case] type_name: &str) {
-    let program = format!(r#"
+    let program = format!(
+        r#"
         let a: {} = 50.0;
         let b: {} = 8.0;
         print_value(if a > b {{ a - b }} else {{ b - a }});
-    "#, type_name, type_name);
+    "#,
+        type_name, type_name
+    );
     execute_program_and_assert(&program, "42");
 }
 
@@ -60,6 +66,45 @@ fn nested() {
         print_value(result);
     "#;
     execute_program_and_assert(program, "50");
+}
+
+#[test]
+fn complex_nested() {
+    let program = r#"
+        let x: i32 = 5;
+        let y: i32 = 10;
+        let z: i32 = 15;
+        let result: i32 = if x < y {
+            if y < z {
+                let a: i32 = x + y;
+                x + y + z + a
+            } else {
+                let b: i32 = y - x;
+                y - x + b
+            }
+        } else {
+            let c: i32 = z - y;
+            z - y + c
+        };
+        print_value(result);
+    "#;
+    execute_program_and_assert(program, "45");
+}
+
+#[test]
+fn block_with_multiple_statements() {
+    let program = r#"
+        let x: i32 = 5;
+        let result: i32 = if x > 3 {
+            let a: i32 = x + 2;
+            let b: i32 = a * 2;
+            b
+        } else {
+           x - 1 
+        };
+        print_value(result);
+    "#;
+    execute_program_and_assert(program, "14");
 }
 
 #[test]
@@ -133,6 +178,7 @@ fn must_have_same_type() {
     "#;
     execute_program_expect_error(program, "[E2005]", "Type mismatch");
 }
+
 #[test]
 fn must_have_else_branch() {
     let program = r#"
@@ -141,4 +187,14 @@ fn must_have_else_branch() {
         print_value(result);
     "#;
     execute_program_expect_error(program, "[E1031]", "Expected 'else' after if expression");
+}
+
+#[test]
+fn with_unit_branches() {
+    let program = r#"
+        let x = true;
+        let result = if x { () } else { () };
+        print_value(result);
+    "#;
+    execute_program_and_assert(program, "()");
 }

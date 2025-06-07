@@ -1,4 +1,4 @@
-use slang_derive::NamedEnum;
+use slang_derive::{IterableEnum, NamedEnum, NumericEnum};
 
 // Type name constants
 pub const TYPE_NAME_I32: &str = PrimitiveType::I32.name();
@@ -11,10 +11,11 @@ pub const TYPE_NAME_BOOL: &str = PrimitiveType::Bool.name();
 pub const TYPE_NAME_STRING: &str = PrimitiveType::String.name();
 pub const TYPE_NAME_INT: &str = PrimitiveType::UnspecifiedInt.name();
 pub const TYPE_NAME_FLOAT: &str = PrimitiveType::UnspecifiedFloat.name();
+pub const TYPE_NAME_UNIT: &str = PrimitiveType::Unit.name();
 pub const TYPE_NAME_UNKNOWN: &str = PrimitiveType::Unknown.name();
 
 /// Represents all primitive types in the language
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, NamedEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, NamedEnum, IterableEnum, NumericEnum)]
 pub enum PrimitiveType {
     /// 32-bit signed integer
     I32,
@@ -38,12 +39,14 @@ pub enum PrimitiveType {
     /// Unspecified float type (for literals)
     #[name = "float"]
     UnspecifiedFloat,
+    /// Unit type (similar to Rust's ())
+    #[name = "()"]
+    Unit,
     /// Unknown type
     Unknown,
 }
 
 impl PrimitiveType {
-
     /// Check if this is a numeric type (integer or float)
     pub fn is_numeric(&self) -> bool {
         self.is_integer() || self.is_float()
@@ -88,8 +91,71 @@ impl PrimitiveType {
             PrimitiveType::I32 | PrimitiveType::U32 | PrimitiveType::F32 => 32,
             PrimitiveType::I64 | PrimitiveType::U64 | PrimitiveType::F64 => 64,
             PrimitiveType::Bool => 1,
+            PrimitiveType::Unit => 0,
             _ => 0,
         }
+    }
+
+    /// Get the TypeKind for this primitive type
+    ///
+    /// This method defines the actual type characteristics for each primitive type,
+    /// separating type definition from type registration logic.
+    pub fn to_type_kind(&self) -> TypeKind {
+        match self {
+            PrimitiveType::I32 => TypeKind::Integer(IntegerType {
+                signed: true,
+                bits: 32,
+                is_unspecified: false,
+            }),
+            PrimitiveType::I64 => TypeKind::Integer(IntegerType {
+                signed: true,
+                bits: 64,
+                is_unspecified: false,
+            }),
+            PrimitiveType::U32 => TypeKind::Integer(IntegerType {
+                signed: false,
+                bits: 32,
+                is_unspecified: false,
+            }),
+            PrimitiveType::U64 => TypeKind::Integer(IntegerType {
+                signed: false,
+                bits: 64,
+                is_unspecified: false,
+            }),
+            PrimitiveType::UnspecifiedInt => TypeKind::Integer(IntegerType {
+                signed: true,
+                bits: 0,
+                is_unspecified: true,
+            }),
+            PrimitiveType::F32 => TypeKind::Float(FloatType {
+                bits: 32,
+                is_unspecified: false,
+            }),
+            PrimitiveType::F64 => TypeKind::Float(FloatType {
+                bits: 64,
+                is_unspecified: false,
+            }),
+            PrimitiveType::UnspecifiedFloat => TypeKind::Float(FloatType {
+                bits: 0,
+                is_unspecified: true,
+            }),
+            PrimitiveType::String => TypeKind::String,
+            PrimitiveType::Bool => TypeKind::Boolean,
+            PrimitiveType::Unit => TypeKind::Unit,
+            PrimitiveType::Unknown => TypeKind::Unknown,
+        }
+    }
+}
+
+impl From<PrimitiveType> for usize {
+    fn from(primitive: PrimitiveType) -> usize {
+        primitive as usize    
+    }
+}
+
+impl From<PrimitiveType> for TypeId {
+    fn from(primitive: PrimitiveType) -> Self {
+        TypeId(primitive as usize)
     }
 }
 
@@ -106,14 +172,14 @@ impl Default for TypeId {
 impl TypeId {
     /// Creates a new unique type identifier
     pub fn new() -> Self {
-        static NEXT_ID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(PrimitiveType::Unknown as usize + 1);
+        static NEXT_ID: std::sync::atomic::AtomicUsize =
+            std::sync::atomic::AtomicUsize::new(PrimitiveType::Unknown as usize + 1);
         TypeId(NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
     }
 }
 
 /// Represents the different kinds of types in the language
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub enum TypeKind {
     /// Integer types (signed/unsigned, different bit widths)
     Integer(IntegerType),
@@ -123,6 +189,8 @@ pub enum TypeKind {
     String,
     /// Boolean type
     Boolean,
+    /// Unit type (similar to Rust's ())
+    Unit,
     /// Struct type with fields
     Struct(StructType),
     /// Unknown or not yet determined type
@@ -131,7 +199,6 @@ pub enum TypeKind {
 
 /// Represents an integer type with its properties
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct IntegerType {
     /// Whether the integer is signed or unsigned
     pub signed: bool,
@@ -143,7 +210,6 @@ pub struct IntegerType {
 
 /// Represents a floating point type with its properties
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct FloatType {
     /// The number of bits (e.g., 64 for f64)
     pub bits: u8,
@@ -153,7 +219,6 @@ pub struct FloatType {
 
 /// Represents a struct type with its fields
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct StructType {
     /// Name of the struct
     pub name: String,
@@ -170,7 +235,6 @@ impl StructType {
 
 /// Contains all information about a specific type
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct TypeInfo {
     /// Unique identifier for this type
     pub id: TypeId,

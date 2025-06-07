@@ -1,6 +1,5 @@
-use std::collections::HashMap;
 use crate::{PrimitiveType, TypeId, TypeInfo, TypeKind};
-use crate::types::{IntegerType, FloatType};
+use std::collections::HashMap;
 
 /// Registry that stores all available types in the language
 pub struct TypeRegistry {
@@ -20,85 +19,22 @@ impl TypeRegistry {
 
     /// Registers all built-in types in the type registry
     fn register_built_in_types(&mut self) {
-        let types_to_register: &[(PrimitiveType, TypeKind)] = &[
-            (
-                PrimitiveType::I32,
-                TypeKind::Integer(IntegerType {
-                    signed: true,
-                    bits: 32,
-                    is_unspecified: false,
-                }),
-            ),
-            (
-                PrimitiveType::I64,
-                TypeKind::Integer(IntegerType {
-                    signed: true,
-                    bits: 64,
-                    is_unspecified: false,
-                }),
-            ),
-            (
-                PrimitiveType::U32,
-                TypeKind::Integer(IntegerType {
-                    signed: false,
-                    bits: 32,
-                    is_unspecified: false,
-                }),
-            ),
-            (
-                PrimitiveType::U64,
-                TypeKind::Integer(IntegerType {
-                    signed: false,
-                    bits: 64,
-                    is_unspecified: false,
-                }),
-            ),
-            (
-                PrimitiveType::UnspecifiedInt,
-                TypeKind::Integer(IntegerType {
-                    signed: true,
-                    bits: 0,
-                    is_unspecified: true,
-                }),
-            ),
-            (
-                PrimitiveType::F32,
-                TypeKind::Float(FloatType {
-                    bits: 32,
-                    is_unspecified: false,
-                }),
-            ),
-            (
-                PrimitiveType::F64,
-                TypeKind::Float(FloatType {
-                    bits: 64,
-                    is_unspecified: false,
-                }),
-            ),
-            (
-                PrimitiveType::UnspecifiedFloat,
-                TypeKind::Float(FloatType {
-                    bits: 0,
-                    is_unspecified: true,
-                }),
-            ),
-            (PrimitiveType::String, TypeKind::String),
-            (PrimitiveType::Bool, TypeKind::Boolean),
-            (PrimitiveType::Unknown, TypeKind::Unknown),
-        ];
-
-        for (ptype, kind) in types_to_register {
-            self.register_primitive_type(ptype.name(), kind.clone(), TypeId(*ptype as usize));
+        for ptype in PrimitiveType::iter() {
+            self.register_primitive_type(
+                ptype.name(),
+                ptype.to_type_kind(),
+                TypeId(ptype as usize),
+            );
         }
     }
 
     /// Registers a new type in the registry
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `name` - The name of the type
     /// * `kind` - The kind of the type (e.g., Integer, Float, etc.)
-    /// 
+    ///
     /// ### Returns
     /// A TypeId representing the newly registered type
     pub fn register_type(&mut self, name: &str, kind: TypeKind) -> TypeId {
@@ -113,9 +49,9 @@ impl TypeRegistry {
     }
 
     /// Registers a primitive type in the registry
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `name` - The name of the primitive type
     /// * `kind` - The kind of the primitive type (e.g., Integer, Float, etc.)
     /// * `id` - The TypeId for the primitive type
@@ -129,10 +65,10 @@ impl TypeRegistry {
     }
 
     /// Gets type information for a given TypeId
-    /// 
+    ///
     /// ### Arguments
     /// * `id` - The TypeId to look up
-    /// 
+    ///
     /// ### Returns
     /// An Option containing the TypeInfo if found, or None if not found
     pub fn get_type_info(&self, id: &TypeId) -> Option<&TypeInfo> {
@@ -140,10 +76,10 @@ impl TypeRegistry {
     }
 
     /// Try to get the primitive type for a given TypeId
-    /// 
+    ///
     /// ### Arguments
     /// * `id` - The TypeId to look up
-    /// 
+    ///
     /// ### Returns
     /// An Option containing the PrimitiveType if found, or None if not found
     pub fn get_primitive_type(&self, id: &TypeId) -> Option<PrimitiveType> {
@@ -152,10 +88,10 @@ impl TypeRegistry {
     }
 
     /// Check if a type is a primitive type
-    /// 
+    ///
     /// ### Arguments
     /// * `id` - The TypeId to check
-    /// 
+    ///
     /// ### Returns
     /// A boolean indicating whether the type is a primitive type
     pub fn is_primitive_type(&self, id: &TypeId) -> bool {
@@ -163,11 +99,11 @@ impl TypeRegistry {
     }
 
     /// Checks if a value is within the valid range for a given type
-    /// 
+    ///
     /// ### Arguments
     /// * `value` - The value to check
     /// * `type_id` - The TypeId of the type to check against
-    /// 
+    ///
     /// ### Returns
     /// A boolean indicating whether the value is within the valid range
     pub fn check_value_in_range(&self, value: &i64, type_id: &TypeId) -> bool {
@@ -194,11 +130,11 @@ impl TypeRegistry {
     }
 
     /// Checks if a float value is within the valid range for a given type
-    /// 
+    ///
     /// ### Arguments
     /// * `value` - The float value to check
     /// * `type_id` - The TypeId of the type to check against
-    /// 
+    ///
     /// ### Returns
     /// A boolean indicating whether the float value is within the valid range
     pub fn check_float_value_in_range(&self, value: &f64, type_id: &TypeId) -> bool {
@@ -217,4 +153,3 @@ impl TypeRegistry {
         }
     }
 }
-

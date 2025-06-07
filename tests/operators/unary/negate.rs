@@ -36,7 +36,11 @@ fn with_string() {
         let a: string = "Hello";
         print_value(-a);
     "#;
-    execute_program_expect_error(program, "[E2015]", "Cannot negate non-numeric type \'string\'");
+    execute_program_expect_error(
+        program,
+        "[E2015]",
+        "Cannot negate non-numeric type \'string\'",
+    );
 }
 
 #[test]
@@ -55,4 +59,13 @@ fn double_negation() {
         print_value(-(-a));
     "#;
     execute_program_and_assert(program, "42");
+}
+
+#[test]
+fn with_unit() {
+    let program = r#"
+        let x = ();
+        print_value(-x);
+    "#;
+    execute_program_expect_error(program, "[E2015]", "Cannot negate non-numeric type '()'");
 }

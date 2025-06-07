@@ -55,16 +55,18 @@ fn block_scope_mutability() {
     execute_program_and_assert(program, "20");
 }
 
-
 #[test]
 fn with_immutable_variable() {
     let program = r#"
         let x: i32 = 10;
         x = 20; // This should cause an error
     "#;
-    execute_program_expect_error(program, "[E2016]", "Cannot assign to immutable variable 'x'");
+    execute_program_expect_error(
+        program,
+        "[E2016]",
+        "Cannot assign to immutable variable 'x'",
+    );
 }
-
 
 #[test]
 fn with_immutable_in_expression() {
@@ -73,5 +75,9 @@ fn with_immutable_in_expression() {
         let y = 20;
         x = y + 5; // Should fail
     "#;
-    execute_program_expect_error(program, "[E2016]", "Cannot assign to immutable variable 'x'");
+    execute_program_expect_error(
+        program,
+        "[E2016]",
+        "Cannot assign to immutable variable 'x'",
+    );
 }

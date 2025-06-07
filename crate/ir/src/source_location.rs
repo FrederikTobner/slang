@@ -50,7 +50,7 @@ impl SourceLocation {
     }
 
     /// Get the end position of this location
-    /// 
+    ///
     /// ### Returns
     /// The byte offset position at the end of this location
     pub fn end_position(&self) -> usize {
@@ -58,7 +58,7 @@ impl SourceLocation {
     }
 
     /// Get the end column of this location (assuming single line)
-    /// 
+    ///
     /// ### Returns
     /// The column number at the end of this location
     pub fn end_column(&self) -> usize {
@@ -66,11 +66,11 @@ impl SourceLocation {
     }
 
     /// Create a span from this location to another location
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `other` - The other SourceLocation to create a span to
-    /// 
+    ///
     /// ### Returns
     /// A new SourceLocation representing the span from this location to the other
     pub fn span_to(&self, other: &SourceLocation) -> SourceLocation {

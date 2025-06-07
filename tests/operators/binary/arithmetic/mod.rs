@@ -1,5 +1,6 @@
-mod plus;
-mod minus;
 mod divide;
-mod multiply;
+mod minus;
 mod misc;
+mod multiply;
+mod plus;
+

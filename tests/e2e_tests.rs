@@ -1,6 +1,8 @@
-mod syntax;
+mod expression;
 mod functions;
 mod operators;
-mod types;
-mod test_utils;
 mod statement;
+mod syntax;
+mod test_utils;
+mod types;
+

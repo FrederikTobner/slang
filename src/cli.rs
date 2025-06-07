@@ -1,4 +1,4 @@
-use crate::error::{CliResult, CliError};
+use crate::error::{CliError, CliResult};
 use crate::exit;
 use clap::{Parser as ClapParser, Subcommand};
 use colored::Colorize;
@@ -89,21 +89,19 @@ pub fn repl() {
                     chunk.disassemble("REPL");
                 }
 
-                // Execute the bytecode
                 if let Err(e) = vm.interpret(&chunk) {
                     eprintln!("{}: {}", "Runtime error".red(), e);
                 }
             }
             Err(errors) => {
-                // In REPL mode, we just report errors and continue
-                report_errors(&errors, &input); // Pass the source input to report_errors
+                report_errors(&errors, &input); 
             }
         }
     }
 }
 
 /// Compile a Slang source file to bytecode
-/// 
+///
 /// ### Arguments
 /// * `input` - The input source file
 /// * `output` - The output file path (if provided)
@@ -121,7 +119,7 @@ pub fn compile_file(input: &str, output: Option<String>) {
                 }
             }
             Err(errors) => {
-                report_errors(&errors, &source); // Pass the source to report_errors
+                report_errors(&errors, &source); 
                 exit::with_code(
                     exit::Code::Software,
                     &format!(
@@ -136,7 +134,7 @@ pub fn compile_file(input: &str, output: Option<String>) {
 }
 
 /// Execute a Slang source file directly
-/// 
+///
 /// ### Arguments
 /// * `input` - The input source file
 pub fn execute_file(input: &str) {
@@ -153,7 +151,7 @@ pub fn execute_file(input: &str) {
                 }
             }
             Err(errors) => {
-                report_errors(&errors, &source); // Pass the source to report_errors
+                report_errors(&errors, &source); 
                 exit::with_code(
                     exit::Code::Software,
                     &format!(
@@ -168,7 +166,7 @@ pub fn execute_file(input: &str) {
 }
 
 /// Run a compiled Slang bytecode file
-/// 
+///
 /// ### Arguments
 /// * `input` - The input compiled bytecode file
 pub fn run_file(input: &str) {
@@ -206,16 +204,24 @@ fn compile_source_to_bytecode(source: &str) -> CompileResult<Chunk> {
         printer.print(&statements);
     }
     semantic_analyzer::execute(&statements, &mut context)?;
-    codegen::generate_bytecode(&statements)
-        .map_err(|err_msg| vec![slang_frontend::error::CompilerError::new(slang_frontend::error_codes::ErrorCode::GenericCompileError, err_msg, 0, 0, 0, None)])
+    codegen::generate_bytecode(&statements).map_err(|err_msg| {
+        vec![slang_frontend::error::CompilerError::new(
+            slang_frontend::error_codes::ErrorCode::GenericCompileError,
+            err_msg,
+            0,
+            0,
+            0,
+            None,
+        )]
+    })
 }
 
 /// Determine the output path for a compiled file
-/// 
+///
 /// ### Arguments
 /// * `input` - The input source file
 /// * `output` - The output file path (if provided)
-/// 
+///
 /// ### Returns
 /// The resolved output path
 fn resolve_output_path(input: &str, output: Option<String>) -> String {
@@ -340,7 +346,7 @@ fn read_bytecode_file(input_path: &str) -> CliResult<Chunk> {
         let mut cursor = std::io::Cursor::new(buffer);
         let chunk = Chunk::deserialize(&mut cursor).map_err(|e| CliError::Serialization {
             source: Box::new(e),
-            context:"Failed to deserialize bytecode".to_string(),
+            context: "Failed to deserialize bytecode".to_string(),
             exit_code: exit::Code::Dataerr,
         })?;
 

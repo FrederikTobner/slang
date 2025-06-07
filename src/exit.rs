@@ -7,11 +7,11 @@
 /// This function does not return. It will terminate the program with the specified exit code.
 pub fn with_code(code: Code, message: &str) -> ! {
     eprintln!("{}", message);
-    std::process::exit(code as i32);
+    std::process::exit(code.into());
 }
 
 /// Based on unix exit codes
-#[allow(dead_code)]
+#[allow(dead_code)] // Not all codes may be used
 #[derive(Debug, Copy, Clone)]
 pub enum Code {
     Usage = 64,       /* command line usage error */
@@ -29,4 +29,10 @@ pub enum Code {
     Protocol = 76,    /* remote error in protocol */
     NoPerm = 77,      /* permission denied */
     Config = 78,      /* configuration error */
+}
+
+impl From<Code> for i32 {
+    fn from(code: Code) -> Self {
+        code as i32
+    }
 }
