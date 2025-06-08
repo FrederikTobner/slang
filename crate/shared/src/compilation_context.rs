@@ -1,5 +1,6 @@
 use crate::{Symbol, SymbolKind, SymbolTable};
-use slang_types::{PrimitiveType, StructType, TypeId, TypeInfo, TypeKind, TypeRegistry};
+use crate::symbol_table::SymbolData;
+use slang_types::{PrimitiveType, StructType, TypeId, TypeInfo, TypeKind, TypeRegistry, FunctionType};
 
 /// Compilation context that owns the type registry and symbol table
 pub struct CompilationContext {
@@ -30,7 +31,7 @@ impl CompilationContext {
         let mut define_primitive = |ptype: PrimitiveType| {
             let type_id = TypeId(ptype as usize);
             symbol_table
-                .define(ptype.name().to_string(), SymbolKind::Type, type_id.clone())
+                .define(ptype.name().to_string(), SymbolData::Type, type_id.clone())
                 .unwrap_or_else(|_| {
                     panic!(
                         "Failed to define primitive type symbol for '{}'",
@@ -223,6 +224,7 @@ impl CompilationContext {
     /// * `name` - The name of the symbol
     /// * `kind` - The kind of symbol (variable, type, function)
     /// * `type_id` - The type ID associated with the symbol
+    /// * `is_mutable` - Whether the symbol is mutable (only relevant for variables)
     ///
     /// ### Returns
     /// A Result indicating success or an error message if the symbol cannot be defined
@@ -231,8 +233,14 @@ impl CompilationContext {
         name: String,
         kind: SymbolKind,
         type_id: TypeId,
+        is_mutable: bool,
     ) -> Result<(), String> {
-        self.symbol_table.define(name, kind, type_id)
+        let data = match kind {
+            SymbolKind::Type => SymbolData::Type,
+            SymbolKind::Variable => SymbolData::Variable { is_mutable },
+            SymbolKind::Function => SymbolData::Function,
+        };
+        self.symbol_table.define(name, data, type_id)
     }
 
     /// Looks up a symbol in the symbol table by name
@@ -265,7 +273,7 @@ impl CompilationContext {
 
         let type_id = self.type_registry.register_type(name, type_kind);
         self.symbol_table
-            .define(name.to_string(), SymbolKind::Type, type_id.clone())?;
+            .define(name.to_string(), SymbolData::Type, type_id.clone())?;
         Ok(type_id)
     }
 
@@ -285,5 +293,44 @@ impl CompilationContext {
         let struct_type = StructType::new(name.clone(), fields);
         let type_kind = TypeKind::Struct(struct_type);
         self.register_custom_type(&name, type_kind)
+    }
+
+    /// Registers a function type and returns its TypeId
+    pub fn register_function_type(&mut self, param_types: Vec<TypeId>, return_type: TypeId) -> TypeId {
+        self.type_registry.register_function_type(param_types, return_type)
+    }
+
+    /// Checks if a type is a function type
+    pub fn is_function_type(&self, type_id: &TypeId) -> bool {
+        if let Some(type_info) = self.type_registry.get_type_info(type_id) {
+            matches!(type_info.kind, TypeKind::Function(_))
+        } else {
+            false
+        }
+    }
+
+    /// Gets function type information
+    pub fn get_function_type(&self, type_id: &TypeId) -> Option<&FunctionType> {
+        if let Some(type_info) = self.type_registry.get_type_info(type_id) {
+            if let TypeKind::Function(ref function_type) = type_info.kind {
+                Some(function_type)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Begins a new scope by calling the symbol table
+    /// Used when entering a block, function, or other lexical scope.
+    pub fn begin_scope(&mut self) {
+        self.symbol_table.begin_scope();
+    }
+
+    /// Ends the current scope by calling the symbol table
+    /// Used when exiting a block, function, or other lexical scope.
+    pub fn end_scope(&mut self) {
+        self.symbol_table.end_scope();
     }
 }

@@ -3,12 +3,12 @@ use crate::value::Value;
 use slang_ir::Visitor;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
-    FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt,
+    FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt,
     UnaryExpr, UnaryOperator,
 };
 
 /// Compiles AST nodes into bytecode instructions
-struct CodeGenerator {
+pub struct CodeGenerator {
     /// The bytecode chunk being constructed
     pub chunk: Chunk,
     /// Current line number for debugging information
@@ -28,7 +28,7 @@ pub fn generate_bytecode(statements: &[Statement]) -> Result<Chunk, String> {
 
 impl CodeGenerator {
     /// Creates a new compiler with an empty chunk
-    fn new() -> Self {
+    pub fn new() -> Self {
         CodeGenerator {
             chunk: Chunk::new(),
             line: 1,
@@ -58,6 +58,30 @@ impl CodeGenerator {
         self.emit_op(OpCode::Return);
 
         Ok(self.chunk)
+    }
+
+    /// Compiles statements and appends them to the existing chunk (for REPL usage)
+    ///
+    /// ### Arguments
+    ///
+    /// * `statements` - The statements to compile
+    ///
+    /// ### Returns
+    ///
+    /// Ok(()) if successful, or an error message
+    pub fn compile_statements(&mut self, statements: &[Statement]) -> Result<(), String> {
+        for stmt in statements {
+            match stmt.accept(self) {
+                Ok(_) => (),
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(())
+    }
+
+    /// Gets a reference to the current chunk
+    pub fn get_chunk(&self) -> &Chunk {
+        &self.chunk
     }
 
     /// Emits a single byte to the bytecode chunk
@@ -126,10 +150,12 @@ impl CodeGenerator {
 
     fn begin_scope(&mut self) {
         self.local_scopes.push(Vec::new());
+        self.emit_op(OpCode::BeginScope);
     }
 
     fn end_scope(&mut self) {
         self.local_scopes.pop();
+        self.emit_op(OpCode::EndScope);
     }
 }
 
@@ -263,6 +289,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
             Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
             Expression::Block(block_expr) => self.visit_block_expression(block_expr),
+            Expression::FunctionType(func_type_expr) => self.visit_function_type_expression(func_type_expr),
         }
     }
 
@@ -461,6 +488,14 @@ impl Visitor<Result<(), String>> for CodeGenerator {
 
         self.end_scope();
 
+        Ok(())
+    }
+
+    fn visit_function_type_expression(&mut self, _func_type_expr: &FunctionTypeExpr) -> Result<(), String> {
+        // Function type expressions are compile-time constructs that don't generate runtime bytecode
+        // They are used for type checking and don't produce any values at runtime
+        // In a more advanced implementation, this might generate type metadata
+        self.emit_constant(Value::Unit);
         Ok(())
     }
 }

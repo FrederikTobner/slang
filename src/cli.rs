@@ -7,7 +7,7 @@ use slang_backend::codegen;
 use slang_backend::vm::VM;
 use slang_frontend::error::{CompileResult, report_errors};
 use slang_frontend::{lexer, parser, semantic_analyzer};
-use slang_shared::compilation_context::CompilationContext;
+use slang_shared::compilation_context::{CompilationContext};
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
@@ -19,7 +19,8 @@ use zip::{ZipArchive, ZipWriter, write::FileOptions};
     version,
     about = "Slang programming language",
     long_about = r#"Slang is a simple programming language designed for educational purposes.
-It features a REPL, compilation to bytecode, and execution of both source files and compiled bytecode."#
+It features a REPL, compilation to bytecode, and execution of both source files and compiled bytecode."#,
+arg_required_else_help = true,
 )]
 pub struct Parser {
     #[command(subcommand)]
@@ -29,9 +30,6 @@ pub struct Parser {
 /// Available commands for the Slang CLI
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Run the interactive REPL
-    Repl {},
-
     /// Compile a Slang source file to bytecode
     Compile {
         /// Input source file
@@ -58,48 +56,6 @@ pub enum Commands {
 /// The extension for compiled Slang bytecode files
 const SLANG_BYTECODE_EXTENSION: &str = "sip";
 
-/// Run the interactive REPL
-pub fn repl() {
-    let mut vm = VM::new();
-    println!("Slang REPL - Type 'exit' to exit");
-
-    loop {
-        let mut input = String::new();
-        print!(">>> ");
-        std::io::stdout().flush().unwrap();
-
-        if std::io::stdin().read_line(&mut input).is_ok() {
-            let trimmed = input.trim();
-            if trimmed == "exit" {
-                break;
-            } else if trimmed.is_empty() {
-                continue;
-            }
-        } else {
-            println!("Error reading input. Try again.");
-            continue;
-        }
-
-        // Compile the input
-        match compile_source_to_bytecode(&input) {
-            Ok(chunk) => {
-                #[cfg(feature = "print-byte_code")]
-                {
-                    println!("\n=== Bytecode ===");
-                    chunk.disassemble("REPL");
-                }
-
-                if let Err(e) = vm.interpret(&chunk) {
-                    eprintln!("{}: {}", "Runtime error".red(), e);
-                }
-            }
-            Err(errors) => {
-                report_errors(&errors, &input); 
-            }
-        }
-    }
-}
-
 /// Compile a Slang source file to bytecode
 ///
 /// ### Arguments
@@ -108,9 +64,9 @@ pub fn repl() {
 pub fn compile_file(input: &str, output: Option<String>) {
     let output_path = resolve_output_path(input, output);
     println!("Compiling {} to {}", input, output_path);
-
+    let mut compilation_context = CompilationContext::new();
     match read_source_file(input) {
-        Ok(source) => match compile_source_to_bytecode(&source) {
+        Ok(source) => match compile_source_to_bytecode(&source, &mut compilation_context) {
             Ok(chunk) => {
                 if let Err(err) = write_bytecode(&chunk, &output_path) {
                     exit::with_code(err.exit_code(), &err.to_string())
@@ -139,9 +95,9 @@ pub fn compile_file(input: &str, output: Option<String>) {
 /// * `input` - The input source file
 pub fn execute_file(input: &str) {
     println!("Executing source file: {}", input);
-
+    let mut compilation_context = CompilationContext::new();
     match read_source_file(input) {
-        Ok(source) => match compile_source_to_bytecode(&source) {
+        Ok(source) => match compile_source_to_bytecode(&source, &mut compilation_context) {
             Ok(chunk) => {
                 if let Err(e) = execute_bytecode(&chunk) {
                     exit::with_code(
@@ -194,16 +150,15 @@ pub fn run_file(input: &str) {
 /// ### Returns
 ///
 /// The compiled bytecode chunk or compilation errors
-fn compile_source_to_bytecode(source: &str) -> CompileResult<Chunk> {
-    let lexer_result = lexer::tokenize(source);
-    let mut context = CompilationContext::new();
-    let statements = parser::parse(&lexer_result.tokens, &lexer_result.line_info, &mut context)?;
+fn compile_source_to_bytecode(source: &str, compilation_context: &mut CompilationContext) -> CompileResult<Chunk> {
+    let lexer_result = lexer::tokenize(source)?;
+    let statements = parser::parse(&lexer_result.tokens, &lexer_result.line_info, compilation_context)?;
     #[cfg(feature = "print-ast")]
     {
         let mut printer = slang_ir::ast_printer::ASTPrinter::new();
         printer.print(&statements);
     }
-    semantic_analyzer::execute(&statements, &mut context)?;
+    semantic_analyzer::execute(&statements, compilation_context)?;
     codegen::generate_bytecode(&statements).map_err(|err_msg| {
         vec![slang_frontend::error::CompilerError::new(
             slang_frontend::error_codes::ErrorCode::GenericCompileError,

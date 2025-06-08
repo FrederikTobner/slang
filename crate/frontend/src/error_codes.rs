@@ -72,6 +72,8 @@ pub enum ErrorCode {
     UnknownType = 1030,
     /// Expected 'else' keyword after if expression
     ExpectedElse = 1031,
+    /// Expected a closing quote for a string literal
+    ExpectedClosingQuote = 1032,
 
     // Semantic Analysis Errors (2000-2999)
     /// Variable used before being defined
@@ -154,6 +156,7 @@ impl ErrorCode {
             ErrorCode::InvalidSyntax => "Invalid syntax",
             ErrorCode::UnknownType => "Unknow type",
             ErrorCode::ExpectedElse => "Expected 'else' after if expression",
+            ErrorCode::ExpectedClosingQuote => "Expected closing quote for string literal",
 
             // Semantic Analysis Errors
             ErrorCode::UndefinedVariable => "Undefined variable",

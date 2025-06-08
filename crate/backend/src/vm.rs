@@ -26,6 +26,8 @@ pub struct VM {
     frames: Vec<CallFrame>,
     /// Index of the current call frame
     current_frame: Option<usize>,
+    /// Stack of variable states for scope management
+    scope_stack: Vec<HashMap<String, Option<Value>>>,
 }
 
 impl Default for VM {
@@ -43,6 +45,7 @@ impl VM {
             variables: HashMap::new(),
             frames: Vec::new(),
             current_frame: None,
+            scope_stack: Vec::new(),
         };
         vm.register_native_functions();
         vm
@@ -165,7 +168,7 @@ impl VM {
             OpCode::Return => {
                 if let Some(frame_index) = self.current_frame {
                     let return_value = if self.stack.is_empty() {
-                        Value::Unit // Default return value for functions without explicit return
+                        Value::Unit 
                     } else {
                         self.pop()?
                     };
@@ -179,7 +182,6 @@ impl VM {
                         self.pop()?;
                     }
 
-                    // Push the return value
                     self.stack.push(return_value);
 
                     self.ip = return_address;
@@ -234,13 +236,11 @@ impl VM {
 
                 if let Some(frame_idx) = self.current_frame {
                     if self.frames[frame_idx].param_names.contains(&var_name) {
-                        // Local variable
                         self.frames[frame_idx].locals.insert(var_name, value);
                     } else {
                         self.variables.insert(var_name, value);
                     }
                 } else {
-                    // Global scope
                     self.variables.insert(var_name, value);
                 }
             }
@@ -376,6 +376,32 @@ impl VM {
             }
             OpCode::NotEqual => {
                 self.binary_op(|a, b| a.not_equal(b))?;
+            }
+            OpCode::BeginScope => {
+                // Save current state of variables that might be shadowed
+                let mut saved_state = HashMap::new();
+                // For now, we save all variables - this could be optimized
+                for (name, value) in &self.variables {
+                    saved_state.insert(name.clone(), Some(value.clone()));
+                }
+                self.scope_stack.push(saved_state);
+            }
+            OpCode::EndScope => {
+                // Restore the previous variable state
+                if let Some(saved_state) = self.scope_stack.pop() {
+                    for (name, maybe_value) in saved_state {
+                        match maybe_value {
+                            Some(value) => {
+                                self.variables.insert(name, value);
+                            }
+                            None => {
+                                self.variables.remove(&name);
+                            }
+                        }
+                    }
+                } else {
+                    return Err("Scope stack underflow".to_string());
+                }
             }
         }
 

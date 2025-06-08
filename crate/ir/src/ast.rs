@@ -86,6 +86,8 @@ pub enum Expression {
     Conditional(ConditionalExpr),
     /// A block expression with statements and optional return value
     Block(BlockExpr),
+    /// A function type expression (e.g., fn(i32, string) -> string)
+    FunctionType(FunctionTypeExpr),
 }
 
 impl Expression {
@@ -98,6 +100,7 @@ impl Expression {
             Expression::Call(e) => e.location,
             Expression::Conditional(e) => e.location,
             Expression::Block(e) => e.location,
+            Expression::FunctionType(e) => e.location,
         }
     }
 }
@@ -184,6 +187,19 @@ pub struct FunctionDeclarationStmt {
     pub return_type: TypeId,
     /// Function body (block expression)
     pub body: BlockExpr,
+    /// Source code location information
+    pub location: SourceLocation,
+}
+
+/// A function type expression (e.g., fn(i32, string) -> string)
+#[derive(Debug)]
+pub struct FunctionTypeExpr {
+    /// Parameter types of the function
+    pub param_types: Vec<TypeId>,
+    /// Return type of the function
+    pub return_type: TypeId,
+    /// Type of the function type expression (will be a function type)
+    pub expr_type: TypeId,
     /// Source code location information
     pub location: SourceLocation,
 }
@@ -364,6 +380,7 @@ impl Expression {
             Expression::Call(call) => visitor.visit_call_expression(call),
             Expression::Conditional(cond) => visitor.visit_conditional_expression(cond),
             Expression::Block(block) => visitor.visit_block_expression(block),
+            Expression::FunctionType(func_type) => visitor.visit_function_type_expression(func_type),
         }
     }
 }

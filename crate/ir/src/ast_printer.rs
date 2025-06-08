@@ -1,7 +1,7 @@
 use crate::Visitor;
 use crate::ast::{
     AssignmentStatement, BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression,
-    FunctionCallExpr, FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr,
+    FunctionCallExpr, FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr,
     LiteralValue, ReturnStatement, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
     VariableExpr,
 };
@@ -129,6 +129,7 @@ impl Visitor<()> for ASTPrinter {
             Expression::Call(call) => self.visit_call_expression(call),
             Expression::Conditional(cond) => self.visit_conditional_expression(cond),
             Expression::Block(block) => self.visit_block_expression(block),
+            Expression::FunctionType(func_type) => self.visit_function_type_expression(func_type),
         }
     }
 
@@ -244,6 +245,17 @@ impl Visitor<()> for ASTPrinter {
         self.indent_level -= 1;
 
         self.indent_level -= 1;
+    }
+
+    fn visit_function_type_expression(&mut self, func_type_expr: &FunctionTypeExpr) {
+        print!("{}fn(", self.indent());
+        for (i, _param_type) in func_type_expr.param_types.iter().enumerate() {
+            if i > 0 {
+                print!(", ");
+            }
+            print!("param_{}", i);
+        }
+        println!(") -> return_type");
     }
 
     fn visit_block_expression(&mut self, block_expr: &BlockExpr) {

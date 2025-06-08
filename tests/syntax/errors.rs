@@ -18,6 +18,15 @@ fn mismatched_brackets() {
 }
 
 #[test]
+fn mismatch_quotes() {
+    let program = r#"
+        let message = "Hello, world!;
+        print_value(message);
+    "#;
+    execute_program_expect_error(program, "[E1032]", "Expected closing quote for string");
+}
+
+#[test]
 fn mismatched_parentheses() {
     let program = r#"
         let a = 42;

@@ -1,4 +1,4 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 
 #[test]
 fn with_multiple_params() {
@@ -25,7 +25,7 @@ fn function_with_no_params() {
 }
 
 #[test]
-fn test_empty_return() {
+fn empty_return() {
     let program = r#"
         fn void_function() {
             return ();
@@ -38,7 +38,7 @@ fn test_empty_return() {
 }
 
 #[test]
-fn test_function_with_no_return() {
+fn with_no_return() {
     let program = r#"
         fn no_return_function() {
             // No return statement
@@ -190,7 +190,7 @@ fn returns_unit_explicitly() {
 }
 
 #[test]
-fn function_returns_unit_implicitly() {
+fn returns_unit_implicitly() {
     let program = r#"
         fn test_fn() {
             let x = 42;
@@ -200,4 +200,89 @@ fn function_returns_unit_implicitly() {
         print_value(result);
     "#;
     execute_program_and_assert(program, "()");
+}
+
+#[test]
+fn print_function() {
+    let program = r#"
+        fn test_fn() {
+        }
+        
+        print_value(test_fn);
+    "#;
+    execute_program_and_assert(program, "<fn test_fn>");
+}
+
+#[test]
+fn print_native_function() {
+    let program = r#"
+        
+        print_value(print_value);
+    "#;
+    execute_program_and_assert(program, "<native fn print_value>");
+}
+
+#[test]
+fn assign_function_to_variable() {
+    let program = r#"
+        fn add(a: i32, b: i32) -> i32 {
+            return a + b;
+        }
+        
+        let my_function = add;
+        print_value(my_function(10, 20));
+    "#;
+    execute_program_and_assert(program, "30");
+}
+
+#[test]
+fn assign_native_function_to_variable() {
+    let program = r#"
+        let my_print = print_value;
+        my_print("Hello from native function");
+    "#;
+    execute_program_and_assert(program, "Hello from native function");
+}
+
+#[test]
+fn assign_native_to_function_with_explicit_function_type_mismatch() {
+    let program = r#"
+        fn my_print(value: string) {
+            print_value(value);
+        }
+        
+        let my_function : fn(i32) -> () = my_print;
+        "#;
+        execute_program_expect_error(program, "[E2005]", "Type mismatch: variable my_function is fn(i32) -> () but expression is fn(string) -> ()");
+}
+
+
+#[test]
+fn assign_native_to_function_with_explicit_function_type() {
+    let program = r#"
+        fn my_print(value: string) {
+            print_value(value);
+        }
+        
+        let my_function : fn(string) -> () = my_print;
+        my_function("Hello from native function");
+        "#;
+    execute_program_and_assert(program, "Hello from native function");
+}
+
+#[test]
+fn assign_native_to_function_with_explicit_function_type_multiple_times() {
+    let program = r#"
+        fn my_print(value: string) {
+            print_value(value);
+        }
+        
+        let my_function : fn(string) -> () = my_print;
+        let my_function2 : fn(string) -> () = my_print;
+        let my_function3 : fn(string) -> () = my_print;
+        my_function("Hello from native function");
+        my_function2("Hello from native function");
+        my_function3("Hello from native function");
+        "#;
+    execute_program_and_assert(program, "Hello from native function\nHello from native function\nHello from native function");
 }

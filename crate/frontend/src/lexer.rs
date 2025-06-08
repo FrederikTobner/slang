@@ -1,7 +1,8 @@
-use crate::error::LineInfo;
+use crate::error::{CompileResult, CompilerError, LineInfo};
+use crate::error_codes::ErrorCode;
 use crate::token::{Token, Tokentype};
 
-pub struct Result<'a> {
+pub struct LexerResult<'a> {
     /// The list of tokens generated from the input
     pub tokens: Vec<Token>,
     /// The line information for the tokens
@@ -24,6 +25,8 @@ struct LexerState<'a> {
     tokens: Vec<Token>,
     /// Line token counts for line info
     line_tokens: Vec<(u16, u16)>,
+    /// Collected lexer errors
+    errors: Vec<CompilerError>,
 }
 
 impl<'a> LexerState<'a> {
@@ -43,6 +46,7 @@ impl<'a> LexerState<'a> {
             tokens_on_current_line: 0,
             tokens: Vec::new(),
             line_tokens: Vec::new(),
+            errors: Vec::new(),
         }
     }
 
@@ -78,6 +82,29 @@ impl<'a> LexerState<'a> {
         self.tokens_on_current_line += 1;
     }
 
+    /// Adds an error to the error list
+    ///
+    /// ### Arguments
+    /// * `self` - The current lexer state
+    /// * `error_code` - The error code for this error
+    /// * `message` - The error message
+    /// * `start_pos` - The starting position of the error
+    /// * `token_length` - The length of the problematic token
+    fn add_error(&mut self, error_code: ErrorCode, message: String, start_pos: usize, token_length: Option<usize>) {
+        // Calculate column position from start_pos
+        let line_start = self.input[..start_pos].rfind('\n').map_or(0, |pos| pos + 1);
+        let column = start_pos - line_start + 1;
+        
+        self.errors.push(CompilerError::new(
+            error_code,
+            message,
+            self.current_line,
+            column,
+            start_pos,
+            token_length,
+        ));
+    }
+
     /// Records a line break, updating line counts
     ///
     /// ### Arguments
@@ -95,7 +122,7 @@ impl<'a> LexerState<'a> {
     ///
     /// ### Arguments
     /// * `self` - The current lexer state
-    fn finish(mut self) -> Result<'a> {
+    fn finish(mut self) -> CompileResult<LexerResult<'a>> {
         // Add any remaining tokens on the last line
         if self.tokens_on_current_line > 0 {
             self.line_tokens
@@ -106,10 +133,15 @@ impl<'a> LexerState<'a> {
         let mut info = LineInfo::new(self.input);
         info.per_line = self.line_tokens;
 
-        Result {
+        // If there are errors, return them
+        if !self.errors.is_empty() {
+            return Err(self.errors);
+        }
+
+        Ok(LexerResult {
             tokens: self.tokens,
             line_info: info,
-        }
+        })
     }
 }
 
@@ -121,8 +153,8 @@ impl<'a> LexerState<'a> {
 ///
 /// ### Returns
 ///
-/// A LexerResult containing tokens and line information
-pub fn tokenize(input: &str) -> Result {
+/// A CompileResult containing LexerResult (tokens and line information) or lexer errors
+pub fn tokenize(input: &str) -> CompileResult<LexerResult> {
     let mut state = LexerState::new(input);
 
     while let Some(&c) = state.peek() {
@@ -249,13 +281,15 @@ fn handle_number(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `self` - The current lexer state
 fn handle_string(state: &mut LexerState) {
-    state.advance();
-    let mut string = String::new();
     let start_pos = state.current_pos;
+    state.advance(); // consume opening quote
+    let mut string = String::new();
+    let mut closed = false;
 
     while let Some(&c) = state.peek() {
         if c == '"' {
             state.advance();
+            closed = true;
             break;
         } else if c == '\n' {
             state.current_line += 1;
@@ -267,7 +301,19 @@ fn handle_string(state: &mut LexerState) {
         }
     }
 
-    state.add_token(Tokentype::StringLiteral, string, start_pos);
+    // If we didn't find a closing quote, report an error
+    if !closed {
+        let error_message = "Expected closing quote for string literal".to_string();
+        let invalid_lexeme = format!("\"{}",string);
+        state.add_error(
+            ErrorCode::ExpectedClosingQuote, 
+            error_message, 
+            start_pos, 
+            Some(invalid_lexeme.len())
+        );
+    } else {
+        state.add_token(Tokentype::StringLiteral, string, start_pos);
+    }
 }
 
 /// Handles simple one-character tokens

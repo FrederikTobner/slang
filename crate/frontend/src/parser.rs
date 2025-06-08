@@ -5,7 +5,7 @@ use crate::token::{Token, Tokentype};
 use slang_ir::SourceLocation;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
-    FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr, LiteralValue, Parameter,
+    FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr, LiteralValue, Parameter,
     Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
 };
 use slang_shared::{CompilationContext, SymbolKind};
@@ -778,6 +778,10 @@ impl<'a> Parser<'a> {
             return self.conditional_expression();
         }
 
+        if self.match_token(&Tokentype::Fn) {
+            return self.parse_function_type_expression();
+        }
+
         if self.match_token(&Tokentype::LeftParen) {
             // Check for unit literal ()
             if self.check(&Tokentype::RightParen) {
@@ -1032,6 +1036,53 @@ impl<'a> Parser<'a> {
     ///
     /// The type ID for the parsed type or an error
     fn parse_type(&mut self) -> Result<TypeId, ParseError> {
+        // Handle function types: fn(param_types) -> return_type
+        if self.check(&Tokentype::Fn) {
+            self.advance(); // consume 'fn'
+
+            // Expect '('
+            if !self.match_token(&Tokentype::LeftParen) {
+                return Err(self.error(
+                    ErrorCode::ExpectedOpeningParen,
+                    "Expected '(' after 'fn'",
+                ));
+            }
+
+            // Parse parameter types
+            let mut param_types = Vec::new();
+            if !self.check(&Tokentype::RightParen) {
+                loop {
+                    param_types.push(self.parse_type()?);
+                    if !self.match_token(&Tokentype::Comma) {
+                        break;
+                    }
+                }
+            }
+
+            // Expect ')'
+            if !self.match_token(&Tokentype::RightParen) {
+                return Err(self.error(
+                    ErrorCode::ExpectedClosingParen,
+                    "Expected ')' after function parameters",
+                ));
+            }
+
+            // Expect '->'
+            if !self.match_token(&Tokentype::Arrow) {
+                return Err(self.error(
+                    ErrorCode::InvalidSyntax,
+                    "Expected '->' after function parameters",
+                ));
+            }
+
+            // Parse return type
+            let return_type = self.parse_type()?;
+
+            // Register the function type and return its type ID
+            let function_type_id = self.context.register_function_type(param_types, return_type);
+            return Ok(function_type_id);
+        }
+
         if self.check(&Tokentype::LeftParen) {
             self.advance(); 
             if !self.match_token(&Tokentype::RightParen) {
@@ -1073,7 +1124,7 @@ impl<'a> Parser<'a> {
             ));
         }
         if let Some(symbol) = self.context.lookup_symbol(&type_name) {
-            if symbol.kind == SymbolKind::Type {
+            if symbol.kind() == SymbolKind::Type {
                 Ok(symbol.type_id.clone())
             } else {
                 Err(self.error_previous(
@@ -1393,6 +1444,72 @@ impl<'a> Parser<'a> {
             condition,
             then_branch,
             else_branch,
+            location,
+        }))
+    }
+
+    /// Parses a function type expression: `fn(type1, type2) -> return_type`
+    ///
+    /// ### Returns
+    ///
+    /// The parsed function type expression or an error message
+    fn parse_function_type_expression(&mut self) -> Result<Expression, ParseError> {
+        // Extract position information upfront to avoid borrowing issues
+        let fn_token_pos = self.previous().pos;
+        let (start_line, start_column) = self.line_info.get_line_col(fn_token_pos);
+
+        // Expect '('
+        if !self.match_token(&Tokentype::LeftParen) {
+            return Err(self.error(
+                ErrorCode::ExpectedOpeningParen,
+                "Expected '(' after 'fn'",
+            ));
+        }
+
+        // Parse parameter types
+        let mut param_types = Vec::new();
+        if !self.check(&Tokentype::RightParen) {
+            loop {
+                param_types.push(self.parse_type()?);
+                if !self.match_token(&Tokentype::Comma) {
+                    break;
+                }
+            }
+        }
+
+        if !self.match_token(&Tokentype::RightParen) {
+            return Err(self.error(
+                ErrorCode::ExpectedClosingParen,
+                "Expected ')' after function parameters",
+            ));
+        }
+
+        if !self.match_token(&Tokentype::Arrow) {
+            return Err(self.error(
+                ErrorCode::InvalidSyntax,
+                "Expected '->' after function parameters",
+            ));
+        }
+
+        let return_type = self.parse_type()?;
+
+        let end_token_pos = self.previous().pos;
+        let end_token_lexeme_len = self.previous().lexeme.len();
+        let end_pos = end_token_pos + end_token_lexeme_len;
+        let location = slang_ir::source_location::SourceLocation::new(
+            fn_token_pos,
+            start_line,
+            start_column,
+            end_pos - fn_token_pos,
+        );
+
+        // Will be determined by the semantic analyzer
+        let expr_type = PrimitiveType::Unknown.into();
+
+        Ok(Expression::FunctionType(FunctionTypeExpr {
+            param_types,
+            return_type,
+            expr_type,
             location,
         }))
     }

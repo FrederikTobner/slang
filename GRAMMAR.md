@@ -61,9 +61,14 @@ primary = literal
         | call_expression
         | if_expression
         | block_expression
+        | function_type_expression
         | "(", expression, ")" ;
 
 call_expression = identifier, "(", [ argument_list ], ")" ;
+
+function_type_expression = "fn", "(", [ function_parameter_type_list ], ")", "->", type ;
+
+function_parameter_type_list = type, { ",", type } ;
 
 if_expression = "if", expression, "{", expression, "}", "else", "{", expression, "}" ;
 
@@ -90,7 +95,9 @@ string_literal = '"', { character - '"' }, '"' ;
 boolean_literal = "true" | "false" ;
 
 /* Types */
-type = "i32" | "i64" | "u32" | "u64" | "f32" | "f64" | "string" | "bool" | identifier ;
+type = "i32" | "i64" | "u32" | "u64" | "f32" | "f64" | "string" | "bool" | identifier | function_type ;
+
+function_type = "fn", "(", [ function_parameter_type_list ], ")", "->", type ;
 
 /* Lexical elements */
 identifier = letter, { letter | digit | "_" } ;
