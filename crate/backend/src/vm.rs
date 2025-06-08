@@ -1,5 +1,5 @@
 use crate::bytecode::{Chunk, NativeFunction, OpCode};
-use crate::value::{Value, ValueOperation};
+use crate::value::{Value, ArithmeticOps, LogicalOps, ComparisonOps};
 use std::collections::HashMap;
 
 /// Represents a single scope with its variables
