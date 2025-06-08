@@ -66,3 +66,15 @@ fn with_function() {
         "Logical operator \'&&\' requires boolean operands, got fn() -> () and fn() -> ()",
     );
 }
+
+#[test]
+fn with_native_function() {
+    let program = r#"
+        print_value && print_value;
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2007]",
+        "Logical operator \'&&\' requires boolean operands, got fn(unknown) -> i32 and fn(unknown) -> i32",
+    );
+}

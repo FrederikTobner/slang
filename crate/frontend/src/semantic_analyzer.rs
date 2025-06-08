@@ -671,7 +671,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
         let function_type_id = self.context.register_function_type(param_types.clone(), fn_decl.return_type.clone());
         
         // Define function symbol in the symbol table
-        if let Err(e) = self.context.define_symbol(
+        if let Err(_) = self.context.define_symbol(
             fn_decl.name.clone(), 
             SymbolKind::Function, 
             function_type_id, 
@@ -679,7 +679,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
         ) {
             return Err(SemanticAnalysisError::SymbolRedefinition {
                 name: fn_decl.name.clone(),
-                kind: format!("function (error: {})", e),
+                kind: "function".to_string(),
                 location: fn_decl.location,
             });
         }
@@ -689,7 +689,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
 
         self.context.begin_scope();
         for param in &fn_decl.parameters {
-            if let Err(e) = self.context.define_symbol(
+            if let Err(_) = self.context.define_symbol(
                 param.name.clone(), 
                 SymbolKind::Variable, 
                 param.param_type.clone(),
@@ -697,7 +697,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
             ) {
                 return Err(SemanticAnalysisError::SymbolRedefinition {
                     name: param.name.clone(),
-                    kind: format!("parameter (error: {})", e),
+                    kind: "parameter".to_string(),
                     location: fn_decl.location,
                 });
             }
@@ -888,9 +888,9 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
             .register_struct_type(type_def.name.clone(), field_types_for_registration)
         {
             Ok(type_id) => Ok(type_id),
-            Err(err_msg) => Err(SemanticAnalysisError::SymbolRedefinition {
+            Err(_) => Err(SemanticAnalysisError::SymbolRedefinition {
                 name: type_def.name.clone(),
-                kind: format!("struct type (error: {})", err_msg),
+                kind: "type".to_string(),
                 location: type_def.location,
             }),
         }

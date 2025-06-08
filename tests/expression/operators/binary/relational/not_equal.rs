@@ -119,3 +119,11 @@ fn with_function() {
     "#;
     execute_program_and_assert(program, "false");
 }
+
+#[test]
+fn with_native_function() {
+    let program = r#"
+        print_value(print_value != print_value);
+    "#;
+    execute_program_and_assert(program, "false");
+}

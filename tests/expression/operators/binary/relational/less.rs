@@ -149,3 +149,15 @@ fn with_function() {
         "Type mismatch: cannot apply '<' operator on fn() -> () and fn() -> ()",
     );
 }
+
+#[test]
+fn with_native_function() {
+    let program = r#"
+        print_value(print_value < print_value);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2006]",
+        "Type mismatch: cannot apply '<' operator on fn(unknown) -> i32 and fn(unknown) -> i32",
+    );
+}

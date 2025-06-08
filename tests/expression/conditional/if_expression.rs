@@ -198,3 +198,30 @@ fn with_unit_branches() {
     "#;
     execute_program_and_assert(program, "()");
 }
+
+#[test]
+fn with_function_branches() {
+    let program = r#"
+        fn my_function() -> i32 {
+            42
+        }
+        fn another_function() -> i32 {
+            0
+        }
+        
+        let x: bool = true;
+        let result: fn() -> i32 = if x { my_function } else { another_function };
+        print_value(result());
+    "#;
+    execute_program_and_assert(program, "42");
+}
+
+#[test]
+fn with_native_function_branches() {
+    let program = r#"
+        let x: bool = true;
+        let result = if x { print_value } else { print_value };
+        print_value(result(100));
+    "#;
+    execute_program_and_assert(program, "100");
+}

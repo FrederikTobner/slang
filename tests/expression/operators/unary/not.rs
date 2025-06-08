@@ -114,3 +114,40 @@ fn with_function() {
         "Boolean not operator '!' can only be applied to boolean types, but got fn() -> ()",
     );
 }
+
+#[test]
+fn with_native_function() {
+    let program: &'static str = r#"
+        print_value(!print_value);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2015]",
+        "Boolean not operator '!' can only be applied to boolean types, but got fn(unknown) -> i32",
+    );
+}
+
+#[test]
+fn with_string() {
+    let program = r#"
+        let a: string = "Hello";
+        print_value(!a);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2015]",
+        "Boolean not operator '!' can only be applied to boolean types, but got string",
+    );
+}
+
+#[test]
+fn with_string_literal() {
+    let program = r#"
+        print_value(!"Hello");
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2015]",
+        "Boolean not operator '!' can only be applied to boolean types, but got string",
+    );
+}

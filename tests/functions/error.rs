@@ -1,7 +1,7 @@
 use crate::test_utils::execute_program_expect_error;
 
 #[test]
-fn test_type_mismatch_in_function_argument() {
+fn type_mismatch_in_function_argument() {
     let program = r#"
         fn expect_int(x: i32) {}
         
@@ -15,7 +15,7 @@ fn test_type_mismatch_in_function_argument() {
 }
 
 #[test]
-fn test_function_wrong_parameter_count() {
+fn wrong_parameter_count() {
     let program = r#"
         fn add(a: i32, b: i32) -> i32 {
             return a + b;
@@ -31,7 +31,7 @@ fn test_function_wrong_parameter_count() {
 }
 
 #[test]
-fn test_function_wrong_parameter_types() {
+fn wrong_parameter_types() {
     let program = r#"
         fn add(a: i32, b: i32) -> i32 {
             return a + b;
@@ -47,7 +47,7 @@ fn test_function_wrong_parameter_types() {
 }
 
 #[test]
-fn test_return_type_mismatch() {
+fn return_type_mismatch() {
     let program = r#"
         fn get_number() -> i32 {
             return "not a number";
@@ -63,7 +63,7 @@ fn test_return_type_mismatch() {
 }
 
 #[test]
-fn test_undefined_function() {
+fn undefined_function() {
     let program = r#"
         let result = undefined_function(5, 10);
         print_value(result);
@@ -73,7 +73,7 @@ fn test_undefined_function() {
 }
 
 #[test]
-fn test_integer_return_type() {
+fn integer_return_type() {
     let program = r#"
         fn get_number() -> int {
             return 42;
@@ -87,5 +87,26 @@ fn test_integer_return_type() {
         program,
         "[E1030]",
         "\'int\' is not a valid type specifier. Use \'i32\', \'i64\', \'u32\', or \'u64\' instead",
+    );
+}
+
+#[test]
+fn duplicate_function_definition() {
+    let program = r#"
+        fn add(a: i32, b: i32) -> i32 {
+            return a + b;
+        }
+        
+        fn add(a: i32, b: i32) -> i32 {
+            return a - b;
+        }
+        
+        print_value(add(5, 10));
+    "#;
+
+    execute_program_expect_error(
+        program,
+        "[E2003]",
+        "Function \'add\' is already defined in the current scope.",
     );
 }

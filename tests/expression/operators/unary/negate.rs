@@ -44,6 +44,18 @@ fn with_string() {
 }
 
 #[test]
+fn with_string_literal() {
+    let program = r#"
+        print_value(-"Hello");
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2015]",
+        "Cannot negate non-numeric type 'string'",
+    );
+}
+
+#[test]
 fn with_unsigned_integer() {
     let program = r#"
         let a: u32 = 42;
@@ -79,4 +91,41 @@ fn with_function() {
         print_value(-my_function);
     "#;
     execute_program_expect_error(program, "[E2015]", "Cannot negate non-numeric type 'fn() -> i32'");
+}
+
+#[test]
+fn with_native_function() {
+    let program = r#"
+        print_value(-print_value);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2015]",
+        "Cannot negate non-numeric type 'fn(unknown) -> i32'",
+    );
+}
+
+#[test]
+fn with_boolean() {
+    let program = r#"
+        let a: bool = true;
+        print_value(-a);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2015]",
+        "Cannot negate non-numeric type 'bool'",
+    );
+}
+
+#[test]
+fn with_boolean_literal() {
+    let program = r#"
+        print_value(-true);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2015]",
+        "Cannot negate non-numeric type 'bool'",
+    );
 }
