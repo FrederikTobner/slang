@@ -5,6 +5,8 @@ pub mod parser;
 pub mod semantic_analyzer;
 pub mod semantic_error;
 pub mod token;
+#[cfg(feature = "print-tokens")]
+pub mod token_printer;
 
 pub use error_codes::ErrorCode;
 pub use lexer::tokenize;

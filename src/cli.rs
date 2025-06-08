@@ -152,6 +152,11 @@ pub fn run_file(input: &str) {
 /// The compiled bytecode chunk or compilation errors
 fn compile_source_to_bytecode(source: &str, compilation_context: &mut CompilationContext) -> CompileResult<Chunk> {
     let lexer_result = lexer::tokenize(source)?;
+    #[cfg(feature = "print-tokens")]
+    {
+        let printer = slang_frontend::token_printer::TokenPrinter::new();
+        printer.print(&lexer_result.tokens);
+    }
     let statements = parser::parse(&lexer_result.tokens, &lexer_result.line_info, compilation_context)?;
     #[cfg(feature = "print-ast")]
     {

@@ -11,6 +11,7 @@ slang_shared = { path = "../shared" }
 
 [features]
 default = []
+print-tokens = []
 
 [lib]
 name = "slang_frontend"

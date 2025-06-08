@@ -18,6 +18,7 @@ members = [
 default = []
 print-byte_code = ["slang_backend/print-byte_code"]
 print-ast = ["slang_ir/print-ast"]
+print-tokens = ["slang_frontend/print-tokens"]
 trace-execution = ["slang_backend/trace-execution"]
 
 [dependencies]
