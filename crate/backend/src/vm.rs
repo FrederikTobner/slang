@@ -2,6 +2,11 @@ use crate::bytecode::{Chunk, NativeFunction, OpCode};
 use crate::value::{Value, ValueOperation};
 use std::collections::HashMap;
 
+/// Represents a single scope with its variables
+struct Scope {
+    variables: HashMap<String, Value>,
+}
+
 /// Call frame to track function calls
 struct CallFrame {
     /// Parameter names for the function (for local variable checking)
@@ -20,14 +25,12 @@ pub struct VM {
     ip: usize,
     /// Stack for values
     stack: Vec<Value>,
-    /// Global variables
-    variables: HashMap<String, Value>,
+    /// Stack of scopes, with global scope at index 0
+    scopes: Vec<Scope>,
     /// Call frames for function calls
     frames: Vec<CallFrame>,
     /// Index of the current call frame
     current_frame: Option<usize>,
-    /// Stack of variable states for scope management
-    scope_stack: Vec<HashMap<String, Option<Value>>>,
 }
 
 impl Default for VM {
@@ -42,10 +45,9 @@ impl VM {
         let mut vm = VM {
             ip: 0,
             stack: Vec::new(),
-            variables: HashMap::new(),
+            scopes: vec![Scope { variables: HashMap::new() }], // Global scope
             frames: Vec::new(),
             current_frame: None,
-            scope_stack: Vec::new(),
         };
         vm.register_native_functions();
         vm
@@ -75,7 +77,7 @@ impl VM {
             function,
         }));
 
-        self.variables.insert(name.to_string(), native_fn);
+        self.set_variable(name.to_string(), native_fn);
     }
 
     /// Built-in function to print a value
@@ -177,7 +179,6 @@ impl VM {
                     let return_address = frame.return_address;
                     let stack_offset = frame.stack_offset;
 
-                    // Clear the stack back to where the function call started
                     while self.stack.len() > stack_offset {
                         self.pop()?;
                     }
@@ -210,12 +211,12 @@ impl VM {
                 let value = if let Some(frame_idx) = self.current_frame {
                     if let Some(value) = self.frames[frame_idx].locals.get(var_name) {
                         value.clone()
-                    } else if let Some(value) = self.variables.get(var_name) {
+                    } else if let Some(value) = self.get_variable(var_name) {
                         value.clone()
                     } else {
                         return Err(format!("Undefined variable '{}'", var_name));
                     }
-                } else if let Some(value) = self.variables.get(var_name) {
+                } else if let Some(value) = self.get_variable(var_name) {
                     value.clone()
                 } else {
                     return Err(format!("Undefined variable '{}'", var_name));
@@ -238,10 +239,10 @@ impl VM {
                     if self.frames[frame_idx].param_names.contains(&var_name) {
                         self.frames[frame_idx].locals.insert(var_name, value);
                     } else {
-                        self.variables.insert(var_name, value);
+                        self.set_variable(var_name, value);
                     }
                 } else {
-                    self.variables.insert(var_name, value);
+                    self.set_variable(var_name, value);
                 }
             }
             OpCode::Pop => {
@@ -258,7 +259,7 @@ impl VM {
                 let var_name = chunk.identifiers[var_index].clone();
                 let value = &chunk.constants[constant_index];
 
-                self.variables.insert(var_name, value.clone());
+                self.set_variable(var_name, value.clone());
             }
             OpCode::Call => {
                 let arg_count = self.read_byte(chunk) as usize;
@@ -272,7 +273,6 @@ impl VM {
 
                 match function_value {
                     Value::Function(func) => {
-                        // Check argument count
                         if arg_count != func.arity as usize {
                             return Err(format!(
                                 "Expected {} arguments but got {}",
@@ -378,30 +378,15 @@ impl VM {
                 self.binary_op(|a, b| a.not_equal(b))?;
             }
             OpCode::BeginScope => {
-                // Save current state of variables that might be shadowed
-                let mut saved_state = HashMap::new();
-                // For now, we save all variables - this could be optimized
-                for (name, value) in &self.variables {
-                    saved_state.insert(name.clone(), Some(value.clone()));
-                }
-                self.scope_stack.push(saved_state);
+                self.scopes.push(Scope {
+                    variables: HashMap::new(),
+                });
             }
             OpCode::EndScope => {
-                // Restore the previous variable state
-                if let Some(saved_state) = self.scope_stack.pop() {
-                    for (name, maybe_value) in saved_state {
-                        match maybe_value {
-                            Some(value) => {
-                                self.variables.insert(name, value);
-                            }
-                            None => {
-                                self.variables.remove(&name);
-                            }
-                        }
-                    }
-                } else {
-                    return Err("Scope stack underflow".to_string());
+                if self.scopes.len() <= 1 {
+                    return Err("Cannot end global scope".to_string());
                 }
+                self.scopes.pop();
             }
         }
 
@@ -472,5 +457,22 @@ impl VM {
         let result = op(&a, &b)?;
         self.stack.push(result);
         Ok(())
+    }
+
+    /// Helper method to find a variable in any scope (from innermost to outermost)
+    fn get_variable(&self, name: &str) -> Option<&Value> {
+        for scope in self.scopes.iter().rev() {
+            if let Some(value) = scope.variables.get(name) {
+                return Some(value);
+            }
+        }
+        None
+    }
+
+    /// Helper method to set a variable (creates in current scope or updates existing)
+    fn set_variable(&mut self, name: String, value: Value) {
+        if let Some(current_scope) = self.scopes.last_mut() {
+            current_scope.variables.insert(name, value);
+        }
     }
 }
