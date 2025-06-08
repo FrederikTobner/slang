@@ -69,6 +69,10 @@ impl<'a> SemanticAnalyzer<'a> {
     /// name - The name of the variable
     /// type_id - The type ID of the variable
     /// is_mutable - Whether the variable is mutable
+    /// 
+    /// ### Returns
+    /// Ok(()) if the variable was defined successfully,
+    /// or Err with an error message if the variable already exists
     fn define_variable(&mut self, name: String, type_id: TypeId, is_mutable: bool) -> Result<(), String> {
         self.context.define_symbol(name, SymbolKind::Variable, type_id, is_mutable)
     }
@@ -949,8 +953,6 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
             final_type.clone(),
             let_stmt.is_mutable,
         ) {
-            // The symbol table's define method only fails for same-scope redefinition
-            // This should be a VariableRedefinition error (E2002)
             return Err(SemanticAnalysisError::VariableRedefinition {
                 name: let_stmt.name.clone(),
                 location: let_stmt.location,
@@ -1216,7 +1218,6 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
             });
         }
 
-        // Function type expressions evaluate to their own type
         Ok(func_type_expr.expr_type.clone())
     }
 

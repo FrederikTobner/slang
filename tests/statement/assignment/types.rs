@@ -1,4 +1,4 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use rstest::rstest;
 
 #[test]
@@ -66,4 +66,41 @@ fn boolean_assignment() {
         print_value(x);
     "#;
     execute_program_and_assert(program, "false");
+}
+
+#[test]
+fn function_to_variable() {
+    let program = r#"
+        fn add(a: i32, b: i32) -> i32 {
+            return a + b;
+        }
+
+        fn subtract(a: i32, b: i32) -> i32 {
+            return a - b;
+        }
+        
+        let mut my_function = add;
+        print_value(my_function(10, 20));
+        my_function = subtract;
+        print_value(my_function(30, 10));
+    "#;
+    execute_program_and_assert(program, "30\n20");
+}
+
+#[test]
+fn native_function_to_variable() {
+    let program = r#"
+        let mut my_print = print_value;
+        my_print("Hello from native function");
+    "#;
+    execute_program_and_assert(program, "Hello from native function");
+}
+
+#[test]
+fn with_another_type() {
+    let program = r#"
+        let mut x: i32 = 10;
+        x = "Hello"; // This should cause a type mismatch error
+    "#;
+    execute_program_expect_error(program, "[E2005]", "Type mismatch: variable assignment to variable \'x\' is i32 but expression is string");
 }

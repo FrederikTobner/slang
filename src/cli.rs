@@ -164,13 +164,13 @@ fn compile_source_to_bytecode(source: &str, compilation_context: &mut Compilatio
         printer.print(&statements);
     }
     semantic_analyzer::execute(&statements, compilation_context)?;
-    codegen::generate_bytecode(&statements).map_err(|err_msg| {
+    codegen::generate_bytecode(&statements).map_err(|codegen_err| {
         vec![slang_frontend::error::CompilerError::new(
             slang_frontend::error_codes::ErrorCode::GenericCompileError,
-            err_msg,
-            0,
-            0,
-            0,
+            codegen_err.message,
+            codegen_err.location.position,
+            codegen_err.location.line,
+            codegen_err.location.column,
             None,
         )]
     })
