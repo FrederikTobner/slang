@@ -170,7 +170,7 @@ impl VM {
             OpCode::Return => {
                 if let Some(frame_index) = self.current_frame {
                     let return_value = if self.stack.is_empty() {
-                        Value::Unit 
+                        Value::Unit(()) 
                     } else {
                         self.pop()?
                     };

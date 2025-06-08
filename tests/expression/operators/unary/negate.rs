@@ -69,3 +69,14 @@ fn with_unit() {
     "#;
     execute_program_expect_error(program, "[E2015]", "Cannot negate non-numeric type '()'");
 }
+
+#[test]
+fn with_function() {
+    let program = r#"
+        fn my_function() -> i32 {
+            42
+        }
+        print_value(-my_function);
+    "#;
+    execute_program_expect_error(program, "[E2015]", "Cannot negate non-numeric type 'fn() -> i32'");
+}

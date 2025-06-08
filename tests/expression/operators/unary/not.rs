@@ -101,3 +101,16 @@ fn with_unit() {
         "Boolean not operator '!' can only be applied to boolean types, but got ()",
     );
 }
+
+#[test]
+fn with_function() {
+    let program = r#"
+        fn my_function() {}
+        print_value(!my_function);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2015]",
+        "Boolean not operator '!' can only be applied to boolean types, but got fn() -> ()",
+    );
+}

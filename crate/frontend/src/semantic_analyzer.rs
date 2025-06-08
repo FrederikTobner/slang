@@ -265,6 +265,7 @@ impl<'a> SemanticAnalyzer<'a> {
             || *type_id == TypeId(PrimitiveType::Unit as usize)
             || (operator != &BinaryOperator::Add
                 && *type_id == TypeId(PrimitiveType::String as usize))
+            || self.context.is_function_type(type_id)
         {
             Err(SemanticAnalysisError::OperationTypeMismatch {
                 operator: operator.to_string(),

@@ -201,7 +201,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         if let Some(return_expr) = &fn_decl.body.return_expr {
             return_expr.accept(self)?;
         } else {
-            self.emit_constant(Value::Unit);
+            self.emit_constant(Value::Unit(()));
         }
 
         self.emit_op(OpCode::Return);
@@ -228,7 +228,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         if let Some(expr) = &return_stmt.value {
             self.visit_expression(expr)?;
         } else {
-            self.emit_constant(Value::Unit);
+            self.emit_constant(Value::Unit(()));
         }
         self.emit_op(OpCode::Return);
         Ok(())
@@ -341,7 +341,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
                 self.emit_constant(Value::Boolean(*b));
             }
             slang_ir::ast::LiteralValue::Unit => {
-                self.emit_constant(Value::Unit);
+                self.emit_constant(Value::Unit(()));
             }
         }
 
@@ -483,7 +483,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         if let Some(return_expr) = &block_expr.return_expr {
             self.visit_expression(return_expr)?;
         } else {
-            self.emit_constant(Value::Unit);
+            self.emit_constant(Value::Unit(()));
         }
 
         self.end_scope();
@@ -495,7 +495,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         // Function type expressions are compile-time constructs that don't generate runtime bytecode
         // They are used for type checking and don't produce any values at runtime
         // In a more advanced implementation, this might generate type metadata
-        self.emit_constant(Value::Unit);
+        self.emit_constant(Value::Unit(()));
         Ok(())
     }
 }

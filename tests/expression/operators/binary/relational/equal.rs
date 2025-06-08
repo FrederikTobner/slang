@@ -109,3 +109,13 @@ fn with_unit() {
     );
 }
 
+#[test]
+fn with_function() {
+    let program = r#"
+        fn my_function() {}
+        let fun_1 = my_function;
+        let fun_2 = my_function;
+        print_value(fun_1 == fun_2);
+    "#;
+    execute_program_and_assert(program, "true");
+}

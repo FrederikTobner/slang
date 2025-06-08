@@ -161,3 +161,16 @@ fn with_unit() {
         "Type mismatch: cannot apply '/' operator on () and ()",
     );
 }
+
+#[test]
+fn with_function() {
+    let program = r#"
+        fn my_function() {}
+        print_value(my_function / my_function);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2006]",
+        "Type mismatch: cannot apply '/' operator on fn() -> () and fn() -> ()",
+    );
+}

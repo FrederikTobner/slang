@@ -86,6 +86,14 @@ impl ComparisonOps for Value {
             (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a == b)),
             (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Boolean(a == b)),
             (Value::String(a), Value::String(b)) => Ok(Value::Boolean(a == b)),
+            (Value::Function(a), Value::Function(b)) => {
+                // Functions are equal if they have the same name and code offset
+                Ok(Value::Boolean(a.name == b.name && a.code_offset == b.code_offset))
+            },
+            (Value::NativeFunction(a), Value::NativeFunction(b)) => {
+                // Native functions are equal if they have the same name
+                Ok(Value::Boolean(a.name == b.name))
+            },
             _ => Err("Cannot compare these types with ==".to_string()),
         }
     }
@@ -100,6 +108,14 @@ impl ComparisonOps for Value {
             (Value::F64(a), Value::F64(b)) => Ok(Value::Boolean(a != b)),
             (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Boolean(a != b)),
             (Value::String(a), Value::String(b)) => Ok(Value::Boolean(a != b)),
+            (Value::Function(a), Value::Function(b)) => {
+                // Functions are not equal if they have different names or code offsets
+                Ok(Value::Boolean(a.name != b.name || a.code_offset != b.code_offset))
+            },
+            (Value::NativeFunction(a), Value::NativeFunction(b)) => {
+                // Native functions are not equal if they have different names
+                Ok(Value::Boolean(a.name != b.name))
+            },
             _ => Err("Cannot compare these types with !=".to_string()),
         }
     }

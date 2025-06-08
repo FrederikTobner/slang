@@ -53,3 +53,16 @@ fn short_circuit() {
     "#;
     execute_program_and_assert(program, "false");
 }
+
+#[test]
+fn with_function() {
+    let program = r#"
+        fn my_function() {}
+        print_value(my_function && my_function);
+    "#;
+    execute_program_expect_error(
+        program,
+        "[E2007]",
+        "Logical operator \'&&\' requires boolean operands, got fn() -> () and fn() -> ()",
+    );
+}

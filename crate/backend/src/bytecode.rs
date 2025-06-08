@@ -249,7 +249,7 @@ impl Chunk {
                 Value::Boolean(b) => {
                     writer.write_all(&[*b as u8])?;
                 }
-                Value::Unit => {}
+                Value::Unit(_) => {}
             }
         }
 
