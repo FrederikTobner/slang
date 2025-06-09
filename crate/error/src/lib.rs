@@ -6,6 +6,8 @@
 
 pub mod error_codes;
 pub mod compiler_error;
+pub mod error_types;
 
 pub use error_codes::ErrorCode;
 pub use compiler_error::{CompilerError, CompileResult, ErrorCollector, LineInfo, report_errors};
+pub use error_types::{SlangError, SlangResult, ErrorSeverity, ErrorContext, ParseError, SemanticError, CodegenError, TypeError};

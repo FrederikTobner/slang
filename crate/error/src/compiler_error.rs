@@ -111,7 +111,13 @@ impl CompilerError {
 
 impl std::fmt::Display for CompilerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.message)
+        write!(f, "{}: {}", self.error_code, self.message)
+    }
+}
+
+impl std::error::Error for CompilerError {
+    fn description(&self) -> &str {
+        &self.message
     }
 }
 

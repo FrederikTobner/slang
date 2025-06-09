@@ -1,5 +1,5 @@
 use slang_error::{CompilerError, ErrorCode};
-use slang_ir::SourceLocation;
+use slang_ir::Location;
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
 
@@ -14,16 +14,16 @@ pub enum SemanticAnalysisError {
     UndefinedVariable {
         /// The name of the undefined variable
         name: String,
-        /// The source location where the error occurred
-        location: SourceLocation,
+        /// The location where the error occurred
+        location: Location,
     },
 
     /// A variable with the same name is already defined in the current scope
     VariableRedefinition {
         /// The name of the variable being redefined
         name: String,
-        /// The source location where the redefinition occurred
-        location: SourceLocation,
+        /// The location where the redefinition occurred
+        location: Location,
     },
 
     /// A symbol (type, variable, function) is being redefined.
@@ -32,8 +32,8 @@ pub enum SemanticAnalysisError {
         name: String,
         /// The kind of the symbol (e.g., type, variable, function)
         kind: String,
-        /// The source location where the redefinition occurred
-        location: SourceLocation,
+        /// The location where the redefinition occurred
+        location: Location,
     },
 
     /// A struct field is defined with an invalid type (e.g. unknown, unspecified)
@@ -44,8 +44,8 @@ pub enum SemanticAnalysisError {
         field_name: String,
         /// The type ID of the invalid field type
         type_id: TypeId,
-        /// The source location where the invalid field type was defined
-        location: SourceLocation,
+        /// The location where the invalid field type was defined
+        location: Location,
     },
 
     /// The type of an expression does not match the expected type
@@ -56,8 +56,8 @@ pub enum SemanticAnalysisError {
         actual: TypeId,
         /// Optional context for the mismatch (like variable or function name)
         context: Option<String>,
-        /// The source location where the type mismatch occurred
-        location: SourceLocation,
+        /// The location where the type mismatch occurred
+        location: Location,
     },
 
     /// Incompatible types for an operation like arithmetic or comparison
@@ -68,8 +68,8 @@ pub enum SemanticAnalysisError {
         left_type: TypeId,
         /// Right operand type
         right_type: TypeId,
-        /// The source location where the operation type mismatch occurred
-        location: SourceLocation,
+        /// The location where the operation type mismatch occurred
+        location: Location,
     },
 
     /// Logical operators (AND, OR) used with non-boolean operands
@@ -80,8 +80,8 @@ pub enum SemanticAnalysisError {
         left_type: TypeId,
         /// Right operand type
         right_type: TypeId,
-        /// The source location where the logical operator type mismatch occurred
-        location: SourceLocation,
+        /// The location where the logical operator type mismatch occurred
+        location: Location,
     },
 
     /// Value is out of range for the target type (e.g., integer overflow)
@@ -92,8 +92,8 @@ pub enum SemanticAnalysisError {
         target_type: TypeId,
         /// Whether the value is an integer or float
         is_float: bool,
-        /// The source location where the value out of range occurred
-        location: SourceLocation,
+        /// The location where the value out of range occurred
+        location: Location,
     },
 
     /// Function call with wrong number of arguments
@@ -104,8 +104,8 @@ pub enum SemanticAnalysisError {
         expected: usize,
         /// Actual number of arguments provided
         actual: usize,
-        /// The source location where the argument count mismatch occurred
-        location: SourceLocation,
+        /// The location where the argument count mismatch occurred
+        location: Location,
     },
 
     /// Function call with wrong argument types
@@ -118,14 +118,14 @@ pub enum SemanticAnalysisError {
         expected: TypeId,
         /// Actual type
         actual: TypeId,
-        /// The source location where the argument type mismatch occurred
-        location: SourceLocation,
+        /// The location where the argument type mismatch occurred
+        location: Location,
     },
 
     /// Return statement outside of a function
     ReturnOutsideFunction {
         /// The source location where the return statement was found
-        location: SourceLocation,
+        location: Location,
     },
 
     /// Return type does not match function declaration
@@ -134,24 +134,24 @@ pub enum SemanticAnalysisError {
         expected: TypeId,
         /// Actual returned type
         actual: TypeId,
-        /// The source location where the return type mismatch occurred
-        location: SourceLocation,
+        /// The location where the return type mismatch occurred
+        location: Location,
     },
 
     /// Missing return value for a function that requires one
     MissingReturnValue {
         /// Expected return type
         expected: TypeId,
-        /// The source location where the missing return value was found
-        location: SourceLocation,
+        /// The location where the missing return value was found
+        location: Location,
     },
 
     /// Undefined function in a function call
     UndefinedFunction {
         /// The name of the undefined function
         name: String,
-        /// The source location where the undefined function was called
-        location: SourceLocation,
+        /// The location where the undefined function was called
+        location: Location,
     },
 
     /// Unary operation applied to incompatible type
@@ -160,24 +160,24 @@ pub enum SemanticAnalysisError {
         operator: String,
         /// The operand type
         operand_type: TypeId,
-        /// The source location where the invalid unary operation occurred
-        location: SourceLocation,
+        /// The location where the invalid unary operation occurred
+        location: Location,
     },
 
     /// Assignment to an immutable variable
     AssignmentToImmutableVariable {
         /// The name of the immutable variable
         name: String,
-        /// The source location where the assignment attempt occurred
-        location: SourceLocation,
+        /// The location where the assignment attempt occurred
+        location: Location,
     },
 
     /// An expression has an unexpected form or context
     InvalidExpression {
         /// A description of what was expected vs what was found
         message: String,
-        /// The source location where the invalid expression was found
-        location: SourceLocation,
+        /// The location where the invalid expression was found
+        location: Location,
     },
 }
 
@@ -355,7 +355,6 @@ impl SemanticAnalysisError {
                         context.get_type_name(operand_type)
                     )
                 } else if operator == "-" {
-                    // Special handling for unsigned types to match existing error messages
                     if context.get_type_name(operand_type) == "u32"
                         || context.get_type_name(operand_type) == "u64"
                     {
@@ -384,7 +383,7 @@ impl SemanticAnalysisError {
     }
 
     /// Extracts the SourceLocation from any SemanticAnalysisError variant.
-    fn get_location(&self) -> &SourceLocation {
+    fn get_location(&self) -> &Location {
         match self {
             SemanticAnalysisError::UndefinedVariable { location, .. } => location,
             SemanticAnalysisError::VariableRedefinition { location, .. } => location,
@@ -410,41 +409,7 @@ impl SemanticAnalysisError {
     /// Falls back to heuristics only for cases where location information may not be available.
     fn get_token_length(&self) -> Option<usize> {
         let location = self.get_location();
-
-        // Use the length from SourceLocation if it's meaningful
-        if location.length > 0 {
-            return Some(location.length);
-        }
-
-        // Fall back to heuristics only for specific cases where location might not be available
-        match self {
-            SemanticAnalysisError::UndefinedVariable { name, .. } => Some(name.len()),
-            SemanticAnalysisError::VariableRedefinition { name, .. } => Some(name.len()),
-            SemanticAnalysisError::SymbolRedefinition { name, .. } => Some(name.len()),
-            SemanticAnalysisError::InvalidFieldType { field_name, .. } => Some(field_name.len()),
-            SemanticAnalysisError::TypeMismatch { context, .. } => {
-                context.as_ref().map(|s| s.len())
-            }
-            SemanticAnalysisError::OperationTypeMismatch { operator, .. } => Some(operator.len()),
-            SemanticAnalysisError::LogicalOperatorTypeMismatch { operator, .. } => {
-                Some(operator.len())
-            }
-            SemanticAnalysisError::ValueOutOfRange { value, .. } => Some(value.len()),
-            SemanticAnalysisError::ArgumentCountMismatch { function_name, .. } => {
-                Some(function_name.len())
-            }
-            SemanticAnalysisError::ArgumentTypeMismatch { function_name, .. } => {
-                Some(function_name.len())
-            }
-            SemanticAnalysisError::UndefinedFunction { name, .. } => Some(name.len()),
-            SemanticAnalysisError::InvalidUnaryOperation { operator, .. } => Some(operator.len()),
-            SemanticAnalysisError::AssignmentToImmutableVariable { name, .. } => Some(name.len()),
-            // Return-related errors now have proper location information
-            SemanticAnalysisError::ReturnOutsideFunction { .. } => None,
-            SemanticAnalysisError::ReturnTypeMismatch { .. } => None,
-            SemanticAnalysisError::MissingReturnValue { .. } => None,
-            SemanticAnalysisError::InvalidExpression { .. } => None,
-        }
+        return Some(location.length);
     }
 
     /// Convert a SemanticAnalysisError to a CompilerError that can be used by the rest of the compiler.

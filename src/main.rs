@@ -1,6 +1,7 @@
 mod cli;
 mod error;
 mod exit;
+mod compilation_pipeline;
 
 use clap::Parser;
 

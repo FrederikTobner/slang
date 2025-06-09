@@ -34,6 +34,22 @@ pub struct VM {
     current_frame: Option<usize>,
 }
 
+
+/// Execute a bytecode chunk in the VM
+///
+/// ### Arguments
+///
+/// * `chunk` - The bytecode chunk to run
+///
+/// ### Returns
+///
+/// Ok(()) if successful, or an error message
+pub fn execute_bytecode(chunk: &Chunk) -> Result<(), String> {
+    let mut vm = VM::new();
+    vm.interpret(chunk)
+}
+
+
 impl Default for VM {
     fn default() -> Self {
         Self::new()

@@ -1,7 +1,7 @@
 use slang_error::{CompileResult, CompilerError};
 use crate::semantic_error::SemanticAnalysisError;
 
-use slang_ir::SourceLocation;
+use slang_ir::Location;
 use slang_ir::Visitor;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
@@ -168,7 +168,7 @@ impl<'a> SemanticAnalyzer<'a> {
         left_type: &TypeId,
         right_type: &TypeId,
         operator: &BinaryOperator,
-        location: &SourceLocation,
+        location: &Location,
     ) -> SemanticResult {
         if *left_type == TypeId(PrimitiveType::Bool as usize)
             && *right_type == TypeId(PrimitiveType::Bool as usize)
@@ -204,7 +204,7 @@ impl<'a> SemanticAnalyzer<'a> {
         left_type: &TypeId,
         right_type: &TypeId,
         operator: &BinaryOperator,
-        location: &SourceLocation,
+        location: &Location,
     ) -> SemanticResult {
         let is_relational = matches!(
             operator,
@@ -263,7 +263,7 @@ impl<'a> SemanticAnalyzer<'a> {
         &mut self,
         type_id: &TypeId,
         operator: &BinaryOperator,
-        location: &SourceLocation,
+        location: &Location,
     ) -> SemanticResult {
         if *type_id == TypeId(PrimitiveType::Bool as usize)
             || *type_id == TypeId(PrimitiveType::Unit as usize)
@@ -575,7 +575,7 @@ impl<'a> SemanticAnalyzer<'a> {
         &mut self,
         expr: &Expression,
         expected_type: &TypeId,
-        location: &SourceLocation,
+        location: &Location,
     ) -> SemanticResult {
         let actual_type = self.visit_expression(expr)?;
 

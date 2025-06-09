@@ -1,6 +1,6 @@
 /// Represents a location in the source code (position, line, column, length)
 #[derive(Debug, Clone, Copy)]
-pub struct SourceLocation {
+pub struct Location {
     /// The position in the source code (byte offset)
     pub position: usize,
     /// The line number (1-based)
@@ -11,7 +11,7 @@ pub struct SourceLocation {
     pub length: usize,
 }
 
-impl SourceLocation {
+impl Location {
     /// Creates a new SourceLocation
     ///
     /// ### Arguments
@@ -73,11 +73,11 @@ impl SourceLocation {
     ///
     /// ### Returns
     /// A new SourceLocation representing the span from this location to the other
-    pub fn span_to(&self, other: &SourceLocation) -> SourceLocation {
+    pub fn span_to(&self, other: &Location) -> Location {
         let start_pos = self.position.min(other.position);
         let end_pos = self.end_position().max(other.end_position());
 
-        SourceLocation {
+        Location {
             position: start_pos,
             line: self.line.min(other.line),
             column: if self.line == other.line {
@@ -90,7 +90,7 @@ impl SourceLocation {
     }
 }
 
-impl Default for SourceLocation {
+impl Default for Location {
     /// Creates a default SourceLocation at the start of the source code
     fn default() -> Self {
         Self {

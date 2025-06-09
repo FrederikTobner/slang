@@ -1,6 +1,6 @@
 use slang_error::{LineInfo, CompileResult, CompilerError, ErrorCode};
 use crate::token::{Token, Tokentype};
-use slang_ir::SourceLocation;
+use slang_ir::Location;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
     FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr, LiteralValue, Parameter,
@@ -220,7 +220,7 @@ impl<'a> Parser<'a> {
         let return_token = self.previous();
         let token_pos = return_token.pos;
         let (line, column) = self.line_info.get_line_col(token_pos);
-        let location = slang_ir::source_location::SourceLocation::new(
+        let location = slang_ir::location::Location::new(
             token_pos,
             line,
             column,
@@ -264,7 +264,7 @@ impl<'a> Parser<'a> {
 
         let (line, column) = self.line_info.get_line_col(token_pos);
         let location =
-            slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
+            slang_ir::location::Location::new(token_pos, line, column, name.len());
 
         if !self.match_token(&Tokentype::LeftParen) {
             return Err(self.error(
@@ -339,7 +339,7 @@ impl<'a> Parser<'a> {
         let name = token.lexeme.clone();
 
         let (line, column) = self.line_info.get_line_col(token_pos);
-        let location = SourceLocation::new(token_pos, line, column, name.len());
+        let location = Location::new(token_pos, line, column, name.len());
 
         if !self.match_token(&Tokentype::Colon) {
             return Err(self.error(
@@ -444,7 +444,7 @@ impl<'a> Parser<'a> {
         let token = self.advance();
         let name = token.lexeme.clone();
         let location =
-            slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
+            slang_ir::location::Location::new(token_pos, line, column, name.len());
         let mut var_type = PrimitiveType::Unknown .into();
 
         if self.match_token(&Tokentype::Colon) {
@@ -787,7 +787,7 @@ impl<'a> Parser<'a> {
                 self.advance(); // consume the right paren
                 let end_pos = self.previous().pos + self.previous().lexeme.len();
                 let (line, column) = self.line_info.get_line_col(start_pos);
-                let location = slang_ir::source_location::SourceLocation::new(
+                let location = slang_ir::location::Location::new(
                     start_pos,
                     line,
                     column,
@@ -1142,9 +1142,9 @@ impl<'a> Parser<'a> {
     fn source_location_from_token(
         &self,
         token: &Token,
-    ) -> slang_ir::source_location::SourceLocation {
+    ) -> slang_ir::location::Location {
         let (line, column) = self.line_info.get_line_col(token.pos);
-        slang_ir::source_location::SourceLocation::new(token.pos, line, column, token.lexeme.len())
+        slang_ir::location::Location::new(token.pos, line, column, token.lexeme.len())
     }
 
     /// Consumes the current token if it matches the expected type
@@ -1278,7 +1278,7 @@ impl<'a> Parser<'a> {
         let token = self.advance();
         let name = token.lexeme.clone();
         let location =
-            slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
+            slang_ir::location::Location::new(token_pos, line, column, name.len());
 
         if !self.match_token(&Tokentype::Equal) {
             return Err(self.error(ErrorCode::ExpectedEquals, "Expected '=' for assignment"));
@@ -1334,7 +1334,7 @@ impl<'a> Parser<'a> {
         let else_branch = self.parse_block_expression()?;
 
         let end_pos = self.previous().pos + self.previous().lexeme.len();
-        let location = slang_ir::source_location::SourceLocation::new(
+        let location = slang_ir::location::Location::new(
             if_token_pos,
             line,
             column,
@@ -1386,7 +1386,7 @@ impl<'a> Parser<'a> {
         }
 
         let end_pos = self.previous().pos + self.previous().lexeme.len();
-        let location = slang_ir::source_location::SourceLocation::new(
+        let location = slang_ir::location::Location::new(
             self.tokens[start_pos].pos,
             line,
             column,
@@ -1431,7 +1431,7 @@ impl<'a> Parser<'a> {
         };
 
         let end_pos = self.previous().pos + self.previous().lexeme.len();
-        let location = slang_ir::source_location::SourceLocation::new(
+        let location = slang_ir::location::Location::new(
             if_token_pos,
             line,
             column,
@@ -1494,7 +1494,7 @@ impl<'a> Parser<'a> {
         let end_token_pos = self.previous().pos;
         let end_token_lexeme_len = self.previous().lexeme.len();
         let end_pos = end_token_pos + end_token_lexeme_len;
-        let location = slang_ir::source_location::SourceLocation::new(
+        let location = slang_ir::location::Location::new(
             fn_token_pos,
             start_line,
             start_column,

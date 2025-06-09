@@ -1,13 +1,10 @@
 use crate::error::{CliError, CliResult};
 use crate::exit;
+use crate::compilation_pipeline::{CompilationPipeline, CompilationResult, PipelineStage};
 use clap::{Parser as ClapParser, Subcommand};
 use colored::Colorize;
 use slang_backend::bytecode::Chunk;
-use slang_backend::codegen;
-use slang_backend::vm::VM;
-use slang_error::{CompileResult, report_errors, CompilerError, ErrorCode};
-use slang_frontend::{lexer, parser, semantic_analyzer};
-use slang_shared::compilation_context::{CompilationContext};
+use slang_backend::vm;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
@@ -56,71 +53,6 @@ pub enum Commands {
 /// The extension for compiled Slang bytecode files
 const SLANG_BYTECODE_EXTENSION: &str = "sip";
 
-/// Compile a Slang source file to bytecode
-///
-/// ### Arguments
-/// * `input` - The input source file
-/// * `output` - The output file path (if provided)
-pub fn compile_file(input: &str, output: Option<String>) {
-    let output_path = resolve_output_path(input, output);
-    println!("Compiling {} to {}", input, output_path);
-    let mut compilation_context = CompilationContext::new();
-    match read_source_file(input) {
-        Ok(source) => match compile_source_to_bytecode(&source, &mut compilation_context) {
-            Ok(chunk) => {
-                if let Err(err) = write_bytecode(&chunk, &output_path) {
-                    exit::with_code(err.exit_code(), &err.to_string())
-                } else {
-                    println!("Successfully compiled to {}", output_path);
-                }
-            }
-            Err(errors) => {
-                report_errors(&errors, &source); 
-                exit::with_code(
-                    exit::Code::Software,
-                    &format!(
-                        "{}: Compilation failed due to previous error(s)",
-                        "error".red()
-                    ),
-                );
-            }
-        },
-        Err(err) => exit::with_code(err.exit_code(), &err.to_string()),
-    }
-}
-
-/// Execute a Slang source file directly
-///
-/// ### Arguments
-/// * `input` - The input source file
-pub fn execute_file(input: &str) {
-    println!("Executing source file: {}", input);
-    let mut compilation_context = CompilationContext::new();
-    match read_source_file(input) {
-        Ok(source) => match compile_source_to_bytecode(&source, &mut compilation_context) {
-            Ok(chunk) => {
-                if let Err(e) = execute_bytecode(&chunk) {
-                    exit::with_code(
-                        exit::Code::Software,
-                        &format!("{}: {}", "Runtime Error".red(), e),
-                    );
-                }
-            }
-            Err(errors) => {
-                report_errors(&errors, &source); 
-                exit::with_code(
-                    exit::Code::Software,
-                    &format!(
-                        "{}: Compilation failed due to previous error(s)",
-                        "error".red()
-                    ),
-                );
-            }
-        },
-        Err(err) => exit::with_code(err.exit_code(), &err.to_string()),
-    }
-}
-
 /// Run a compiled Slang bytecode file
 ///
 /// ### Arguments
@@ -130,7 +62,7 @@ pub fn run_file(input: &str) {
 
     match read_bytecode_file(input) {
         Ok(chunk) => {
-            if let Err(e) = execute_bytecode(&chunk) {
+            if let Err(e) = vm::execute_bytecode(&chunk) {
                 exit::with_code(
                     exit::Code::Software,
                     &format!("{}: {}", "Runtime Error".red(), e),
@@ -141,39 +73,43 @@ pub fn run_file(input: &str) {
     }
 }
 
-/// Compile source code to bytecode
+
+
+/// Enhanced compilation function using the new diagnostic-aware pipeline
 ///
 /// ### Arguments
-///
 /// * `source` - The source code to compile
+/// * `file_name` - Optional file name for better error reporting
+/// * `recovery_mode` - Whether to enable error recovery mode
 ///
 /// ### Returns
-///
-/// The compiled bytecode chunk or compilation errors
-fn compile_source_to_bytecode(source: &str, compilation_context: &mut CompilationContext) -> CompileResult<Chunk> {
-    let lexer_result = lexer::tokenize(source)?;
-    #[cfg(feature = "print-tokens")]
-    {
-        let printer = slang_frontend::token_printer::TokenPrinter::new();
-        printer.print(&lexer_result.tokens);
+/// The compilation result with diagnostics
+fn compile_source_to_bytecode_enhanced(
+    source: &str, 
+    file_name: Option<String>,
+    recovery_mode: bool
+) -> CompilationResult {
+    let pipeline = CompilationPipeline::new(source, file_name)
+        .with_recovery_mode(recovery_mode);
+    
+    let tokenize_stage = pipeline.tokenize();
+    
+    let parse_stage = tokenize_stage.and_then(|pipeline, tokens| {
+        pipeline.parse(tokens)
+    });
+    
+    let semantic_stage = parse_stage.and_then(|pipeline, statements| {
+        pipeline.semantic_analysis(statements)
+    });
+    
+    match semantic_stage {
+        PipelineStage::Success { pipeline, data } => {
+            pipeline.codegen(data)
+        }
+        PipelineStage::Failed { pipeline } => {
+            pipeline.finish()
+        }
     }
-    let statements = parser::parse(&lexer_result.tokens, &lexer_result.line_info, compilation_context)?;
-    #[cfg(feature = "print-ast")]
-    {
-        let mut printer = slang_ir::ast_printer::ASTPrinter::new();
-        printer.print(&statements);
-    }
-    semantic_analyzer::execute(&statements, compilation_context)?;
-    codegen::generate_bytecode(&statements).map_err(|codegen_err| {
-        vec![CompilerError::new(
-            ErrorCode::GenericCompileError,
-            codegen_err.message,
-            codegen_err.location.position,
-            codegen_err.location.line,
-            codegen_err.location.column,
-            None,
-        )]
-    })
 }
 
 /// Determine the output path for a compiled file
@@ -319,16 +255,88 @@ fn read_bytecode_file(input_path: &str) -> CliResult<Chunk> {
     }
 }
 
-/// Execute a bytecode chunk in the VM
+/// Compile a Slang source file to bytecode with enhanced error handling
 ///
 /// ### Arguments
+/// * `input` - The input source file
+/// * `output` - The output file path (if provided)
+pub fn compile_file(input: &str, output: Option<String>) {
+    let output_path = resolve_output_path(input, output);
+    println!("Compiling {} to {}", input, output_path);
+    
+    match read_source_file(input) {
+        Ok(source) => {
+            let result = compile_source_to_bytecode_enhanced(
+                &source, 
+                Some(input.to_string()), 
+                false // No recovery mode for final compilation
+            );
+            
+            match result {
+                CompilationResult::Success { chunk, diagnostics, .. } => {
+                    // Report any warnings
+                    if diagnostics.warning_count() > 0 {
+                        diagnostics.report_all(&source);
+                    }
+                    
+                    if let Err(err) = write_bytecode(&chunk, &output_path) {
+                        exit::with_code(err.exit_code(), &err.to_string())
+                    } else {
+                        println!("Successfully compiled to {}", output_path);
+                    }
+                }
+                CompilationResult::Failed { diagnostics, .. } => {
+                    diagnostics.report_all(&source);
+                    exit::with_code(
+                        exit::Code::Software,
+                        &format!(
+                            "{}: Compilation failed",
+                            "error".red()
+                        ),
+                    );
+                }
+            }
+        },
+        Err(err) => exit::with_code(err.exit_code(), &err.to_string()),
+    }
+}
+
+/// Execute a Slang source file with enhanced error handling and diagnostics
 ///
-/// * `chunk` - The bytecode chunk to run
-///
-/// ### Returns
-///
-/// Ok(()) if successful, or an error message
-fn execute_bytecode(chunk: &Chunk) -> Result<(), String> {
-    let mut vm = VM::new();
-    vm.interpret(chunk)
+/// ### Arguments
+/// * `input` - The input source file
+pub fn execute_file(input: &str) {
+    println!("Executing source file: {}", input);
+    match read_source_file(input) {
+        Ok(source) => {
+            let result = compile_source_to_bytecode_enhanced(&source, Some(input.to_string()), true);
+            match result {
+                CompilationResult::Success { chunk, diagnostics, .. } => {
+                    // Report any warnings that might have been collected
+                    let has_any_diagnostics = diagnostics.error_count() > 0 || diagnostics.warning_count() > 0;
+                    if has_any_diagnostics {
+                        diagnostics.report_all(&source);
+                    }
+                    
+                    if let Err(e) = vm::execute_bytecode(&chunk) {
+                        exit::with_code(
+                            exit::Code::Software,
+                            &format!("{}: {}", "Runtime Error".red(), e),
+                        );
+                    }
+                }
+                CompilationResult::Failed { diagnostics, .. } => {
+                    diagnostics.report_all(&source);
+                    exit::with_code(
+                        exit::Code::Software,
+                        &format!(
+                            "{}: Compilation failed",
+                            "error".red()
+                        ),
+                    );
+                }
+            }
+        },
+        Err(err) => exit::with_code(err.exit_code(), &err.to_string()),
+    }
 }
