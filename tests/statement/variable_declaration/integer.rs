@@ -1,4 +1,5 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::ErrorCode;
 use rstest::rstest;
 
 #[rstest]
@@ -65,7 +66,7 @@ fn from_true_literal(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is bool",
             type_name
@@ -87,7 +88,7 @@ fn from_false_literal(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is bool",
             type_name
@@ -109,7 +110,7 @@ fn from_string_literal(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is string",
             type_name
@@ -131,7 +132,7 @@ fn from_float_literal(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is float",
             type_name
@@ -153,7 +154,7 @@ fn from_float_literal_with_f32_suffix(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is f32",
             type_name
@@ -175,7 +176,7 @@ fn from_float_literal_with_f64_suffix(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is f64",
             type_name
@@ -190,7 +191,7 @@ fn int_type() {
     "#;
     execute_program_expect_error(
         program,
-        "[E1030]",
+        ErrorCode::UnknownType,
         "\'int\' is not a valid type specifier. Use \'i32\', \'i64\', \'u32\', or \'u64\' instead",
     );
 }
@@ -202,7 +203,7 @@ fn i32_value_out_of_range() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2008]",
+        ErrorCode::ValueOutOfRange,
         "Integer literal 2147483648 is out of range for type i32",
     );
 }
@@ -214,7 +215,7 @@ fn u32_unsigned_negative_value_error() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2008]",
+        ErrorCode::ValueOutOfRange,
         "Integer literal -1 is out of range for type u32",
     );
 }
@@ -233,7 +234,7 @@ fn using_type_as_variable_name(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2003]",
+        ErrorCode::SymbolRedefinition,
         &format!(
             "Symbol \'{}\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.",
             type_name

@@ -1,4 +1,5 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::ErrorCode;
 use rstest::rstest;
 
 #[rstest]
@@ -134,7 +135,7 @@ fn type_mismatch() {
         let result: i32 = if x > 3 { 10 } else { "string" };
         print_value(result);
     "#;
-    execute_program_expect_error(program, "[E2005]", "Type mismatch");
+    execute_program_expect_error(program, ErrorCode::TypeMismatch, "Type mismatch");
 }
 
 #[test]
@@ -144,7 +145,7 @@ fn non_boolean_condition() {
         let result: i32 = if x { 10 } else { 20 };
         print_value(result);
     "#;
-    execute_program_expect_error(program, "[E2005]", "Type mismatch");
+    execute_program_expect_error(program, ErrorCode::TypeMismatch, "Type mismatch");
 }
 
 #[test]
@@ -176,7 +177,7 @@ fn must_have_same_type() {
         let result: i32 = if x > 3 { 10 } else { "string" };
         print_value(result);
     "#;
-    execute_program_expect_error(program, "[E2005]", "Type mismatch");
+    execute_program_expect_error(program, ErrorCode::TypeMismatch, "Type mismatch");
 }
 
 #[test]
@@ -186,7 +187,7 @@ fn must_have_else_branch() {
         let result: i32 = if x > 3 { 10 };
         print_value(result);
     "#;
-    execute_program_expect_error(program, "[E1031]", "Expected 'else' after if expression");
+    execute_program_expect_error(program, ErrorCode::ExpectedElse, "Expected 'else' after if expression");
 }
 
 #[test]

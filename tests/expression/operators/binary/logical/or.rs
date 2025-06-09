@@ -1,4 +1,5 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::ErrorCode;
 use rstest::rstest;
 
 #[rstest]
@@ -38,7 +39,7 @@ fn with_non_boolean_types() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2007]",
+        ErrorCode::LogicalOperatorTypeMismatch,
         "Logical operator '||' requires boolean operands, got i32 and bool",
     );
 }
@@ -62,7 +63,7 @@ fn with_function() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2007]",
+        ErrorCode::LogicalOperatorTypeMismatch,
         "Logical operator \'||\' requires boolean operands, got fn() -> () and fn() -> ()",
     );
 }
@@ -74,7 +75,7 @@ fn with_native_function() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2007]",
+        ErrorCode::LogicalOperatorTypeMismatch,
         "Logical operator \'||\' requires boolean operands, got fn(unknown) -> i32 and fn(unknown) -> i32",
     );
 }

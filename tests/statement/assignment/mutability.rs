@@ -1,4 +1,5 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::ErrorCode;
 
 #[test]
 fn mutable_with_type_annotation() {
@@ -63,7 +64,7 @@ fn with_immutable_variable() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2016]",
+        ErrorCode::AssignmentToImmutableVariable,
         "Cannot assign to immutable variable 'x'",
     );
 }
@@ -77,7 +78,7 @@ fn with_immutable_in_expression() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2016]",
+        ErrorCode::AssignmentToImmutableVariable,
         "Cannot assign to immutable variable 'x'",
     );
 }

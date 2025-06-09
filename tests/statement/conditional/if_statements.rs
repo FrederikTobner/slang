@@ -1,4 +1,5 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::ErrorCode;
 
 #[test]
 fn basic_if_statement_true() {
@@ -100,7 +101,7 @@ fn if_with_non_boolean_condition() {
             print_value("should not work");
         }
     "#;
-    execute_program_expect_error(program, "[E2005]", "Type mismatch");
+    execute_program_expect_error(program, ErrorCode::TypeMismatch, "Type mismatch");
 }
 
 #[test]
@@ -111,7 +112,7 @@ fn if_with_string_condition() {
             print_value("should not work");
         }
     "#;
-    execute_program_expect_error(program, "[E2005]", "Type mismatch");
+    execute_program_expect_error(program, ErrorCode::TypeMismatch, "Type mismatch");
 }
 
 #[test]

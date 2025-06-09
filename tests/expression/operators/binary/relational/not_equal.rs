@@ -1,4 +1,5 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::ErrorCode;
 use rstest::rstest;
 
 #[rstest]
@@ -104,7 +105,7 @@ fn with_unit() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2006]",
+        ErrorCode::OperationTypeMismatch,
         "Type mismatch: cannot apply '!=' operator on () and ()",
     );
 }

@@ -1,4 +1,5 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::ErrorCode;
 use rstest::rstest;
 
 #[test]
@@ -102,5 +103,5 @@ fn with_another_type() {
         let mut x: i32 = 10;
         x = "Hello"; // This should cause a type mismatch error
     "#;
-    execute_program_expect_error(program, "[E2005]", "Type mismatch: variable assignment to variable \'x\' is i32 but expression is string");
+    execute_program_expect_error(program, ErrorCode::TypeMismatch, "Type mismatch: variable assignment to variable \'x\' is i32 but expression is string");
 }

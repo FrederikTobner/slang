@@ -1,4 +1,5 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::ErrorCode;
 use rstest::rstest;
 
 #[rstest]
@@ -60,7 +61,7 @@ fn with_integer(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2015]",
+        ErrorCode::InvalidUnaryOperation,
         &format!(
             "Boolean not operator '!' can only be applied to boolean types, but got {}",
             type_name
@@ -81,7 +82,7 @@ fn with_float(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2015]",
+        ErrorCode::InvalidUnaryOperation,
         &format!(
             "Boolean not operator '!' can only be applied to boolean types, but got {}",
             type_name
@@ -97,7 +98,7 @@ fn with_unit() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2015]",
+        ErrorCode::InvalidUnaryOperation,
         "Boolean not operator '!' can only be applied to boolean types, but got ()",
     );
 }
@@ -110,7 +111,7 @@ fn with_function() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2015]",
+        ErrorCode::InvalidUnaryOperation,
         "Boolean not operator '!' can only be applied to boolean types, but got fn() -> ()",
     );
 }
@@ -122,7 +123,7 @@ fn with_native_function() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2015]",
+        ErrorCode::InvalidUnaryOperation,
         "Boolean not operator '!' can only be applied to boolean types, but got fn(unknown) -> i32",
     );
 }
@@ -135,7 +136,7 @@ fn with_string() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2015]",
+        ErrorCode::InvalidUnaryOperation,
         "Boolean not operator '!' can only be applied to boolean types, but got string",
     );
 }
@@ -147,7 +148,7 @@ fn with_string_literal() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2015]",
+        ErrorCode::InvalidUnaryOperation,
         "Boolean not operator '!' can only be applied to boolean types, but got string",
     );
 }

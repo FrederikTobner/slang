@@ -1,4 +1,5 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::ErrorCode;
 use rstest::rstest;
 
 #[test]
@@ -32,7 +33,7 @@ fn from_boolean_literal(#[case] value: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         "Type mismatch: variable a is string but expression is bool",
     );
 }
@@ -53,7 +54,7 @@ fn from_integer_literal(#[case] value: &str, #[case] _type: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is string but expression is {}",
             _type
@@ -75,7 +76,7 @@ fn from_float_literal(#[case] value: &str, #[case] _type: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is string but expression is {}",
             _type
@@ -90,7 +91,7 @@ fn using_string_type_as_name() {
     "#;
     execute_program_expect_error(
         &program,
-        "[E2003]",
+        ErrorCode::SymbolRedefinition,
         "Symbol \'string\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.",
     );
 }

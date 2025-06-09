@@ -1,4 +1,5 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::ErrorCode;
 
 #[test]
 fn with_integer_variable() {
@@ -38,7 +39,7 @@ fn with_string() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2015]",
+        ErrorCode::InvalidUnaryOperation,
         "Cannot negate non-numeric type \'string\'",
     );
 }
@@ -50,7 +51,7 @@ fn with_string_literal() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2015]",
+        ErrorCode::InvalidUnaryOperation,
         "Cannot negate non-numeric type 'string'",
     );
 }
@@ -61,7 +62,7 @@ fn with_unsigned_integer() {
         let a: u32 = 42;
         print_value(-a);
     "#;
-    execute_program_expect_error(program, "[E2015]", "Cannot negate unsigned type");
+    execute_program_expect_error(program, ErrorCode::InvalidUnaryOperation, "Cannot negate unsigned type");
 }
 
 #[test]
@@ -79,7 +80,7 @@ fn with_unit() {
         let x = ();
         print_value(-x);
     "#;
-    execute_program_expect_error(program, "[E2015]", "Cannot negate non-numeric type '()'");
+    execute_program_expect_error(program, ErrorCode::InvalidUnaryOperation, "Cannot negate non-numeric type '()'");
 }
 
 #[test]
@@ -90,7 +91,7 @@ fn with_function() {
         }
         print_value(-my_function);
     "#;
-    execute_program_expect_error(program, "[E2015]", "Cannot negate non-numeric type 'fn() -> i32'");
+    execute_program_expect_error(program, ErrorCode::InvalidUnaryOperation, "Cannot negate non-numeric type 'fn() -> i32'");
 }
 
 #[test]
@@ -100,7 +101,7 @@ fn with_native_function() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2015]",
+        ErrorCode::InvalidUnaryOperation,
         "Cannot negate non-numeric type 'fn(unknown) -> i32'",
     );
 }
@@ -113,7 +114,7 @@ fn with_boolean() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2015]",
+        ErrorCode::InvalidUnaryOperation,
         "Cannot negate non-numeric type 'bool'",
     );
 }
@@ -125,7 +126,7 @@ fn with_boolean_literal() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2015]",
+        ErrorCode::InvalidUnaryOperation,
         "Cannot negate non-numeric type 'bool'",
     );
 }

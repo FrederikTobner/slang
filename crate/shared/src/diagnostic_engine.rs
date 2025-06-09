@@ -163,7 +163,6 @@ impl<'a> DiagnosticEngine<'a> {
             ErrorSeverity::Note => "note".blue().bold(),
         };
         
-        // Use the line and column directly from the Location struct
         let line = diagnostic.location.line;
         let col = diagnostic.location.column;
         let current_line_text = line_info.get_line_text(line).unwrap_or("<line not available>");

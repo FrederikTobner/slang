@@ -3,6 +3,7 @@ use predicates::prelude::*;
 use std::fs;
 use std::process::Command;
 use tempfile::tempdir;
+use slang_error::ErrorCode;
 
 /// Helper function to create test programs and assert their output
 /// Runs the file directly, compiles it, and runs the compiled bytecode
@@ -48,11 +49,11 @@ pub fn execute_program_and_assert(program: &str, expected_output: &str) {
 ///
 /// ### Arguments
 /// * `program` - The source code of the program to be executed
-/// * `expected_error_code` - The expected error code (e.g., "E2005")
+/// * `expected_error_code` - The expected error code (from ErrorCode enum)
 /// * `expected_error` - The expected error message
 pub fn execute_program_expect_error(
     program: &str,
-    expected_error_code: &str,
+    expected_error_code: ErrorCode,
     expected_error: &str,
 ) {
     let temp_dir = tempdir().unwrap();
@@ -64,6 +65,6 @@ pub fn execute_program_expect_error(
     cmd.arg("execute")
         .arg(&source_path)
         .assert()
-        .stderr(predicate::str::contains(expected_error_code))
+        .stderr(predicate::str::contains(expected_error_code.to_string()))
         .stderr(predicate::str::contains(expected_error));
 }

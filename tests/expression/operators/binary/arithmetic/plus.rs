@@ -1,4 +1,5 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::ErrorCode;
 use rstest::rstest;
 
 #[rstest]
@@ -132,7 +133,7 @@ fn with_incompatible_types() {
                 left_type, right_type
             );
 
-            execute_program_expect_error(&program, "[E2006]", &expected_error);
+            execute_program_expect_error(&program, ErrorCode::OperationTypeMismatch, &expected_error);
         }
     }
 }
@@ -146,7 +147,7 @@ fn with_unit() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2006]",
+        ErrorCode::OperationTypeMismatch,
         "Type mismatch: cannot apply '+' operator on () and ()",
     );
 }
@@ -159,7 +160,7 @@ fn with_function() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2006]",
+        ErrorCode::OperationTypeMismatch,
         "Type mismatch: cannot apply '+' operator on fn() -> () and fn() -> ()",
     );
 }
@@ -171,7 +172,7 @@ fn with_native_function() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2006]",
+        ErrorCode::OperationTypeMismatch,
         "Type mismatch: cannot apply '+' operator on fn(unknown) -> i32 and fn(unknown) -> i32",
     );
 }

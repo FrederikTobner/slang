@@ -1,4 +1,5 @@
 use crate::test_utils::execute_program_expect_error;
+use crate::ErrorCode;
 
 #[test]
 fn type_mismatch_in_function_argument() {
@@ -9,7 +10,7 @@ fn type_mismatch_in_function_argument() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2010]",
+        ErrorCode::ArgumentTypeMismatch,
         "Type mismatch: function \'expect_int\' expects argument 1 to be i32, but got string",
     );
 }
@@ -25,7 +26,7 @@ fn wrong_parameter_count() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2009]",
+        ErrorCode::ArgumentCountMismatch,
         "Function \'add\' expects 2 arguments, but got 1",
     );
 }
@@ -41,7 +42,7 @@ fn wrong_parameter_types() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2010]",
+        ErrorCode::ArgumentTypeMismatch,
         "Type mismatch: function \'add\' expects argument 1 to be i32, but got string\n",
     );
 }
@@ -57,7 +58,7 @@ fn return_type_mismatch() {
     "#;
     execute_program_expect_error(
         program,
-        "[E2012]",
+        ErrorCode::ReturnTypeMismatch,
         "Type mismatch: function returns i32 but got string",
     );
 }
@@ -69,7 +70,7 @@ fn undefined_function() {
         print_value(result);
     "#;
 
-    execute_program_expect_error(program, "[E2014]", "Undefined function");
+    execute_program_expect_error(program, ErrorCode::UndefinedFunction, "Undefined function");
 }
 
 #[test]
@@ -85,7 +86,7 @@ fn integer_return_type() {
 
     execute_program_expect_error(
         program,
-        "[E1030]",
+        ErrorCode::UnknownType,
         "\'int\' is not a valid type specifier. Use \'i32\', \'i64\', \'u32\', or \'u64\' instead",
     );
 }
@@ -106,7 +107,7 @@ fn duplicate_function_definition() {
 
     execute_program_expect_error(
         program,
-        "[E2003]",
+        ErrorCode::SymbolRedefinition,
         "Function \'add\' is already defined in the current scope.",
     );
 }

@@ -84,7 +84,7 @@ pub fn run_file(input: &str) {
 ///
 /// ### Returns
 /// The compilation result with diagnostics
-fn compile_source_to_bytecode_enhanced(
+fn compile_source_to_bytecode(
     source: &str, 
     file_name: Option<String>,
     recovery_mode: bool
@@ -266,7 +266,7 @@ pub fn compile_file(input: &str, output: Option<String>) {
     
     match read_source_file(input) {
         Ok(source) => {
-            let result = compile_source_to_bytecode_enhanced(
+            let result = compile_source_to_bytecode(
                 &source, 
                 Some(input.to_string()), 
                 false // No recovery mode for final compilation
@@ -274,7 +274,6 @@ pub fn compile_file(input: &str, output: Option<String>) {
             
             match result {
                 CompilationResult::Success { chunk, diagnostics, .. } => {
-                    // Report any warnings
                     if diagnostics.warning_count() > 0 {
                         diagnostics.report_all(&source);
                     }
@@ -309,10 +308,9 @@ pub fn execute_file(input: &str) {
     println!("Executing source file: {}", input);
     match read_source_file(input) {
         Ok(source) => {
-            let result = compile_source_to_bytecode_enhanced(&source, Some(input.to_string()), true);
+            let result = compile_source_to_bytecode(&source, Some(input.to_string()), true);
             match result {
                 CompilationResult::Success { chunk, diagnostics, .. } => {
-                    // Report any warnings that might have been collected
                     let has_any_diagnostics = diagnostics.error_count() > 0 || diagnostics.warning_count() > 0;
                     if has_any_diagnostics {
                         diagnostics.report_all(&source);

@@ -1,4 +1,5 @@
-use crate::test_utils::{execute_program_expect_error};
+use crate::test_utils::execute_program_expect_error;
+use crate::ErrorCode;
 
 #[test]
 fn too_many_constants() {
@@ -8,7 +9,7 @@ fn too_many_constants() {
     }
     execute_program_expect_error(
         &program,
-        "[E3000]",
+        ErrorCode::GenericCompileError,
         "Too many constants",
     );
 }

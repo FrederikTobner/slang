@@ -5,8 +5,7 @@ use slang_ir::ast::Statement;
 use slang_frontend::{Token};
 use slang_backend::bytecode::Chunk;
 
-/// A composable compilation pipeline that handles errors gracefully
-/// and provides sophisticated error recovery capabilities
+/// A composable compilation pipeline providing error recovery capabilities
 pub struct CompilationPipeline<'a> {
     context: CompilationContext,
     diagnostics: DiagnosticEngine<'a>,
@@ -20,7 +19,6 @@ impl<'a> CompilationPipeline<'a> {
         let context = CompilationContext::new();
         let mut diagnostics = DiagnosticEngine::new();
         
-        // Set up diagnostic context with file information
         if let Some(ref name) = file_name {
             diagnostics.set_file_name(name.clone());
         }
@@ -52,13 +50,11 @@ impl<'a> CompilationPipeline<'a> {
                 data: result.tokens,
             },
             Err(errors) => {
-                // Collect error information before emitting
                 let error_info: Vec<_> = errors.iter().map(|error| {
                     (error.error_code.clone(), error.message.clone(), 
                      Location::new(error.position, error.line, error.column, error.token_length.unwrap_or(1)))
                 }).collect();
                 
-                // Now emit the errors
                 for (error_code, message, location) in error_info {
                     self.diagnostics.emit_error(error_code, message, location);
                 }
@@ -72,7 +68,6 @@ impl<'a> CompilationPipeline<'a> {
     pub fn parse(self, tokens: Vec<Token>) -> PipelineStage<'a, Vec<Statement>> {
         match self {
             Self { mut context, mut diagnostics, source, file_name } => {
-                // Create a LineInfo for parsing
                 let line_info = LineInfo::new(&source);
                 match slang_frontend::parser::parse(&tokens, &line_info, &mut context) {
                     Ok(statements) => PipelineStage::Success {
@@ -85,7 +80,6 @@ impl<'a> CompilationPipeline<'a> {
                             diagnostics.emit_error(error.error_code, error.message, location);
                         }
                         
-                        // In recovery mode, continue with empty AST
                         if diagnostics.is_recovery_mode() {
                             PipelineStage::Success {
                                 pipeline: Self { context, diagnostics, source, file_name },

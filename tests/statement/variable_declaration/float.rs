@@ -1,4 +1,5 @@
 use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::ErrorCode;
 use rstest::rstest;
 
 #[rstest]
@@ -57,7 +58,7 @@ fn from_true_literal(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is bool",
             type_name
@@ -77,7 +78,7 @@ fn from_false_literal(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is bool",
             type_name
@@ -97,7 +98,7 @@ fn from_string_literal(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is string",
             type_name
@@ -117,7 +118,7 @@ fn from_integer_literal(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is int",
             type_name
@@ -137,7 +138,7 @@ fn from_integer_literal_with_i32_suffix(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is i32",
             type_name
@@ -157,7 +158,7 @@ fn from_integer_literal_with_i64_suffix(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is i64",
             type_name
@@ -177,7 +178,7 @@ fn from_integer_literal_with_u32_suffix(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is u32",
             type_name
@@ -197,7 +198,7 @@ fn from_float_literal_with_u64_suffix(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2005]",
+        ErrorCode::TypeMismatch,
         &format!(
             "Type mismatch: variable a is {} but expression is u64",
             type_name
@@ -212,7 +213,7 @@ fn float_type() {
     "#;
     execute_program_expect_error(
         program,
-        "[E1030]",
+        ErrorCode::UnknownType,
         "\'float\' is not a valid type specifier. Use \'f32\' or \'f64\' instead",
     );
 }
@@ -229,7 +230,7 @@ fn using_type_as_variable_name(#[case] type_name: &str) {
     );
     execute_program_expect_error(
         &program,
-        "[E2003]",
+        ErrorCode::SymbolRedefinition,
         &format!(
             "Symbol \'{}\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.",
             type_name
