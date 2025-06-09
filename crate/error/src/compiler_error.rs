@@ -34,8 +34,7 @@ impl CompilerError {
     ///
     /// ### Example
     /// ```
-    /// use slang_frontend::error::CompilerError;
-    /// use slang_frontend::error_codes::ErrorCode;
+    /// use slang_error::{CompilerError, ErrorCode};
     ///
     /// let error = CompilerError::new(ErrorCode::ExpectedSemicolon, "Syntax error".to_string(), 10, 5, 0, Some(1));
     /// ```

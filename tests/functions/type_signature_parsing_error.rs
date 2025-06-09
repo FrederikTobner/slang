@@ -24,3 +24,11 @@ fn missing_type_identifier() {
         "#;
     execute_program_expect_error(program, "[E1007]", " Expected type identifier");
 }
+
+#[test]
+fn expect_arrow() {
+    let program = r#"
+        let my_function2 : fn(i32) = my_function;
+        "#;
+    execute_program_expect_error(program, "[E1029]", " Expected \'->\' after function parameters");
+}

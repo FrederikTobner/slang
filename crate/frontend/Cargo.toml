@@ -8,6 +8,7 @@ colored = "2.0.4"
 slang_ir = { path = "../ir" }
 slang_types = { path = "../types" }
 slang_shared = { path = "../shared" }
+slang_error = { path = "../error" }
 
 [features]
 default = []

@@ -1,4 +1,4 @@
-use crate::error::{CompileResult, CompilerError};
+use slang_error::{CompileResult, CompilerError};
 use crate::semantic_error::SemanticAnalysisError;
 
 use slang_ir::SourceLocation;
@@ -671,10 +671,8 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
             param_types.push(param.param_type.clone());
         }
         
-        // Register function type and define function in symbol table
         let function_type_id = self.context.register_function_type(param_types.clone(), fn_decl.return_type.clone());
         
-        // Define function symbol in the symbol table
         if let Err(_) = self.context.define_symbol(
             fn_decl.name.clone(), 
             SymbolKind::Function, 
@@ -747,12 +745,9 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
     }
 
     fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> SemanticResult {
-        // Look up the function in the symbol table and clone the function type to avoid borrowing conflicts
         let function_type = if let Some(symbol) = self.context.lookup_symbol(&call_expr.name) {
-            // Check if it's a function symbol or a variable with function type
             match symbol.kind() {
                 SymbolKind::Function => {
-                    // Direct function symbol - get its function type
                     if self.context.is_function_type(&symbol.type_id) {
                         self.context.get_function_type(&symbol.type_id).cloned()
                     } else {
@@ -763,7 +758,6 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
                     }
                 }
                 SymbolKind::Variable => {
-                    // Variable with function type
                     if self.context.is_function_type(&symbol.type_id) {
                         self.context.get_function_type(&symbol.type_id).cloned()
                     } else {
@@ -781,7 +775,6 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
                 }
             }
         } else {
-            // Function not found in symbol table
             return Err(SemanticAnalysisError::UndefinedFunction {
                 name: call_expr.name.clone(),
                 location: call_expr.location,
@@ -799,12 +792,10 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
                 });
             }
 
-            // Check argument types
             for (i, arg) in call_expr.arguments.iter().enumerate() {
                 let param_type = func_type.param_types[i].clone();
                 let arg_type = self.visit_expression(arg)?;
 
-                // Skip type checking for Unknown parameter types (like in print_value)
                 if param_type == TypeId(PrimitiveType::Unknown as usize) {
                     continue;
                 }
@@ -855,7 +846,6 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
             return Ok(func_type.return_type.clone());
         }
 
-        // This should not happen since we already checked above
         Err(SemanticAnalysisError::UndefinedFunction {
             name: call_expr.name.clone(),
             location: call_expr.location,
@@ -925,8 +915,6 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
             }
         }
 
-        // Check for conflicts with types and functions across all scopes
-        // Variables are allowed to shadow other variables in outer scopes
         if let Some(symbol) = self.context.lookup_symbol(&let_stmt.name) {
             if symbol.kind() == SymbolKind::Type {
                 return Err(SemanticAnalysisError::SymbolRedefinition {
@@ -941,7 +929,6 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
                     location: let_stmt.location,
                 });
             }
-            // Variable shadowing is allowed - don't return an error for variables in outer scopes
         }
 
         let expr_type = self.visit_expression(&let_stmt.value)?;

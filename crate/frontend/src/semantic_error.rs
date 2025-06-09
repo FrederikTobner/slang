@@ -1,5 +1,4 @@
-use crate::error::CompilerError;
-use crate::error_codes::ErrorCode;
+use slang_error::{CompilerError, ErrorCode};
 use slang_ir::SourceLocation;
 use slang_shared::CompilationContext;
 use slang_types::TypeId;

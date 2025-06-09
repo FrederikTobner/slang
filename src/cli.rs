@@ -5,7 +5,7 @@ use colored::Colorize;
 use slang_backend::bytecode::Chunk;
 use slang_backend::codegen;
 use slang_backend::vm::VM;
-use slang_frontend::error::{CompileResult, report_errors};
+use slang_error::{CompileResult, report_errors, CompilerError, ErrorCode};
 use slang_frontend::{lexer, parser, semantic_analyzer};
 use slang_shared::compilation_context::{CompilationContext};
 use std::fs::{self, File};
@@ -165,8 +165,8 @@ fn compile_source_to_bytecode(source: &str, compilation_context: &mut Compilatio
     }
     semantic_analyzer::execute(&statements, compilation_context)?;
     codegen::generate_bytecode(&statements).map_err(|codegen_err| {
-        vec![slang_frontend::error::CompilerError::new(
-            slang_frontend::error_codes::ErrorCode::GenericCompileError,
+        vec![CompilerError::new(
+            ErrorCode::GenericCompileError,
             codegen_err.message,
             codegen_err.location.position,
             codegen_err.location.line,

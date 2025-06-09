@@ -1,5 +1,4 @@
-use crate::error::{CompileResult, CompilerError, LineInfo};
-use crate::error_codes::ErrorCode;
+use slang_error::{CompileResult, CompilerError, LineInfo, ErrorCode};
 use crate::token::{Token, Tokentype};
 
 pub struct LexerResult<'a> {
@@ -301,7 +300,6 @@ fn handle_string(state: &mut LexerState) {
         }
     }
 
-    // If we didn't find a closing quote, report an error
     if !closed {
         let error_message = "Expected closing quote for string literal".to_string();
         let invalid_lexeme = format!("\"{}",string);

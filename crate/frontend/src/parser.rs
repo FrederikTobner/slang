@@ -1,6 +1,4 @@
-use crate::error::LineInfo;
-use crate::error::{CompileResult, CompilerError};
-use crate::error_codes::ErrorCode;
+use slang_error::{LineInfo, CompileResult, CompilerError, ErrorCode};
 use crate::token::{Token, Tokentype};
 use slang_ir::SourceLocation;
 use slang_ir::ast::{

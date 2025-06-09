@@ -1,0 +1,12 @@
+[package]
+name = "slang_error"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+colored = "2.0.4"
+slang_ir = { path = "../ir" }
+
+[lib]
+name = "slang_error"
+path = "src/lib.rs"

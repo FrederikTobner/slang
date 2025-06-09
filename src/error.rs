@@ -32,6 +32,9 @@ pub enum CliError {
     },
 }
 
+/// Type alias for Result with SlangError as the error type
+pub type CliResult<T> = Result<T, CliError>;
+
 impl CliError {
     /// Get the exit code associated with this error
     pub fn exit_code(&self) -> exit::Code {
@@ -109,6 +112,3 @@ impl Error for CliError {
         }
     }
 }
-
-/// Type alias for Result with SlangError as the error type
-pub type CliResult<T> = Result<T, CliError>;
