@@ -16,13 +16,13 @@ pub enum CliError {
     /// Error related to reading/writing ZIP files
     Zip {
         source: zip::result::ZipError,
-        context: String,
+        context: &'static str,
         exit_code: exit::Code,
     },
     /// Error related to serialization/deserialization
     Serialization {
         source: Box<dyn std::error::Error + Send + Sync>,
-        context: String,
+        context: &'static str,
         exit_code: exit::Code,
     },
     /// Generic error with custom message

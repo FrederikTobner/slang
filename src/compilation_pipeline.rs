@@ -131,12 +131,11 @@ impl<'a> CompilationPipeline<'a> {
     /// Generate bytecode from the analyzed AST
     pub fn codegen(self, statements: Vec<Statement>) -> CompilationResult<'a> {
         match self {
-            Self { context, mut diagnostics, source: _source, file_name: _file_name } => {
+            Self { context: _context, mut diagnostics, source: _source, file_name: _file_name } => {
                 match slang_backend::codegen::generate_bytecode(&statements) {
                     Ok(chunk) => CompilationResult::Success {
                         chunk,
                         diagnostics,
-                        context,
                     },
                     Err(errors) => {
                         for error in errors {
@@ -145,7 +144,6 @@ impl<'a> CompilationPipeline<'a> {
                         }
                         CompilationResult::Failed {
                             diagnostics,
-                            context,
                         }
                     }
                 }
@@ -157,7 +155,6 @@ impl<'a> CompilationPipeline<'a> {
     pub fn finish(self) -> CompilationResult<'a> {
         CompilationResult::Failed {
             diagnostics: self.diagnostics,
-            context: self.context,
         }
     }
  
@@ -195,16 +192,72 @@ pub enum CompilationResult<'a> {
     Success {
         chunk: Chunk,
         diagnostics: DiagnosticEngine<'a>,
-        #[allow(dead_code)]
-        context: CompilationContext,
     },
     /// Compilation failed
     Failed {
         diagnostics: DiagnosticEngine<'a>,
-        #[allow(dead_code)]
-        context: CompilationContext,
     },
 }
 
 impl<'a> CompilationResult<'a> {
+}
+
+/// Create a compilation pipeline with the given configuration
+///
+/// ### Arguments
+/// * `source` - The source code to compile
+/// * `file_name` - Optional file name for better error reporting
+/// * `recovery_mode` - Whether to enable error recovery mode
+///
+/// ### Returns
+/// A configured compilation pipeline
+pub fn create_pipeline(source: &str, file_name: Option<String>, recovery_mode: bool) -> CompilationPipeline {
+    CompilationPipeline::new(source, file_name)
+        .with_recovery_mode(recovery_mode)
+}
+
+/// Execute all compilation stages through the pipeline
+///
+/// ### Arguments
+/// * `pipeline` - The compilation pipeline to execute
+///
+/// ### Returns
+/// The final compilation result
+pub fn execute_compilation_stages(pipeline: CompilationPipeline) -> CompilationResult {
+    let tokenize_stage = pipeline.tokenize();
+    
+    let parse_stage = tokenize_stage.and_then(|pipeline, tokens| {
+        pipeline.parse(tokens)
+    });
+    
+    let semantic_stage = parse_stage.and_then(|pipeline, statements| {
+        pipeline.semantic_analysis(statements)
+    });
+    
+    match semantic_stage {
+        PipelineStage::Success { pipeline, data } => {
+            pipeline.codegen(data)
+        }
+        PipelineStage::Failed { pipeline } => {
+            pipeline.finish()
+        }
+    }
+}
+
+/// Compile source code to bytecode using the diagnostic-aware pipeline
+///
+/// ### Arguments
+/// * `source` - The source code to compile
+/// * `file_name` - Optional file name for better error reporting
+/// * `recovery_mode` - Whether to enable error recovery mode
+///
+/// ### Returns
+/// The compilation result with diagnostics
+pub fn compile_to_bytecode(
+    source: &str, 
+    file_name: Option<String>,
+    recovery_mode: bool
+) -> CompilationResult {
+    let pipeline = create_pipeline(source, file_name, recovery_mode);
+    execute_compilation_stages(pipeline)
 }

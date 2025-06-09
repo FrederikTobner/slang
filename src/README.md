@@ -6,7 +6,6 @@ This directory contains the main executable components for the Slang programming
 
 The Slang compiler is a complete interpreter that supports multiple execution modes:
 
-- **Interactive REPL** - Read-Eval-Print Loop for interactive development
 - **Direct Execution** - Run source files directly without intermediate compilation
 - **Compilation** - Compile source files to bytecode for later execution
 - **Bytecode Execution** - Run pre-compiled bytecode files
