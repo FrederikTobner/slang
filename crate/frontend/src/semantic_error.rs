@@ -179,6 +179,16 @@ pub enum SemanticAnalysisError {
         /// The location where the invalid expression was found
         location: Location,
     },
+
+    /// Attempt to call a variable that is not a function
+    VariableNotCallable {
+        /// The name of the variable being called
+        variable_name: String,
+        /// The actual type of the variable
+        variable_type: TypeId,
+        /// The location where the invalid call was attempted
+        location: Location,
+    },
 }
 
 impl SemanticAnalysisError {
@@ -379,6 +389,18 @@ impl SemanticAnalysisError {
             }
 
             SemanticAnalysisError::InvalidExpression { message, .. } => message.clone(),
+
+            SemanticAnalysisError::VariableNotCallable { 
+                variable_name, 
+                variable_type, 
+                .. 
+            } => {
+                format!(
+                    "Cannot call {} type '{}' as a function",
+                    context.get_type_name(variable_type),
+                    variable_name
+                )
+            }
         }
     }
 
@@ -402,6 +424,7 @@ impl SemanticAnalysisError {
             SemanticAnalysisError::InvalidUnaryOperation { location, .. } => location,
             SemanticAnalysisError::AssignmentToImmutableVariable { location, .. } => location,
             SemanticAnalysisError::InvalidExpression { location, .. } => location,
+            SemanticAnalysisError::VariableNotCallable { location, .. } => location,
         }
     }
 
@@ -456,6 +479,7 @@ impl SemanticAnalysisError {
                 ErrorCode::AssignmentToImmutableVariable
             }
             SemanticAnalysisError::InvalidExpression { .. } => ErrorCode::InvalidExpression,
+            SemanticAnalysisError::VariableNotCallable { .. } => ErrorCode::VariableNotCallable,
         }
     }
 }

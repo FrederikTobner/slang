@@ -16,7 +16,7 @@ The frontend consists of several key components:
 
 - **Lexer (`lexer.rs`)**: Tokenizes source code, handling identifiers, keywords, literals, operators, and comments
 - **Parser (`parser.rs`)**: Constructs an AST from tokens following the Slang grammar
-- **Type Checker (`type_checker.rs`)**: Performs static type analysis and validation
+- **Semantic Analyzer (`semantic_analyzer.rs`)**: Performs static type analysis and validation
 - **Error Handling (`error.rs`)**: Error collection and reporting system with source location tracking
 - **Token Management (`token.rs`)**: Token definitions and source line tracking
 
@@ -38,5 +38,4 @@ The frontend works closely with other crates in the Slang ecosystem:
 
 The frontend is used internally by the main Slang CLI for:
 - Compiling source files to bytecode
-- Interactive REPL operations
 - Direct execution of Slang source files

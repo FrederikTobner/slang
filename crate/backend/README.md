@@ -38,7 +38,6 @@ The backend is used by the main Slang CLI for:
 - Compiling AST to bytecode files (`.sip`)
 - Running compiled bytecode files
 - Executing Slang programs directly from source
-- Powering the interactive REPL
 
 ## Integration
 

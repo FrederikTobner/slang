@@ -17,7 +17,6 @@ The error crate consists of:
 
 - **Error Codes (`error_codes.rs`)**: Comprehensive error code enumeration
 - **Compiler Error (`compiler_error.rs`)**: Main error type with location tracking
-- **Code Generation Error (`codegen_error.rs`)**: Backend-specific error type
 - **Error Utilities (`lib.rs`)**: Common utilities and type aliases
 
 ## Integration

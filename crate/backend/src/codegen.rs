@@ -86,7 +86,7 @@ impl CodeGenerator {
         }
     }
 
-    /// Compiles statements and appends them to the existing chunk (for REPL usage)
+    /// Compiles statements and appends them to the existing chunk
     ///
     /// ### Arguments
     ///

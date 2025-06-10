@@ -19,7 +19,7 @@ fn precedence() {
 }
 
 #[test]
-fn test_nested_blocks() {
+fn nested_blocks() {
     let program = r#"
         let x = 10;
         {
@@ -34,7 +34,7 @@ fn test_nested_blocks() {
 }
 
 #[test]
-fn test_variable_shadowing() {
+fn variable_shadowing() {
     let program = r#"
         let x = 5;
         {
@@ -47,7 +47,7 @@ fn test_variable_shadowing() {
 }
 
 #[test]
-fn test_variable_shadowing_with_different_types() {
+fn variable_shadowing_with_different_types() {
     let program = r#"
         let x = 5;
         {
@@ -60,7 +60,7 @@ fn test_variable_shadowing_with_different_types() {
 }
 
 #[test]
-fn test_variable_in_different_scopes() {
+fn variable_in_different_scopes() {
     let program = r#"
         {
             let y = 2;
@@ -75,7 +75,7 @@ fn test_variable_in_different_scopes() {
 }
 
 #[test]
-fn test_variable_in_nested_scopes_with_different_types() {
+fn variable_in_nested_scopes_with_different_types() {
     let program = r#"
         let x = 5;
         {

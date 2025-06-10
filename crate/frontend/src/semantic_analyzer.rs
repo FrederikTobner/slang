@@ -583,27 +583,17 @@ impl<'a> SemanticAnalyzer<'a> {
             return Ok(actual_type);
         }
 
+        // Handle coercion of unspecified int to specific integer types
         if actual_type == TypeId(PrimitiveType::UnspecifiedInt as usize) {
-            if let Expression::Literal(lit) = expr {
-                if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                    let value_in_range = self.context.check_value_in_range(n, expected_type);
-
-                    if value_in_range {
-                        return Ok(expected_type.clone());
-                    }
-                }
+            if self.is_integer_type(expected_type) {
+                return self.check_unspecified_int_for_type(expr, expected_type);
             }
         }
 
+        // Handle coercion of unspecified float to specific float types
         if actual_type == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
-            if let Expression::Literal(lit) = expr {
-                if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
-                    let value_in_range = self.context.check_float_value_in_range(f, expected_type);
-
-                    if value_in_range {
-                        return Ok(expected_type.clone());
-                    }
-                }
+            if self.is_float_type(expected_type) {
+                return self.check_unspecified_float_for_type(expr, expected_type);
             }
         }
 
@@ -761,8 +751,9 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
                     if self.context.is_function_type(&symbol.type_id) {
                         self.context.get_function_type(&symbol.type_id).cloned()
                     } else {
-                        return Err(SemanticAnalysisError::UndefinedFunction {
-                            name: call_expr.name.clone(),
+                        return Err(SemanticAnalysisError::VariableNotCallable {
+                            variable_name: call_expr.name.clone(),
+                            variable_type: symbol.type_id.clone(),
                             location: call_expr.location,
                         });
                     }

@@ -1,6 +1,6 @@
 mod expression;
-mod functions;
 mod statement;
+mod lexical;
 mod syntax;
 pub mod test_utils;
 mod types;

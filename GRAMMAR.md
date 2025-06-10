@@ -4,7 +4,7 @@ Grammar of the slang language in the extended backus naur format:
 
 ```ebnf
 /* Program structure */
-program = { statement ";" | comment } ;
+program = { statement | comment } ;
 
 /* Comments */
 comment = single_line_comment | multi_line_comment ;
@@ -15,6 +15,7 @@ multi_line_comment = "/*", { character | multi_line_comment }, "*/" ;
 
 /* Statements */
 statement = let_statement
+          | assignment_statement
           | expression_statement
           | type_definition_statement
           | function_declaration_statement
@@ -23,7 +24,9 @@ statement = let_statement
 
 let_statement = "let", ["mut"], identifier, [ ":", type ], "=", expression, ";" ;
 
-expression_statement = expression, ";" ;
+assignment_statement = identifier, "=", expression, ";" ;
+
+expression_statement = expression, [ ";" ] ;
 
 type_definition_statement = "struct", identifier, "{", { field_definition, [ "," ] }, "}", ";" ;
 
@@ -37,7 +40,7 @@ parameter = identifier, ":", type ;
 
 return_statement = "return", [ expression ], ";" ;
 
-if_statement = "if", expression, block_expression, [ "else", ( if_statement | block_expression ) ] ;
+if_statement = "if", expression, block_expression, [ "else", block_expression ] ;
 
 /* Expressions */
 expression = logical_or ;
@@ -80,7 +83,8 @@ argument_list = expression, { ",", expression } ;
 literal = integer_literal
         | float_literal
         | string_literal
-        | boolean_literal ;
+        | boolean_literal
+        | unit_literal ;
 
 integer_literal = digit, { digit }, [ integer_type_suffix ] ;
 
@@ -94,8 +98,10 @@ string_literal = '"', { character - '"' }, '"' ;
 
 boolean_literal = "true" | "false" ;
 
+unit_literal = "(", ")" ;
+
 /* Types */
-type = "i32" | "i64" | "u32" | "u64" | "f32" | "f64" | "string" | "bool" | identifier | function_type ;
+type = "i32" | "i64" | "u32" | "u64" | "f32" | "f64" | "string" | "bool" | "()" | identifier | function_type ;
 
 function_type = "fn", "(", [ function_parameter_type_list ], ")", "->", type ;
 

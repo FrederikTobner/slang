@@ -12,7 +12,6 @@ Slang is designed as an educational project to demonstrate language implementati
 - Static type checking
 - Compilation to bytecode
 - Execution via a virtual machine
-- Interactive REPL
 - Support for primitive types (integers, floats, booleans, strings, unit)
 - Functions as first-class values with explicit type annotations
 - Function type expressions (e.g., `fn(i32, string) -> bool`)

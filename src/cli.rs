@@ -17,7 +17,7 @@ use zip::{ZipArchive, ZipWriter, write::FileOptions};
     version,
     about = "Slang programming language",
     long_about = r#"Slang is a simple programming language designed for educational purposes.
-It features a REPL, compilation to bytecode, and execution of both source files and compiled bytecode."#,
+It features compilation to bytecode and execution of both source files and compiled bytecode."#,
 arg_required_else_help = true,
 )]
 pub struct Parser {
