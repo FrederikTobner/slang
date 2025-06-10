@@ -42,20 +42,6 @@ impl ASTPrinter {
 }
 
 impl Visitor<()> for ASTPrinter {
-    fn visit_statement(&mut self, stmt: &Statement) {
-        match stmt {
-            Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
-            Statement::Assignment(assign_stmt) => self.visit_assignment_statement(assign_stmt),
-            Statement::Expression(expr) => self.visit_expression_statement(expr),
-            Statement::TypeDefinition(type_stmt) => self.visit_type_definition_statement(type_stmt),
-            Statement::FunctionDeclaration(fn_decl) => {
-                self.visit_function_declaration_statement(fn_decl)
-            }
-            Statement::Return(expr) => self.visit_return_statement(expr),
-            Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
-        }
-    }
-
     fn visit_function_declaration_statement(&mut self, fn_decl: &FunctionDeclarationStmt) {
         println!(
             "{}Function: {} -> {:?}",
@@ -118,19 +104,6 @@ impl Visitor<()> for ASTPrinter {
             println!("{}Field: {}", self.indent(), field.0);
         }
         self.indent_level -= 1;
-    }
-
-    fn visit_expression(&mut self, expr: &Expression) {
-        match expr {
-            Expression::Literal(lit) => self.visit_literal_expression(lit),
-            Expression::Binary(bin) => self.visit_binary_expression(bin),
-            Expression::Variable(var) => self.visit_variable_expression(var),
-            Expression::Unary(unary) => self.visit_unary_expression(unary),
-            Expression::Call(call) => self.visit_call_expression(call),
-            Expression::Conditional(cond) => self.visit_conditional_expression(cond),
-            Expression::Block(block) => self.visit_block_expression(block),
-            Expression::FunctionType(func_type) => self.visit_function_type_expression(func_type),
-        }
     }
 
     fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) {

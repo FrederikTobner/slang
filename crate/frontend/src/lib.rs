@@ -1,6 +1,7 @@
 pub mod lexer;
 pub mod parser;
 pub mod semantic_analyzer;
+pub mod semantic_analysis;
 pub mod semantic_error;
 pub mod token;
 #[cfg(feature = "print-tokens")]

@@ -215,6 +215,22 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         }
     }
 
+    fn visit_expression(&mut self, expr: &Expression) -> Result<(), ()> {
+        // Update current line from the expression's location
+        self.set_current_location(&expr.location());
+        
+        match expr {
+            Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
+            Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
+            Expression::Variable(var) => self.visit_variable_expression(var),
+            Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
+            Expression::Call(call_expr) => self.visit_call_expression(call_expr),
+            Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
+            Expression::Block(block_expr) => self.visit_block_expression(block_expr),
+            Expression::FunctionType(func_type_expr) => self.visit_function_type_expression(func_type_expr),
+        }
+    }
+
     fn visit_function_declaration_statement(
         &mut self,
         fn_decl: &FunctionDeclarationStmt,
@@ -321,22 +337,6 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         self.emit_byte(var_index as u8);
 
         Ok(())
-    }
-
-    fn visit_expression(&mut self, expr: &Expression) -> Result<(), ()> {
-        // Update current line from the expression's location
-        self.set_current_location(&expr.location());
-        
-        match expr {
-            Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
-            Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
-            Expression::Variable(var) => self.visit_variable_expression(var),
-            Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
-            Expression::Call(call_expr) => self.visit_call_expression(call_expr),
-            Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
-            Expression::Block(block_expr) => self.visit_block_expression(block_expr),
-            Expression::FunctionType(func_type_expr) => self.visit_function_type_expression(func_type_expr),
-        }
     }
 
     fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> Result<(), ()> {
@@ -542,8 +542,6 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
     fn visit_function_type_expression(&mut self, _func_type_expr: &FunctionTypeExpr) -> Result<(), ()> {
         // Function type expressions are compile-time constructs that don't generate runtime bytecode
         // They are used for type checking and don't produce any values at runtime
-        // In a more advanced implementation, this might generate type metadata
-        self.emit_constant(Value::Unit(()))?;
         Ok(())
     }
 }

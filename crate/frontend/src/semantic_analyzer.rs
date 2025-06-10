@@ -1,5 +1,6 @@
 use slang_error::{CompileResult, CompilerError};
 use crate::semantic_error::SemanticAnalysisError;
+use crate::semantic_analysis::{operations, type_system};
 
 use slang_ir::Location;
 use slang_ir::Visitor;
@@ -111,7 +112,7 @@ impl<'a> SemanticAnalyzer<'a> {
     /// True if the type is an integer type, false otherwise
     ///
     fn is_integer_type(&self, type_id: &TypeId) -> bool {
-        self.context.is_integer_type(type_id)
+        type_system::is_integer_type(self.context, type_id)
     }
 
     /// Checks if a type is a float type
@@ -123,19 +124,7 @@ impl<'a> SemanticAnalyzer<'a> {
     /// True if the type is a float type, false otherwise
     ///
     fn is_float_type(&self, type_id: &TypeId) -> bool {
-        self.context.is_float_type(type_id)
-    }
-
-    /// Checks if a type is an unsigned integer type
-    ///
-    /// ### Arguments
-    /// * `type_id` - The type to check
-    ///
-    /// ### Returns
-    /// * `true` if the type is u32 or u64, `false` otherwise
-    fn is_unsigned_type(&self, type_id: &TypeId) -> bool {
-        let type_name = self.context.get_type_name(type_id);
-        type_name == TYPE_NAME_U64 || type_name == TYPE_NAME_U32
+        type_system::is_float_type(self.context, type_id)
     }
 
     /// Registers the built-in native functions that are available to all programs.
@@ -149,137 +138,6 @@ impl<'a> SemanticAnalyzer<'a> {
         // Register as a function symbol in the symbol table
         let function_type_id = self.context.register_function_type(param_types, return_type);
         let _ = self.context.define_symbol("print_value".to_string(), SymbolKind::Function, function_type_id, false);
-    }
-
-    /// Checks if types are compatible for logical operations (AND, OR).
-    /// Both operands must be boolean types.
-    ///
-    /// ### Arguments
-    /// * `left_type` - The type of the left operand
-    /// * `right_type` - The type of the right operand
-    /// * `operator` - The logical operator (either And or Or)
-    /// * `location` - The source location of the operation
-    ///
-    /// ### Returns
-    /// * `Ok(bool_type())` if both operands are boolean
-    /// * `Err` with a descriptive error message otherwise
-    fn check_logical_operation(
-        &mut self,
-        left_type: &TypeId,
-        right_type: &TypeId,
-        operator: &BinaryOperator,
-        location: &Location,
-    ) -> SemanticResult {
-        if *left_type == TypeId(PrimitiveType::Bool as usize)
-            && *right_type == TypeId(PrimitiveType::Bool as usize)
-        {
-            Ok(TypeId(PrimitiveType::Bool as usize))
-        } else {
-            Err(SemanticAnalysisError::LogicalOperatorTypeMismatch {
-                operator: operator.to_string(),
-                left_type: left_type.clone(),
-                right_type: right_type.clone(),
-                location: *location,
-            })
-        }
-    }
-
-    /// Checks if types are compatible for relational operations (>, <, >=, <=, ==, !=).
-    /// Types must be comparable with each other, which means they're either:
-    /// - Exactly the same type
-    /// - Unspecified integer literal and an integer type
-    /// - Unspecified float literal and a float type
-    ///
-    /// ### Arguments
-    /// * `left_type` - The type of the left operand
-    /// * `right_type` - The type of the right operand
-    /// * `operator` - The relational operator
-    /// * `location` - The source location of the operation
-    ///
-    /// ### Returns
-    /// * `Ok(bool_type())` if the types are comparable
-    /// * `Err` with a descriptive error message otherwise
-    fn check_relational_operation(
-        &mut self,
-        left_type: &TypeId,
-        right_type: &TypeId,
-        operator: &BinaryOperator,
-        location: &Location,
-    ) -> SemanticResult {
-        let is_relational = matches!(
-            operator,
-            BinaryOperator::GreaterThan
-                | BinaryOperator::LessThan
-                | BinaryOperator::GreaterThanOrEqual
-                | BinaryOperator::LessThanOrEqual
-        );
-
-        if is_relational
-            && (!PrimitiveType::from_int(left_type.0).is_some_and(|f| f.is_numeric())
-                || !PrimitiveType::from_int(right_type.0).is_some_and(|f| f.is_numeric()))
-        {
-            return Err(SemanticAnalysisError::OperationTypeMismatch {
-                operator: operator.to_string(),
-                left_type: left_type.clone(),
-                right_type: right_type.clone(),
-                location: *location,
-            });
-        }
-
-        if (left_type == right_type && *left_type != TypeId(PrimitiveType::Unit as usize))
-            || (*left_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
-                && self.is_integer_type(right_type))
-            || (*right_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
-                && self.is_integer_type(left_type))
-            || (*left_type == TypeId(PrimitiveType::UnspecifiedFloat as usize)
-                && self.is_float_type(right_type))
-            || (*right_type == TypeId(PrimitiveType::UnspecifiedFloat as usize)
-                && self.is_float_type(left_type))
-        {
-            Ok(TypeId(PrimitiveType::Bool as usize))
-        } else {
-            Err(SemanticAnalysisError::OperationTypeMismatch {
-                operator: operator.to_string(),
-                left_type: left_type.clone(),
-                right_type: right_type.clone(),
-                location: *location,
-            })
-        }
-    }
-
-    /// Checks if a type is compatible with an arithmetic operation when both operands have the same type.
-    /// Boolean types are not allowed for any arithmetic operation.
-    /// String types are only allowed for the Add operator (concatenation).
-    ///
-    /// ### Arguments
-    /// * `type_id` - The type of both operands
-    /// * `operator` - The arithmetic operator (+, -, *, /)
-    /// * `location` - The source location of the operation
-    ///
-    /// ### Returns
-    /// * `Ok(type_id)` if the operation is allowed
-    /// * `Err` with a descriptive error message otherwise
-    fn check_same_type_arithmetic(
-        &mut self,
-        type_id: &TypeId,
-        operator: &BinaryOperator,
-        location: &Location,
-    ) -> SemanticResult {
-        if *type_id == TypeId(PrimitiveType::Bool as usize)
-            || *type_id == TypeId(PrimitiveType::Unit as usize)
-            || (operator != &BinaryOperator::Add
-                && *type_id == TypeId(PrimitiveType::String as usize))
-            || self.context.is_function_type(type_id)
-        {
-            Err(SemanticAnalysisError::OperationTypeMismatch {
-                operator: operator.to_string(),
-                left_type: type_id.clone(),
-                right_type: type_id.clone(),
-                location: *location,
-            })
-        } else {
-            Ok(type_id.clone())
-        }
     }
 
     /// Checks if an unspecified integer literal is in the valid range for a target type.
@@ -298,42 +156,7 @@ impl<'a> SemanticAnalyzer<'a> {
         expr: &Expression,
         target_type: &TypeId,
     ) -> SemanticResult {
-        if let Expression::Unary(unary_expr) = expr {
-            if unary_expr.operator == UnaryOperator::Negate {
-                if let Expression::Literal(lit) = &*unary_expr.right {
-                    if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                        if self.context.get_type_name(target_type) == "u32"
-                            || self.context.get_type_name(target_type) == "u64"
-                        {
-                            return Err(SemanticAnalysisError::ValueOutOfRange {
-                                value: format!("-{}", n),
-                                target_type: target_type.clone(),
-                                is_float: false,
-                                location: expr.location(),
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        if let Expression::Literal(lit) = expr {
-            if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                let value_in_range = self.context.check_value_in_range(n, target_type);
-
-                if value_in_range {
-                    return Ok(target_type.clone());
-                } else {
-                    return Err(SemanticAnalysisError::ValueOutOfRange {
-                        value: n.to_string(),
-                        target_type: target_type.clone(),
-                        is_float: false,
-                        location: expr.location(),
-                    });
-                }
-            }
-        }
-        Ok(target_type.clone())
+        type_system::check_unspecified_int_for_type(self.context, expr, target_type)
     }
 
     /// Checks if an unspecified float literal is in the valid range for a target type.
@@ -352,23 +175,7 @@ impl<'a> SemanticAnalyzer<'a> {
         expr: &Expression,
         target_type: &TypeId,
     ) -> SemanticResult {
-        if let Expression::Literal(lit) = expr {
-            if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
-                let value_in_range = self.context.check_float_value_in_range(f, target_type);
-
-                if value_in_range {
-                    return Ok(target_type.clone());
-                } else {
-                    return Err(SemanticAnalysisError::ValueOutOfRange {
-                        value: f.to_string(),
-                        target_type: target_type.clone(),
-                        is_float: true,
-                        location: expr.location(),
-                    });
-                }
-            }
-        }
-        Ok(target_type.clone())
+        type_system::check_unspecified_float_for_type(self.context, expr, target_type)
     }
 
     /// Checks if mixed-type arithmetic operations are allowed, particularly handling
@@ -381,56 +188,6 @@ impl<'a> SemanticAnalyzer<'a> {
     /// ### Arguments
     /// * `left_type` - The type of the left operand
     /// * `right_type` - The type of the right operand
-    /// * `bin_expr` - The binary expression containing both operands and the operator
-    ///
-    /// ### Returns
-    /// * `Ok(type_id)` with the resulting operation type if allowed
-    /// * `Err` with a descriptive error message if the operation is not allowed
-    fn check_mixed_arithmetic_operation(
-        &mut self,
-        left_type: &TypeId,
-        right_type: &TypeId,
-        bin_expr: &BinaryExpr,
-    ) -> SemanticResult {
-        if *left_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
-            && self.is_integer_type(right_type)
-        {
-            return self.check_unspecified_int_for_type(&bin_expr.left, right_type);
-        }
-
-        if *right_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
-            && self.is_integer_type(left_type)
-        {
-            return self.check_unspecified_int_for_type(&bin_expr.right, left_type);
-        }
-
-        if *left_type == TypeId(PrimitiveType::UnspecifiedFloat as usize)
-            && self.is_float_type(right_type)
-        {
-            return self.check_unspecified_float_for_type(&bin_expr.left, right_type);
-        }
-
-        if *right_type == TypeId(PrimitiveType::UnspecifiedFloat as usize)
-            && self.is_float_type(left_type)
-        {
-            return self.check_unspecified_float_for_type(&bin_expr.right, left_type);
-        }
-
-        if bin_expr.operator == BinaryOperator::Add
-            && *left_type == TypeId(PrimitiveType::String as usize)
-            && *right_type == TypeId(PrimitiveType::String as usize)
-        {
-            return Ok(TypeId(PrimitiveType::String as usize));
-        }
-
-        Err(SemanticAnalysisError::OperationTypeMismatch {
-            operator: bin_expr.operator.to_string(),
-            left_type: left_type.clone(),
-            right_type: right_type.clone(),
-            location: bin_expr.location,
-        })
-    }
-
     /// Converts unspecified literal types to concrete types.
     /// This is used to assign a default concrete type when an unspecified literal
     /// is used in a context where the type wasn't explicitly given.
@@ -442,13 +199,7 @@ impl<'a> SemanticAnalyzer<'a> {
     /// * The concrete type (i64 for unspecified integers, f64 for unspecified floats)
     /// * The original type if it wasn't an unspecified literal type
     fn finalize_inferred_type(&self, type_id: TypeId) -> TypeId {
-        if type_id == TypeId(PrimitiveType::UnspecifiedInt as usize) {
-            TypeId(PrimitiveType::I64 as usize)
-        } else if type_id == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
-            TypeId(PrimitiveType::F64 as usize)
-        } else {
-            type_id
-        }
+        type_system::finalize_inferred_type(type_id)
     }
 
     /// Determines the final type of a variable in a let statement based on both the
@@ -467,97 +218,7 @@ impl<'a> SemanticAnalyzer<'a> {
         let_stmt: &LetStatement,
         expr_type: TypeId,
     ) -> SemanticResult {
-        if let_stmt.expr_type == TypeId(PrimitiveType::Unknown as usize) {
-            return Ok(expr_type);
-        }
-
-        if let_stmt.expr_type == expr_type {
-            if self.is_unsigned_type(&let_stmt.expr_type) {
-                self.check_unspecified_int_for_type(&let_stmt.value, &let_stmt.expr_type)?;
-            }
-            return Ok(let_stmt.expr_type.clone());
-        }
-
-        if self.context.get_function_type(&let_stmt.expr_type).is_some() && 
-           self.context.get_function_type(&expr_type).is_some() {
-            if let_stmt.expr_type == expr_type {
-                return Ok(let_stmt.expr_type.clone());
-            } else {
-                return Err(SemanticAnalysisError::TypeMismatch {
-                    expected: let_stmt.expr_type.clone(),
-                    actual: expr_type,
-                    context: Some(let_stmt.name.clone()),
-                    location: let_stmt.location,
-                });
-            }
-        }
-
-        if expr_type == TypeId(PrimitiveType::UnspecifiedInt as usize) {
-            return self.handle_unspecified_int_assignment(let_stmt, &expr_type);
-        }
-
-        if expr_type == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
-            return self.handle_unspecified_float_assignment(let_stmt, &expr_type);
-        }
-
-        Err(SemanticAnalysisError::TypeMismatch {
-            expected: let_stmt.expr_type.clone(),
-            actual: expr_type,
-            context: Some(let_stmt.name.clone()),
-            location: let_stmt.location,
-        })
-    }
-
-    /// Handles assignment of an unspecified integer literal to a variable with a declared type.
-    ///
-    /// ### Arguments
-    /// * `let_stmt` - The let statement being analyzed.
-    /// * `expr_type` - The type of the initialization expression (should be unspecified_int_type).
-    ///
-    /// ### Returns
-    /// * `Ok(type_id)` with the declared type if the literal is valid for that type.
-    /// * `Err` with a SemanticAnalysisError if there's a type mismatch or value out of range.
-    fn handle_unspecified_int_assignment(
-        &mut self,
-        let_stmt: &LetStatement,
-        _expr_type: &TypeId,
-    ) -> SemanticResult {
-        if self.is_integer_type(&let_stmt.expr_type) {
-            self.check_unspecified_int_for_type(&let_stmt.value, &let_stmt.expr_type)
-        } else {
-            Err(SemanticAnalysisError::TypeMismatch {
-                expected: let_stmt.expr_type.clone(),
-                actual: TypeId(PrimitiveType::UnspecifiedInt as usize),
-                context: Some(let_stmt.name.clone()),
-                location: let_stmt.location,
-            })
-        }
-    }
-
-    /// Handles assignment of an unspecified float literal to a variable with a declared type.
-    ///
-    /// ### Arguments
-    /// * `let_stmt` - The let statement being analyzed.
-    /// * `expr_type` - The type of the initialization expression (should be unspecified_float_type).
-    ///
-    /// ### Returns
-    /// * `Ok(type_id)` with the declared type if the literal is valid for that type.
-    /// * `Err` with a SemanticAnalysisError if there's a type mismatch or value out of range.
-    fn handle_unspecified_float_assignment(
-        &mut self,
-        let_stmt: &LetStatement,
-        _expr_type: &TypeId,
-    ) -> SemanticResult {
-        if self.is_float_type(&let_stmt.expr_type) {
-            self.check_unspecified_float_for_type(&let_stmt.value, &let_stmt.expr_type)
-        } else {
-            Err(SemanticAnalysisError::TypeMismatch {
-                expected: let_stmt.expr_type.clone(),
-                actual: TypeId(PrimitiveType::UnspecifiedFloat as usize),
-                context: Some(let_stmt.name.clone()),
-                location: let_stmt.location,
-            })
-        }
+        type_system::determine_let_statement_type(self.context, let_stmt, expr_type)
     }
 
     /// Internal version of analyze_return_expr_type that returns TypeCheckResult
@@ -638,20 +299,6 @@ impl<'a> SemanticAnalyzer<'a> {
 }
 
 impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
-    fn visit_statement(&mut self, stmt: &Statement) -> SemanticResult {
-        match stmt {
-            Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
-            Statement::Assignment(assign_stmt) => self.visit_assignment_statement(assign_stmt),
-            Statement::Expression(expr) => self.visit_expression_statement(expr),
-            Statement::TypeDefinition(type_def) => self.visit_type_definition_statement(type_def),
-            Statement::FunctionDeclaration(fn_decl) => {
-                self.visit_function_declaration_statement(fn_decl)
-            }
-            Statement::Return(opt_expr) => self.visit_return_statement(opt_expr),
-            Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
-        }
-    }
-
     fn visit_function_declaration_statement(
         &mut self,
         fn_decl: &FunctionDeclarationStmt,
@@ -999,7 +646,7 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
         let right_type = self.visit_expression(&bin_expr.right)?;
 
         if bin_expr.operator == BinaryOperator::And || bin_expr.operator == BinaryOperator::Or {
-            let result = self.check_logical_operation(
+            let result = operations::check_logical_operation(
                 &left_type,
                 &right_type,
                 &bin_expr.operator,
@@ -1017,7 +664,8 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
                 | BinaryOperator::Equal
                 | BinaryOperator::NotEqual
         ) {
-            return self.check_relational_operation(
+            return operations::check_relational_operation(
+                self.context,
                 &left_type,
                 &right_type,
                 &bin_expr.operator,
@@ -1033,14 +681,15 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
                 | BinaryOperator::Divide
         ) {
             if left_type == right_type {
-                return self.check_same_type_arithmetic(
+                return operations::check_same_type_arithmetic(
+                    self.context,
                     &left_type,
                     &bin_expr.operator,
                     &bin_expr.location,
                 );
             }
 
-            return self.check_mixed_arithmetic_operation(&left_type, &right_type, bin_expr);
+            return operations::check_mixed_arithmetic_operation(self.context, &left_type, &right_type, bin_expr);
         }
 
         Err(SemanticAnalysisError::OperationTypeMismatch {
@@ -1111,19 +760,6 @@ impl Visitor<SemanticResult> for SemanticAnalyzer<'_> {
                     location: unary_expr.location,
                 })
             }
-        }
-    }
-
-    fn visit_expression(&mut self, expr: &Expression) -> SemanticResult {
-        match expr {
-            Expression::Literal(lit) => self.visit_literal_expression(lit),
-            Expression::Variable(var) => self.visit_variable_expression(var),
-            Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
-            Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
-            Expression::Call(call_expr) => self.visit_call_expression(call_expr),
-            Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
-            Expression::Block(block_expr) => self.visit_block_expression(block_expr),
-            Expression::FunctionType(func_type_expr) => self.visit_function_type_expression(func_type_expr),
         }
     }
 
