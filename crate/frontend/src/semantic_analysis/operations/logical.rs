@@ -1,8 +1,9 @@
 
 use super::super::error::SemanticAnalysisError;
+use super::helpers;
 use slang_ir::ast::BinaryOperator;
 use slang_ir::Location;
-use slang_types::{PrimitiveType, TypeId};
+use slang_types::TypeId;
 
 /// Type alias for result of semantic analysis operations
 pub type SemanticResult = Result<TypeId, SemanticAnalysisError>;
@@ -25,16 +26,14 @@ pub fn check_logical_operation(
     operator: &BinaryOperator,
     location: &Location,
 ) -> SemanticResult {
-    if *left_type == TypeId(PrimitiveType::Bool as usize)
-        && *right_type == TypeId(PrimitiveType::Bool as usize)
-    {
-        Ok(TypeId(PrimitiveType::Bool as usize))
+    if helpers::is_boolean_type(left_type) && helpers::is_boolean_type(right_type) {
+        Ok(helpers::bool_type())
     } else {
-        Err(SemanticAnalysisError::LogicalOperatorTypeMismatch {
-            operator: operator.to_string(),
-            left_type: left_type.clone(),
-            right_type: right_type.clone(),
-            location: *location,
-        })
+        Err(helpers::logical_operator_type_mismatch_error(
+            &operator.to_string(),
+            left_type,
+            right_type,
+            location,
+        ))
     }
 }

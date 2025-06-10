@@ -1,7 +1,7 @@
 use super::error::SemanticAnalysisError;
 use slang_ir::ast::{BinaryExpr, BinaryOperator, Expression, LetStatement, LiteralValue, UnaryOperator};
 use slang_shared::CompilationContext;
-use slang_types::{PrimitiveType, TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
+use slang_types::{TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
 
 /// Type alias for result of type system operations
 pub type SemanticResult = Result<TypeId, SemanticAnalysisError>;
@@ -145,10 +145,10 @@ pub fn check_unspecified_float_for_type(
 /// * The concrete type (i64 for unspecified integers, f64 for unspecified floats)
 /// * The original type if it wasn't an unspecified literal type
 pub fn finalize_inferred_type(type_id: TypeId) -> TypeId {
-    if type_id == TypeId(PrimitiveType::UnspecifiedInt as usize) {
-        TypeId(PrimitiveType::I64 as usize)
-    } else if type_id == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
-        TypeId(PrimitiveType::F64 as usize)
+    if type_id == TypeId::unspecified_int() {
+        TypeId::i64()
+    } else if type_id == TypeId::unspecified_float() {
+        TypeId::f64()
     } else {
         type_id
     }
@@ -171,7 +171,7 @@ pub fn determine_let_statement_type(
     let_stmt: &LetStatement,
     expr_type: TypeId,
 ) -> SemanticResult {
-    if let_stmt.expr_type == TypeId(PrimitiveType::Unknown as usize) {
+    if let_stmt.expr_type == TypeId::unknown() {
         return Ok(expr_type);
     }
 
@@ -196,11 +196,11 @@ pub fn determine_let_statement_type(
         }
     }
 
-    if expr_type == TypeId(PrimitiveType::UnspecifiedInt as usize) {
+    if expr_type == TypeId::unspecified_int() {
         return handle_unspecified_int_assignment(context, let_stmt, &expr_type);
     }
 
-    if expr_type == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
+    if expr_type == TypeId::unspecified_float() {
         return handle_unspecified_float_assignment(context, let_stmt, &expr_type);
     }
 
@@ -232,7 +232,7 @@ pub fn handle_unspecified_int_assignment(
     } else {
         Err(SemanticAnalysisError::TypeMismatch {
             expected: let_stmt.expr_type.clone(),
-            actual: TypeId(PrimitiveType::UnspecifiedInt as usize),
+            actual: TypeId::unspecified_int(),
             context: Some(let_stmt.name.clone()),
             location: let_stmt.location,
         })
@@ -259,7 +259,7 @@ pub fn handle_unspecified_float_assignment(
     } else {
         Err(SemanticAnalysisError::TypeMismatch {
             expected: let_stmt.expr_type.clone(),
-            actual: TypeId(PrimitiveType::UnspecifiedFloat as usize),
+            actual: TypeId::unspecified_float(),
             context: Some(let_stmt.name.clone()),
             location: let_stmt.location,
         })
@@ -288,35 +288,35 @@ pub fn check_mixed_arithmetic_operation(
     right_type: &TypeId,
     bin_expr: &BinaryExpr,
 ) -> SemanticResult {
-    if *left_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
+    if *left_type == TypeId::unspecified_int()
         && is_integer_type(context, right_type)
     {
         return check_unspecified_int_for_type(context, &bin_expr.left, right_type);
     }
 
-    if *right_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
+    if *right_type == TypeId::unspecified_int()
         && is_integer_type(context, left_type)
     {
         return check_unspecified_int_for_type(context, &bin_expr.right, left_type);
     }
 
-    if *left_type == TypeId(PrimitiveType::UnspecifiedFloat as usize)
+    if *left_type == TypeId::unspecified_float()
         && is_float_type(context, right_type)
     {
         return check_unspecified_float_for_type(context, &bin_expr.left, right_type);
     }
 
-    if *right_type == TypeId(PrimitiveType::UnspecifiedFloat as usize)
+    if *right_type == TypeId::unspecified_float()
         && is_float_type(context, left_type)
     {
         return check_unspecified_float_for_type(context, &bin_expr.right, left_type);
     }
 
     if bin_expr.operator == BinaryOperator::Add
-        && *left_type == TypeId(PrimitiveType::String as usize)
-        && *right_type == TypeId(PrimitiveType::String as usize)
+        && *left_type == TypeId::string()
+        && *right_type == TypeId::string()
     {
-        return Ok(TypeId(PrimitiveType::String as usize));
+        return Ok(TypeId::string());
     }
 
     Err(SemanticAnalysisError::OperationTypeMismatch {

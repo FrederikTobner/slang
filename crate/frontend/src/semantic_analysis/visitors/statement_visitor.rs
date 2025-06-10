@@ -1,7 +1,7 @@
 use slang_ir::ast::*;
 use slang_ir::Location;
 use slang_shared::{CompilationContext, SymbolKind};
-use slang_types::{PrimitiveType, TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
+use slang_types::{TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
 
 use super::super::{
     traits::SemanticResult,
@@ -125,8 +125,8 @@ impl<'a> StatementVisitor<'a> {
                     &expected_type,
                     &expr.location(),
                 );
-            } else if expected_type != TypeId(PrimitiveType::Unknown as usize)
-                && expected_type != TypeId(PrimitiveType::Unit as usize)
+            } else if expected_type != TypeId::unknown()
+                && expected_type != TypeId::unit()
             {
                 return Err(SemanticAnalysisError::MissingReturnValue {
                     expected: expected_type.clone(),
@@ -135,7 +135,7 @@ impl<'a> StatementVisitor<'a> {
             }
 
             // Empty return is treated as returning unit
-            Ok(TypeId(PrimitiveType::Unit as usize))
+            Ok(TypeId::unit())
         } else {
             Err(SemanticAnalysisError::ReturnOutsideFunction {
                 location: error_location,
@@ -227,8 +227,8 @@ impl<'a> StatementVisitor<'a> {
         let expr_type = self.visit_expression(&assign_stmt.value)?;
 
         if var_type_id == expr_type
-            || expr_type == TypeId(PrimitiveType::UnspecifiedInt as usize)
-            || expr_type == TypeId(PrimitiveType::UnspecifiedFloat as usize)
+            || expr_type == TypeId::unspecified_int()
+            || expr_type == TypeId::unspecified_float()
         {
             Ok(var_type_id)
         } else {
@@ -253,9 +253,9 @@ impl<'a> StatementVisitor<'a> {
 
         let mut field_types_for_registration = Vec::new();
         for (name, type_id) in &type_def.fields {
-            if *type_id == TypeId(PrimitiveType::Unknown as usize)
-                || *type_id == TypeId(PrimitiveType::UnspecifiedInt as usize)
-                || *type_id == TypeId(PrimitiveType::UnspecifiedFloat as usize)
+            if *type_id == TypeId::unknown()
+                || *type_id == TypeId::unspecified_int()
+                || *type_id == TypeId::unspecified_float()
             {
                 return Err(SemanticAnalysisError::InvalidFieldType {
                     struct_name: type_def.name.clone(),
@@ -285,9 +285,9 @@ impl<'a> StatementVisitor<'a> {
     /// Visit an if statement
     pub fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> SemanticResult {
         let condition_type = self.visit_expression(&if_stmt.condition)?;
-        if condition_type != TypeId(PrimitiveType::Bool as usize) {
+        if condition_type != TypeId::bool() {
             return Err(SemanticAnalysisError::TypeMismatch {
-                expected: TypeId(PrimitiveType::Bool as usize),
+                expected: TypeId::bool(),
                 actual: condition_type,
                 context: Some("if condition".to_string()),
                 location: if_stmt.condition.location(),
@@ -300,7 +300,7 @@ impl<'a> StatementVisitor<'a> {
             self.visit_block_expression(else_branch)?;
         }
 
-        Ok(TypeId(PrimitiveType::Unit as usize))
+        Ok(TypeId::unit())
     }
 
     // Helper methods that will be replaced when integrating with expression visitor
@@ -323,14 +323,14 @@ impl<'a> StatementVisitor<'a> {
         }
 
         // Handle coercion of unspecified int to specific integer types
-        if actual_type == TypeId(PrimitiveType::UnspecifiedInt as usize) {
+        if actual_type == TypeId::unspecified_int() {
             if type_system::is_integer_type(self.context, expected_type) {
                 return type_system::check_unspecified_int_for_type(self.context, expr, expected_type);
             }
         }
 
         // Handle coercion of unspecified float to specific float types
-        if actual_type == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
+        if actual_type == TypeId::unspecified_float() {
             if type_system::is_float_type(self.context, expected_type) {
                 return type_system::check_unspecified_float_for_type(self.context, expr, expected_type);
             }

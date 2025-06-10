@@ -26,7 +26,7 @@ impl TypeRegistry {
             self.register_primitive_type(
                 ptype.name(),
                 ptype.to_type_kind(),
-                TypeId(ptype as usize),
+                TypeId::from_primitive(ptype),
             );
         }
     }

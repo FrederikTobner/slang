@@ -29,7 +29,7 @@ impl CompilationContext {
         let mut symbol_table = SymbolTable::new();
 
         let mut define_primitive = |ptype: PrimitiveType| {
-            let type_id = TypeId(ptype as usize);
+            let type_id = TypeId::from_primitive(ptype);
             symbol_table
                 .define(ptype.name().to_string(), SymbolData::Type, type_id.clone())
                 .unwrap_or_else(|_| {

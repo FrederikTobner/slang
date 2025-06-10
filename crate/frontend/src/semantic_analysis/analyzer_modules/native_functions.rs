@@ -1,5 +1,5 @@
 use slang_shared::{CompilationContext, SymbolKind};
-use slang_types::{PrimitiveType, TypeId};
+use slang_types::{TypeId};
 
 /// Register built-in native functions that are available to all programs.
 /// 
@@ -17,8 +17,8 @@ pub fn register_builtins(context: &mut CompilationContext) {
 /// # Arguments
 /// * `context` - The compilation context to register the function in
 fn register_print_value_function(context: &mut CompilationContext) {
-    let param_types = vec![TypeId(PrimitiveType::Unknown as usize)];
-    let return_type = TypeId(PrimitiveType::I32 as usize);
+    let param_types = vec![TypeId::unknown()];
+    let return_type = TypeId::i32();
 
     // Register as a function symbol in the symbol table
     let function_type_id = context.register_function_type(param_types, return_type);

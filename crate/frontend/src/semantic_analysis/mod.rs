@@ -1,11 +1,12 @@
 pub mod operations;
 pub mod type_system;
 pub mod error;
-pub mod analyzer; 
+pub mod semantic_analyzer; 
+pub mod analyzer_modules;
 pub mod visitors;
 pub mod traits;
-pub mod semantic_analyzer;
+pub mod validation;
 
 pub use error::{SemanticAnalysisError};
-pub use analyzer::CoreAnalyzer;
+pub use analyzer_modules::CoreAnalyzer;
 pub use semantic_analyzer::{execute, SemanticAnalyzer};

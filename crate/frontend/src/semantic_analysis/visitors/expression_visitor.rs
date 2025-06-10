@@ -1,12 +1,12 @@
 use slang_ir::ast::*;
 use slang_shared::{CompilationContext, SymbolKind};
-use slang_types::{PrimitiveType, TypeId};
+use slang_types::{TypeId};
 
 use super::super::{
     traits::SemanticResult,
     error::SemanticAnalysisError,
     operations,
-    type_system,
+    validation::TypeCheckingCoordinator,
 };
 
 /// Handles semantic analysis for all expression types
@@ -46,6 +46,11 @@ impl<'a> ExpressionVisitor<'a> {
     /// Set the current return type for function analysis
     pub fn set_return_type(&mut self, return_type: Option<TypeId>) {
         self.current_return_type = return_type;
+    }
+
+    /// Create a type checking coordinator for this visitor's context
+    fn create_type_coordinator(&self) -> TypeCheckingCoordinator {
+        TypeCheckingCoordinator::new(self.context)
     }
 
     /// Visit an expression and determine its type
@@ -113,11 +118,12 @@ impl<'a> ExpressionVisitor<'a> {
                 );
             }
 
-            return operations::check_mixed_arithmetic_operation(
-                self.context, 
-                &left_type, 
-                &right_type, 
-                bin_expr
+            // Use coordinator for mixed arithmetic with coercion
+            let coordinator = self.create_type_coordinator();
+            return coordinator.check_mixed_arithmetic_with_coercion(
+                &left_type,
+                &right_type,
+                bin_expr,
             );
         }
 
@@ -133,68 +139,7 @@ impl<'a> ExpressionVisitor<'a> {
     pub fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> SemanticResult {
         let operand_type = self.visit_expression(&unary_expr.right)?;
 
-        match unary_expr.operator {
-            UnaryOperator::Negate => {
-                // Handle unspecified integer literals
-                if operand_type == TypeId(PrimitiveType::UnspecifiedInt as usize) {
-                    if let Expression::Literal(lit) = &*unary_expr.right {
-                        if let LiteralValue::UnspecifiedInteger(_value) = &lit.value {
-                            return Ok(TypeId(PrimitiveType::UnspecifiedInt as usize));
-                        }
-                        return Ok(TypeId(PrimitiveType::UnspecifiedFloat as usize));
-                    }
-                }
-
-                // Handle unspecified float literals
-                if operand_type == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
-                    if let Expression::Literal(_) = &*unary_expr.right {
-                        return Ok(TypeId(PrimitiveType::UnspecifiedFloat as usize));
-                    }
-                }
-
-                let is_numeric = type_system::is_integer_type(self.context, &operand_type) 
-                    || type_system::is_float_type(self.context, &operand_type);
-
-                if is_numeric {
-                    // Signed types can be negated
-                    if operand_type == TypeId(PrimitiveType::I32 as usize)
-                        || operand_type == TypeId(PrimitiveType::I64 as usize)
-                        || operand_type == TypeId(PrimitiveType::F32 as usize)
-                        || operand_type == TypeId(PrimitiveType::F64 as usize)
-                    {
-                        return Ok(operand_type);
-                    }
-
-                    // Unsigned types cannot be negated
-                    if operand_type == TypeId(PrimitiveType::U32 as usize)
-                        || operand_type == TypeId(PrimitiveType::U64 as usize)
-                    {
-                        return Err(SemanticAnalysisError::InvalidUnaryOperation {
-                            operator: "-".to_string(),
-                            operand_type: operand_type.clone(),
-                            location: unary_expr.location,
-                        });
-                    }
-                }
-                
-                Err(SemanticAnalysisError::InvalidUnaryOperation {
-                    operator: "-".to_string(),
-                    operand_type: operand_type.clone(),
-                    location: unary_expr.location,
-                })
-            }
-            UnaryOperator::Not => {
-                if operand_type == TypeId(PrimitiveType::Bool as usize) {
-                    Ok(TypeId(PrimitiveType::Bool as usize))
-                } else {
-                    Err(SemanticAnalysisError::InvalidUnaryOperation {
-                        operator: "!".to_string(),
-                        operand_type: operand_type.clone(),
-                        location: unary_expr.location,
-                    })
-                }
-            }
-        }
+        operations::unary::check_unary_operation(self.context, unary_expr, &operand_type)
     }
 
     /// Visit a function call expression
@@ -252,18 +197,17 @@ impl<'a> ExpressionVisitor<'a> {
                 let param_type = func_type.param_types[i].clone();
                 let arg_type = self.visit_expression(arg)?;
 
-                if param_type == TypeId(PrimitiveType::Unknown as usize) {
+                if param_type == TypeId::unknown() {
                     continue;
                 }
 
-                if arg_type != param_type {
-                    // Handle unspecified integer coercion
-                    if arg_type == TypeId(PrimitiveType::UnspecifiedInt as usize) {
-                        if type_system::check_unspecified_int_for_type(
-                            self.context, 
-                            arg, 
-                            &param_type
-                        ).is_err() {
+                // Use coordinator for assignment compatibility checking
+                let coordinator = self.create_type_coordinator();
+                if !coordinator.check_assignment_compatibility(&param_type, &arg_type) {
+                    // For unspecified literals, try range validation
+                    if arg_type == TypeId::unspecified_int() 
+                        || arg_type == TypeId::unspecified_float() {
+                        if coordinator.validate_literal_range(arg, &param_type).is_err() {
                             return Err(SemanticAnalysisError::ArgumentTypeMismatch {
                                 function_name: call_expr.name.clone(),
                                 argument_position: i + 1,
@@ -272,34 +216,16 @@ impl<'a> ExpressionVisitor<'a> {
                                 location: arg.location(),
                             });
                         }
-                        continue;
+                    } else {
+                        // For non-literal types, it's a direct type mismatch
+                        return Err(SemanticAnalysisError::ArgumentTypeMismatch {
+                            function_name: call_expr.name.clone(),
+                            argument_position: i + 1,
+                            expected: param_type.clone(),
+                            actual: arg_type,
+                            location: arg.location(),
+                        });
                     }
-
-                    // Handle unspecified float coercion
-                    if arg_type == TypeId(PrimitiveType::UnspecifiedFloat as usize) {
-                        if type_system::check_unspecified_float_for_type(
-                            self.context, 
-                            arg, 
-                            &param_type
-                        ).is_err() {
-                            return Err(SemanticAnalysisError::ArgumentTypeMismatch {
-                                function_name: call_expr.name.clone(),
-                                argument_position: i + 1,
-                                expected: param_type.clone(),
-                                actual: arg_type,
-                                location: arg.location(),
-                            });
-                        }
-                        continue;
-                    }
-
-                    return Err(SemanticAnalysisError::ArgumentTypeMismatch {
-                        function_name: call_expr.name.clone(),
-                        argument_position: i + 1,
-                        expected: param_type,
-                        actual: arg_type,
-                        location: arg.location(),
-                    });
                 }
             }
 
@@ -332,9 +258,9 @@ impl<'a> ExpressionVisitor<'a> {
     /// Visit a conditional expression
     pub fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) -> SemanticResult {
         let condition_type = self.visit_expression(&cond_expr.condition)?;
-        if condition_type != TypeId(PrimitiveType::Bool as usize) {
+        if condition_type != TypeId::bool() {
             return Err(SemanticAnalysisError::TypeMismatch {
-                expected: TypeId(PrimitiveType::Bool as usize),
+                expected: TypeId::bool(),
                 actual: condition_type,
                 context: Some("if condition".to_string()),
                 location: cond_expr.condition.location(),
@@ -344,9 +270,9 @@ impl<'a> ExpressionVisitor<'a> {
         let then_type = self.visit_expression(&cond_expr.then_branch)?;
         let else_type = self.visit_expression(&cond_expr.else_branch)?;
 
-        if then_type == TypeId(PrimitiveType::Unknown as usize) {
+        if then_type == TypeId::unknown() {
             Ok(else_type)
-        } else if else_type == TypeId(PrimitiveType::Unknown as usize) || then_type == else_type {
+        } else if else_type == TypeId::unknown() || then_type == else_type {
             Ok(then_type)
         } else {
             Err(SemanticAnalysisError::TypeMismatch {
@@ -399,7 +325,7 @@ impl<'a> ExpressionVisitor<'a> {
         let block_type = if let Some(return_expr) = &block_expr.return_expr {
             self.visit_expression(return_expr)?
         } else {
-            TypeId(PrimitiveType::Unit as usize)
+            TypeId::unit()
         };
 
         self.context.end_scope();
