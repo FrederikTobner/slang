@@ -1,5 +1,5 @@
 
-use crate::semantic_error::SemanticAnalysisError;
+use super::super::error::SemanticAnalysisError;
 use slang_ir::ast::BinaryOperator;
 use slang_ir::Location;
 use slang_shared::CompilationContext;

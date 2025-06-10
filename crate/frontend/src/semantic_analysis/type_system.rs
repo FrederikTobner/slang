@@ -1,4 +1,4 @@
-use crate::semantic_error::SemanticAnalysisError;
+use super::error::SemanticAnalysisError;
 use slang_ir::ast::{BinaryExpr, BinaryOperator, Expression, LetStatement, LiteralValue, UnaryOperator};
 use slang_shared::CompilationContext;
 use slang_types::{PrimitiveType, TYPE_NAME_U32, TYPE_NAME_U64, TypeId};

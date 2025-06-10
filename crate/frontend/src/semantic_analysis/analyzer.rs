@@ -1,5 +1,5 @@
 use slang_error::{CompileResult, CompilerError};
-use crate::semantic_error::SemanticAnalysisError;
+use crate::semantic_analysis::SemanticAnalysisError;
 use crate::semantic_analysis::{operations, type_system};
 
 use slang_ir::Location;
