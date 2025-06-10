@@ -249,7 +249,7 @@ impl<'a> CompilationPipeline<'a> {
                 source,
                 file_name,
             } => {
-                match slang_frontend::semantic_analysis::analyzer::execute(&statements, &mut context) {
+                match slang_frontend::semantic_analysis::execute(&statements, &mut context) {
                     Ok(()) => PipelineStage::Success {
                         pipeline: Self {
                             context,
