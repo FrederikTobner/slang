@@ -1,4 +1,11 @@
+# Build directories
 /target
+
+# General
+/.planning
+
+# VsCode specific files
+/.vscode
 
 # Slang specific files
 *.sl

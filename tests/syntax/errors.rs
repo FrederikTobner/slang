@@ -1,3 +1,4 @@
+use crate::ErrorCode;
 use crate::test_utils::execute_program_expect_error;
 
 #[test]
@@ -6,7 +7,11 @@ fn missing_semicolon() {
         let a = 42
         print_value(a);
     "#;
-    execute_program_expect_error(program, "[E1001]", "Expected \';\' after let statement");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedSemicolon,
+        "Expected \';\' after let statement",
+    );
 }
 
 #[test]
@@ -14,7 +19,24 @@ fn mismatched_brackets() {
     let program = r#"
         fn test() {
     "#;
-    execute_program_expect_error(program, "[E1002]", "Expected \'}\' after block");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedClosingBrace,
+        "Expected \'}\' after block",
+    );
+}
+
+#[test]
+fn mismatch_quotes() {
+    let program = r#"
+        let message = "Hello, world!;
+        print_value(message);
+    "#;
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedClosingQuote,
+        "Expected closing quote for string",
+    );
 }
 
 #[test]
@@ -25,7 +47,7 @@ fn mismatched_parentheses() {
     "#;
     execute_program_expect_error(
         program,
-        "[E1003]",
+        ErrorCode::ExpectedClosingParen,
         "Expected \')\' after function arguments",
     );
 }
@@ -36,7 +58,11 @@ fn invalid_assignment() {
         let a = 42;
         42 = a;
     "#;
-    execute_program_expect_error(program, "[E1001]", "Expected \';\' after expression");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedSemicolon,
+        "Expected \';\' after expression",
+    );
 }
 
 #[test]
@@ -45,7 +71,11 @@ fn invalid_variable_declaration() {
         let 123abc = 42;
         print_value(123abc);
     "#;
-    execute_program_expect_error(program, "[E1007]", "Expected identifier after \'let\'");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedIdentifier,
+        "Expected identifier after \'let\'",
+    );
 }
 
 #[test]
@@ -55,7 +85,11 @@ fn invalid_function_declaration() {
             print_value(42);
         }
     "#;
-    execute_program_expect_error(program, "[E1007]", "Expected function name");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedIdentifier,
+        "Expected function name",
+    );
 }
 
 #[test]
@@ -65,6 +99,9 @@ fn redefined_variable() {
         let a = 43;
         print_value(a);
     "#;
-    execute_program_expect_error(program, "[E2002]", "Variable \'a\' already defined");
+    execute_program_expect_error(
+        program,
+        ErrorCode::VariableRedefinition,
+        "Variable \'a\' already defined",
+    );
 }
-

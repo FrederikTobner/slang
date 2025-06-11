@@ -53,6 +53,10 @@ pub enum OpCode {
     Equal,
     /// Not equal comparison
     NotEqual,
+    /// Begin a new scope (save variable state)
+    BeginScope,
+    /// End the current scope (restore variable state)
+    EndScope,
 }
 
 /// Function representation in bytecode
@@ -245,7 +249,7 @@ impl Chunk {
                 Value::Boolean(b) => {
                     writer.write_all(&[*b as u8])?;
                 }
-                Value::Unit => {}
+                Value::Unit(_) => {}
             }
         }
 
@@ -393,6 +397,8 @@ impl Chunk {
             Some(OpCode::LessEqual) => self.simple_instruction("LESS_EQUAL", offset),
             Some(OpCode::Equal) => self.simple_instruction("EQUAL", offset),
             Some(OpCode::NotEqual) => self.simple_instruction("NOT_EQUAL", offset),
+            Some(OpCode::BeginScope) => self.simple_instruction("BEGIN_SCOPE", offset),
+            Some(OpCode::EndScope) => self.simple_instruction("END_SCOPE", offset),
             None => {
                 println!("Unknown opcode: {}", instruction);
                 offset + 1

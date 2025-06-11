@@ -1,7 +1,7 @@
-use crate::error::LineInfo;
+use slang_error::{CompileResult, CompilerError, LineInfo, ErrorCode};
 use crate::token::{Token, Tokentype};
 
-pub struct Result<'a> {
+pub struct LexerResult<'a> {
     /// The list of tokens generated from the input
     pub tokens: Vec<Token>,
     /// The line information for the tokens
@@ -24,6 +24,8 @@ struct LexerState<'a> {
     tokens: Vec<Token>,
     /// Line token counts for line info
     line_tokens: Vec<(u16, u16)>,
+    /// Collected lexer errors
+    errors: Vec<CompilerError>,
 }
 
 impl<'a> LexerState<'a> {
@@ -43,13 +45,14 @@ impl<'a> LexerState<'a> {
             tokens_on_current_line: 0,
             tokens: Vec::new(),
             line_tokens: Vec::new(),
+            errors: Vec::new(),
         }
     }
 
     /// Advances to the next character in the input
     ///
     /// ### Arguments
-    /// * `self` - The current lexer state
+    /// * `state` - The current lexer state
     fn advance(&mut self) -> Option<char> {
         let c = self.chars.next();
         if c.is_some() {
@@ -61,7 +64,7 @@ impl<'a> LexerState<'a> {
     /// Peeks at the next character without consuming it
     ///
     /// ### Arguments
-    /// * `self` - The current lexer state
+    /// * `state` - The current lexer state
     fn peek(&mut self) -> Option<&char> {
         self.chars.peek()
     }
@@ -69,7 +72,7 @@ impl<'a> LexerState<'a> {
     /// Adds a token to the token list
     ///
     /// ### Arguments
-    /// * `self` - The current lexer state
+    /// * `state` - The current lexer state
     /// * `token_type` - The type of token to add
     /// * `lexeme` - The string representation of the token
     /// * `start_pos` - The starting position of the token in the input
@@ -78,10 +81,33 @@ impl<'a> LexerState<'a> {
         self.tokens_on_current_line += 1;
     }
 
+    /// Adds an error to the error list
+    ///
+    /// ### Arguments
+    /// * `state` - The current lexer state
+    /// * `error_code` - The error code for this error
+    /// * `message` - The error message
+    /// * `start_pos` - The starting position of the error
+    /// * `token_length` - The length of the problematic token
+    fn add_error(&mut self, error_code: ErrorCode, message: String, start_pos: usize, token_length: Option<usize>) {
+        // Calculate column position from start_pos
+        let line_start = self.input[..start_pos].rfind('\n').map_or(0, |pos| pos + 1);
+        let column = start_pos - line_start + 1;
+        
+        self.errors.push(CompilerError::new(
+            error_code,
+            message,
+            self.current_line,
+            column,
+            start_pos,
+            token_length,
+        ));
+    }
+
     /// Records a line break, updating line counts
     ///
     /// ### Arguments
-    /// * `self` - The current lexer state
+    /// * `state` - The current lexer state
     fn record_line_break(&mut self) {
         if self.tokens_on_current_line > 0 {
             self.line_tokens
@@ -94,8 +120,8 @@ impl<'a> LexerState<'a> {
     /// Finishes tokenization and returns the result
     ///
     /// ### Arguments
-    /// * `self` - The current lexer state
-    fn finish(mut self) -> Result<'a> {
+    /// * `state` - The current lexer state
+    fn finish(mut self) -> CompileResult<LexerResult<'a>> {
         // Add any remaining tokens on the last line
         if self.tokens_on_current_line > 0 {
             self.line_tokens
@@ -106,10 +132,15 @@ impl<'a> LexerState<'a> {
         let mut info = LineInfo::new(self.input);
         info.per_line = self.line_tokens;
 
-        Result {
+        // If there are errors, return them
+        if !self.errors.is_empty() {
+            return Err(self.errors);
+        }
+
+        Ok(LexerResult {
             tokens: self.tokens,
             line_info: info,
-        }
+        })
     }
 }
 
@@ -121,8 +152,8 @@ impl<'a> LexerState<'a> {
 ///
 /// ### Returns
 ///
-/// A LexerResult containing tokens and line information
-pub fn tokenize(input: &str) -> Result {
+/// A CompileResult containing LexerResult (tokens and line information) or lexer errors
+pub fn tokenize(input: &str) -> CompileResult<LexerResult> {
     let mut state = LexerState::new(input);
 
     while let Some(&c) = state.peek() {
@@ -160,7 +191,7 @@ pub fn tokenize(input: &str) -> Result {
 /// Handles whitespace characters in the input
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 fn handle_whitespace(state: &mut LexerState) {
     let c = state.advance().unwrap();
 
@@ -172,7 +203,7 @@ fn handle_whitespace(state: &mut LexerState) {
 /// Handles alphabetic identifiers and keywords
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the identifier in the input
 fn handle_identifier(state: &mut LexerState, start_pos: usize) {
     let mut identifier = String::new();
@@ -204,7 +235,7 @@ fn handle_identifier(state: &mut LexerState, start_pos: usize) {
 /// Handles numeric literals (integers and floating point)
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the number in the input
 fn handle_number(state: &mut LexerState, start_pos: usize) {
     let mut number = String::new();
@@ -247,15 +278,17 @@ fn handle_number(state: &mut LexerState, start_pos: usize) {
 /// Handles string literals
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 fn handle_string(state: &mut LexerState) {
-    state.advance();
-    let mut string = String::new();
     let start_pos = state.current_pos;
+    state.advance(); // consume opening quote
+    let mut string = String::new();
+    let mut closed = false;
 
     while let Some(&c) = state.peek() {
         if c == '"' {
             state.advance();
+            closed = true;
             break;
         } else if c == '\n' {
             state.current_line += 1;
@@ -267,13 +300,24 @@ fn handle_string(state: &mut LexerState) {
         }
     }
 
-    state.add_token(Tokentype::StringLiteral, string, start_pos);
+    if !closed {
+        let error_message = "Expected closing quote for string literal".to_string();
+        let invalid_lexeme = format!("\"{}",string);
+        state.add_error(
+            ErrorCode::ExpectedClosingQuote, 
+            error_message, 
+            start_pos, 
+            Some(invalid_lexeme.len())
+        );
+    } else {
+        state.add_token(Tokentype::StringLiteral, string, start_pos);
+    }
 }
 
 /// Handles simple one-character tokens
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 /// * `token_type` - The type of token to add
 /// * `lexeme` - The string representation of the token
 /// * `start_pos` - The starting position of the token in the input
@@ -290,7 +334,7 @@ fn handle_simple_token(
 /// Handles dash character (minus or arrow)
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the dash in the input
 fn handle_dash(state: &mut LexerState, start_pos: usize) {
     state.advance();
@@ -305,7 +349,7 @@ fn handle_dash(state: &mut LexerState, start_pos: usize) {
 /// Handles slash character (divide or comments)
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the slash in the input
 fn handle_slash(state: &mut LexerState, start_pos: usize) {
     state.advance();
@@ -322,7 +366,7 @@ fn handle_slash(state: &mut LexerState, start_pos: usize) {
 /// Handles single-line comments
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 fn handle_line_comment(state: &mut LexerState) {
     state.advance();
 
@@ -339,7 +383,7 @@ fn handle_line_comment(state: &mut LexerState) {
 /// Handles multi-line block comments
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 fn handle_block_comment(state: &mut LexerState) {
     state.advance();
 
@@ -378,7 +422,7 @@ fn handle_block_comment(state: &mut LexerState) {
 /// Handles equals character (assignment or equality)
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the equals in the input
 fn handle_equals(state: &mut LexerState, start_pos: usize) {
     state.advance();
@@ -393,7 +437,7 @@ fn handle_equals(state: &mut LexerState, start_pos: usize) {
 /// Handles less than character (less than or less than or equal)
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the less than in the input
 fn handle_less_than(state: &mut LexerState, start_pos: usize) {
     state.advance();
@@ -408,7 +452,7 @@ fn handle_less_than(state: &mut LexerState, start_pos: usize) {
 /// Handles greater than character (greater than or greater than or equal)
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the greater than in the input
 fn handle_greater_than(state: &mut LexerState, start_pos: usize) {
     state.advance();
@@ -423,7 +467,7 @@ fn handle_greater_than(state: &mut LexerState, start_pos: usize) {
 /// Handles exclamation mark (not or not equal)
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the exclamation mark in the input
 fn handle_exclamation(state: &mut LexerState, start_pos: usize) {
     state.advance();
@@ -438,7 +482,7 @@ fn handle_exclamation(state: &mut LexerState, start_pos: usize) {
 /// Handles ampersand character (logical AND)
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the ampersand in the input
 fn handle_ampersand(state: &mut LexerState, start_pos: usize) {
     state.advance();
@@ -453,7 +497,7 @@ fn handle_ampersand(state: &mut LexerState, start_pos: usize) {
 /// Handles pipe character (logical OR)
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the pipe in the input
 fn handle_pipe(state: &mut LexerState, start_pos: usize) {
     state.advance();
@@ -468,7 +512,7 @@ fn handle_pipe(state: &mut LexerState, start_pos: usize) {
 /// Handles invalid characters
 ///
 /// ### Arguments
-/// * `self` - The current lexer state
+/// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the invalid character in the input
 fn handle_invalid_char(state: &mut LexerState, start_pos: usize) {
     let invalid_char = state.advance().unwrap();

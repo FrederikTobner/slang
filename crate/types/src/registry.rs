@@ -1,10 +1,12 @@
-use crate::{PrimitiveType, TypeId, TypeInfo, TypeKind};
+use crate::{FunctionType, PrimitiveType, TypeId, TypeInfo, TypeKind};
 use std::collections::HashMap;
 
 /// Registry that stores all available types in the language
 pub struct TypeRegistry {
     /// Map from TypeId to TypeInfo
     types: HashMap<TypeId, TypeInfo>,
+    /// Map from function signatures to TypeIds for fast function type deduplication
+    function_type_cache: HashMap<FunctionType, TypeId>,
 }
 
 impl TypeRegistry {
@@ -12,6 +14,7 @@ impl TypeRegistry {
     pub fn new_instance() -> Self {
         let mut registry = TypeRegistry {
             types: HashMap::new(),
+            function_type_cache: HashMap::new(),
         };
         registry.register_built_in_types();
         registry
@@ -23,7 +26,7 @@ impl TypeRegistry {
             self.register_primitive_type(
                 ptype.name(),
                 ptype.to_type_kind(),
-                TypeId(ptype as usize),
+                TypeId::from_primitive(ptype),
             );
         }
     }
@@ -61,7 +64,7 @@ impl TypeRegistry {
             name: name.to_string(),
             kind,
         };
-        self.types.insert(id.clone(), type_info);
+        self.types.insert(id, type_info);
     }
 
     /// Gets type information for a given TypeId
@@ -151,5 +154,77 @@ impl TypeRegistry {
             },
             _ => false,
         }
+    }
+
+    /// Registers a function type in the registry
+    ///
+    /// ### Arguments
+    /// * `param_types` - The parameter types of the function
+    /// * `return_type` - The return type of the function
+    ///
+    /// ### Returns
+    /// A TypeId representing the function type (either existing or newly registered)
+    pub fn register_function_type(
+        &mut self,
+        param_types: Vec<TypeId>,
+        return_type: TypeId,
+    ) -> TypeId {
+        // Create a function type signature for lookup
+        let function_signature = FunctionType::new(param_types.clone(), return_type.clone());
+
+        if let Some(&existing_type_id) = self.function_type_cache.get(&function_signature) {
+            return existing_type_id;
+        }
+
+        let kind = TypeKind::Function(function_signature.clone());
+
+        let param_type_names: Vec<&str> = param_types
+            .iter()
+            .filter_map(|id| self.get_type_info(id).map(|info| info.name.as_str()))
+            .collect();
+
+        let return_type_name = self
+            .get_type_info(&return_type)
+            .map(|info| info.name.as_str())
+            .unwrap_or("UnknownType");
+
+        let name = format!(
+            "fn({}) -> {}",
+            param_type_names.join(", "),
+            return_type_name
+        );
+
+        let type_id = self.register_type(&name, kind);
+
+        self.function_type_cache.insert(function_signature, type_id);
+
+        type_id
+    }
+
+    /// Checks if a type is a function type
+    ///
+    /// ### Arguments
+    /// * `id` - The TypeId to check
+    ///
+    /// ### Returns
+    /// A boolean indicating whether the type is a function type
+    pub fn is_function_type(&self, id: &TypeId) -> bool {
+        self.get_type_info(id)
+            .map(|info| matches!(info.kind, TypeKind::Function(_)))
+            .unwrap_or(false)
+    }
+
+    /// Gets the function type information for a given TypeId
+    ///
+    /// ### Arguments
+    /// * `id` - The TypeId to look up
+    ///
+    /// ### Returns
+    /// An Option containing the FunctionType if found, or None if not found or not a function
+    pub fn get_function_type(&self, id: &TypeId) -> Option<&FunctionType> {
+        self.get_type_info(id).and_then(|info| match &info.kind {
+            TypeKind::Function(func_type) => Some(func_type),
+            _ => None,
+        })
     }
 }

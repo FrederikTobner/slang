@@ -16,13 +16,13 @@ pub enum CliError {
     /// Error related to reading/writing ZIP files
     Zip {
         source: zip::result::ZipError,
-        context: String,
+        context: &'static str,
         exit_code: exit::Code,
     },
     /// Error related to serialization/deserialization
     Serialization {
         source: Box<dyn std::error::Error + Send + Sync>,
-        context: String,
+        context: &'static str,
         exit_code: exit::Code,
     },
     /// Generic error with custom message
@@ -31,6 +31,9 @@ pub enum CliError {
         exit_code: exit::Code,
     },
 }
+
+/// Type alias for Result with SlangError as the error type
+pub type CliResult<T> = Result<T, CliError>;
 
 impl CliError {
     /// Get the exit code associated with this error
@@ -109,6 +112,3 @@ impl Error for CliError {
         }
     }
 }
-
-/// Type alias for Result with SlangError as the error type
-pub type CliResult<T> = Result<T, CliError>;

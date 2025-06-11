@@ -1,6 +1,6 @@
 use crate::ast::{
     AssignmentStatement, BinaryExpr, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
-    FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr, ReturnStatement, Statement, TypeDefinitionStmt,
+    FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr, ReturnStatement, Statement, TypeDefinitionStmt,
     UnaryExpr, VariableExpr,
 };
 
@@ -12,7 +12,19 @@ use crate::ast::{
 /// The generic parameter T represents the return type of the visit methods.
 pub trait Visitor<T> {
     /// Visit a general statement
-    fn visit_statement(&mut self, stmt: &Statement) -> T;
+    fn visit_statement(&mut self, stmt: &Statement) -> T {
+        match stmt {
+            Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
+            Statement::Assignment(assign_stmt) => self.visit_assignment_statement(assign_stmt),
+            Statement::Expression(expr) => self.visit_expression_statement(expr),
+            Statement::TypeDefinition(type_def) => self.visit_type_definition_statement(type_def),
+            Statement::FunctionDeclaration(fn_decl) => {
+                self.visit_function_declaration_statement(fn_decl)
+            }
+            Statement::Return(return_stmt) => self.visit_return_statement(return_stmt),
+            Statement::If(if_stmt) => self.visit_if_statement(if_stmt),
+        }
+    }
 
     /// Visit an expression statement
     fn visit_expression_statement(&mut self, expr: &Expression) -> T;
@@ -33,7 +45,18 @@ pub trait Visitor<T> {
     fn visit_assignment_statement(&mut self, stmt: &AssignmentStatement) -> T;
 
     /// Visit a general expression
-    fn visit_expression(&mut self, expr: &Expression) -> T;
+    fn visit_expression(&mut self, expr: &Expression) -> T {
+        match expr {
+            Expression::Literal(lit) => self.visit_literal_expression(lit),
+            Expression::Binary(bin) => self.visit_binary_expression(bin),
+            Expression::Variable(var) => self.visit_variable_expression(var),
+            Expression::Unary(unary) => self.visit_unary_expression(unary),
+            Expression::Call(call) => self.visit_call_expression(call),
+            Expression::Conditional(cond) => self.visit_conditional_expression(cond),
+            Expression::Block(block) => self.visit_block_expression(block),
+            Expression::FunctionType(func_type) => self.visit_function_type_expression(func_type),
+        }
+    }
 
     /// Visit a binary expression (e.g., a + b)
     fn visit_binary_expression(&mut self, expr: &BinaryExpr) -> T;
@@ -55,6 +78,9 @@ pub trait Visitor<T> {
 
     /// Visit a block expression
     fn visit_block_expression(&mut self, expr: &BlockExpr) -> T;
+
+    /// Visit a function type expression (e.g., fn(i32, string) -> string)
+    fn visit_function_type_expression(&mut self, expr: &FunctionTypeExpr) -> T;
 
     /// Visit a conditional statement (if/else)
     fn visit_if_statement(&mut self, stmt: &IfStatement) -> T;

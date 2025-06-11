@@ -1,11 +1,10 @@
-use crate::error::LineInfo;
-use crate::error::{CompileResult, CompilerError};
-use crate::error_codes::ErrorCode;
+use slang_error::{LineInfo, CompileResult, CompilerError, ErrorCode};
 use crate::token::{Token, Tokentype};
-use slang_ir::SourceLocation;
+use crate::parse_error::ParseError;
+use slang_ir::Location;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
-    FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr, LiteralValue, Parameter,
+    FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr, LiteralValue, Parameter,
     Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
 };
 use slang_shared::{CompilationContext, SymbolKind};
@@ -13,56 +12,6 @@ use slang_types::{
     PrimitiveType, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64,
     TYPE_NAME_INT, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNKNOWN, TypeId,
 };
-
-/// Error that occurs during parsing
-#[derive(Debug)]
-pub struct ParseError {
-    /// The structured error code for this error
-    error_code: ErrorCode,
-    /// Error message describing the problem
-    message: String,
-    /// Position in the source code where the error occurred
-    position: usize,
-    /// Length of the underlined part
-    underline_length: usize,
-}
-
-impl ParseError {
-    /// Creates a new parse error with the given error code, message and position
-    pub fn new(
-        error_code: ErrorCode,
-        message: &str,
-        position: usize,
-        underline_length: usize,
-    ) -> Self {
-        ParseError {
-            error_code,
-            message: message.to_string(),
-            position,
-            underline_length,
-        }
-    }
-
-    pub fn to_compiler_error(&self, line_info: &LineInfo) -> CompilerError {
-        let line_pos = line_info.get_line_col(self.position);
-        CompilerError::new(
-            self.error_code,
-            self.message.clone(),
-            line_pos.0,
-            line_pos.1,
-            self.position,
-            Some(self.underline_length),
-        )
-    }
-}
-
-impl std::fmt::Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-impl std::error::Error for ParseError {}
 
 /// Parser that converts tokens into an abstract syntax tree
 pub struct Parser<'a> {
@@ -222,7 +171,7 @@ impl<'a> Parser<'a> {
         let return_token = self.previous();
         let token_pos = return_token.pos;
         let (line, column) = self.line_info.get_line_col(token_pos);
-        let location = slang_ir::source_location::SourceLocation::new(
+        let location = slang_ir::location::Location::new(
             token_pos,
             line,
             column,
@@ -266,7 +215,7 @@ impl<'a> Parser<'a> {
 
         let (line, column) = self.line_info.get_line_col(token_pos);
         let location =
-            slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
+            slang_ir::location::Location::new(token_pos, line, column, name.len());
 
         if !self.match_token(&Tokentype::LeftParen) {
             return Err(self.error(
@@ -341,7 +290,7 @@ impl<'a> Parser<'a> {
         let name = token.lexeme.clone();
 
         let (line, column) = self.line_info.get_line_col(token_pos);
-        let location = SourceLocation::new(token_pos, line, column, name.len());
+        let location = Location::new(token_pos, line, column, name.len());
 
         if !self.match_token(&Tokentype::Colon) {
             return Err(self.error(
@@ -446,7 +395,7 @@ impl<'a> Parser<'a> {
         let token = self.advance();
         let name = token.lexeme.clone();
         let location =
-            slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
+            slang_ir::location::Location::new(token_pos, line, column, name.len());
         let mut var_type = PrimitiveType::Unknown .into();
 
         if self.match_token(&Tokentype::Colon) {
@@ -778,6 +727,10 @@ impl<'a> Parser<'a> {
             return self.conditional_expression();
         }
 
+        if self.match_token(&Tokentype::Fn) {
+            return self.parse_function_type_expression();
+        }
+
         if self.match_token(&Tokentype::LeftParen) {
             // Check for unit literal ()
             if self.check(&Tokentype::RightParen) {
@@ -785,7 +738,7 @@ impl<'a> Parser<'a> {
                 self.advance(); // consume the right paren
                 let end_pos = self.previous().pos + self.previous().lexeme.len();
                 let (line, column) = self.line_info.get_line_col(start_pos);
-                let location = slang_ir::source_location::SourceLocation::new(
+                let location = slang_ir::location::Location::new(
                     start_pos,
                     line,
                     column,
@@ -1032,6 +985,53 @@ impl<'a> Parser<'a> {
     ///
     /// The type ID for the parsed type or an error
     fn parse_type(&mut self) -> Result<TypeId, ParseError> {
+        // Handle function types: fn(param_types) -> return_type
+        if self.check(&Tokentype::Fn) {
+            self.advance(); // consume 'fn'
+
+            // Expect '('
+            if !self.match_token(&Tokentype::LeftParen) {
+                return Err(self.error(
+                    ErrorCode::ExpectedOpeningParen,
+                    "Expected '(' after 'fn'",
+                ));
+            }
+
+            // Parse parameter types
+            let mut param_types = Vec::new();
+            if !self.check(&Tokentype::RightParen) {
+                loop {
+                    param_types.push(self.parse_type()?);
+                    if !self.match_token(&Tokentype::Comma) {
+                        break;
+                    }
+                }
+            }
+
+            // Expect ')'
+            if !self.match_token(&Tokentype::RightParen) {
+                return Err(self.error(
+                    ErrorCode::ExpectedClosingParen,
+                    "Expected ')' after function parameters",
+                ));
+            }
+
+            // Expect '->'
+            if !self.match_token(&Tokentype::Arrow) {
+                return Err(self.error(
+                    ErrorCode::InvalidSyntax,
+                    "Expected '->' after function parameters",
+                ));
+            }
+
+            // Parse return type
+            let return_type = self.parse_type()?;
+
+            // Register the function type and return its type ID
+            let function_type_id = self.context.register_function_type(param_types, return_type);
+            return Ok(function_type_id);
+        }
+
         if self.check(&Tokentype::LeftParen) {
             self.advance(); 
             if !self.match_token(&Tokentype::RightParen) {
@@ -1073,7 +1073,7 @@ impl<'a> Parser<'a> {
             ));
         }
         if let Some(symbol) = self.context.lookup_symbol(&type_name) {
-            if symbol.kind == SymbolKind::Type {
+            if symbol.kind() == SymbolKind::Type {
                 Ok(symbol.type_id.clone())
             } else {
                 Err(self.error_previous(
@@ -1093,9 +1093,9 @@ impl<'a> Parser<'a> {
     fn source_location_from_token(
         &self,
         token: &Token,
-    ) -> slang_ir::source_location::SourceLocation {
+    ) -> slang_ir::location::Location {
         let (line, column) = self.line_info.get_line_col(token.pos);
-        slang_ir::source_location::SourceLocation::new(token.pos, line, column, token.lexeme.len())
+        slang_ir::location::Location::new(token.pos, line, column, token.lexeme.len())
     }
 
     /// Consumes the current token if it matches the expected type
@@ -1229,7 +1229,7 @@ impl<'a> Parser<'a> {
         let token = self.advance();
         let name = token.lexeme.clone();
         let location =
-            slang_ir::source_location::SourceLocation::new(token_pos, line, column, name.len());
+            slang_ir::location::Location::new(token_pos, line, column, name.len());
 
         if !self.match_token(&Tokentype::Equal) {
             return Err(self.error(ErrorCode::ExpectedEquals, "Expected '=' for assignment"));
@@ -1285,7 +1285,7 @@ impl<'a> Parser<'a> {
         let else_branch = self.parse_block_expression()?;
 
         let end_pos = self.previous().pos + self.previous().lexeme.len();
-        let location = slang_ir::source_location::SourceLocation::new(
+        let location = slang_ir::location::Location::new(
             if_token_pos,
             line,
             column,
@@ -1337,7 +1337,7 @@ impl<'a> Parser<'a> {
         }
 
         let end_pos = self.previous().pos + self.previous().lexeme.len();
-        let location = slang_ir::source_location::SourceLocation::new(
+        let location = slang_ir::location::Location::new(
             self.tokens[start_pos].pos,
             line,
             column,
@@ -1382,7 +1382,7 @@ impl<'a> Parser<'a> {
         };
 
         let end_pos = self.previous().pos + self.previous().lexeme.len();
-        let location = slang_ir::source_location::SourceLocation::new(
+        let location = slang_ir::location::Location::new(
             if_token_pos,
             line,
             column,
@@ -1393,6 +1393,72 @@ impl<'a> Parser<'a> {
             condition,
             then_branch,
             else_branch,
+            location,
+        }))
+    }
+
+    /// Parses a function type expression: `fn(type1, type2) -> return_type`
+    ///
+    /// ### Returns
+    ///
+    /// The parsed function type expression or an error message
+    fn parse_function_type_expression(&mut self) -> Result<Expression, ParseError> {
+        // Extract position information upfront to avoid borrowing issues
+        let fn_token_pos = self.previous().pos;
+        let (start_line, start_column) = self.line_info.get_line_col(fn_token_pos);
+
+        // Expect '('
+        if !self.match_token(&Tokentype::LeftParen) {
+            return Err(self.error(
+                ErrorCode::ExpectedOpeningParen,
+                "Expected '(' after 'fn'",
+            ));
+        }
+
+        // Parse parameter types
+        let mut param_types = Vec::new();
+        if !self.check(&Tokentype::RightParen) {
+            loop {
+                param_types.push(self.parse_type()?);
+                if !self.match_token(&Tokentype::Comma) {
+                    break;
+                }
+            }
+        }
+
+        if !self.match_token(&Tokentype::RightParen) {
+            return Err(self.error(
+                ErrorCode::ExpectedClosingParen,
+                "Expected ')' after function parameters",
+            ));
+        }
+
+        if !self.match_token(&Tokentype::Arrow) {
+            return Err(self.error(
+                ErrorCode::InvalidSyntax,
+                "Expected '->' after function parameters",
+            ));
+        }
+
+        let return_type = self.parse_type()?;
+
+        let end_token_pos = self.previous().pos;
+        let end_token_lexeme_len = self.previous().lexeme.len();
+        let end_pos = end_token_pos + end_token_lexeme_len;
+        let location = slang_ir::location::Location::new(
+            fn_token_pos,
+            start_line,
+            start_column,
+            end_pos - fn_token_pos,
+        );
+
+        // Will be determined by the semantic analyzer
+        let expr_type = PrimitiveType::Unknown.into();
+
+        Ok(Expression::FunctionType(FunctionTypeExpr {
+            param_types,
+            return_type,
+            expr_type,
             location,
         }))
     }

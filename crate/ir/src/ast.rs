@@ -1,4 +1,4 @@
-use crate::SourceLocation;
+use crate::Location;
 use crate::Visitor;
 use slang_types::types::TypeId;
 use std::fmt::Display;
@@ -86,10 +86,12 @@ pub enum Expression {
     Conditional(ConditionalExpr),
     /// A block expression with statements and optional return value
     Block(BlockExpr),
+    /// A function type expression (e.g., fn(i32, string) -> string)
+    FunctionType(FunctionTypeExpr),
 }
 
 impl Expression {
-    pub fn location(&self) -> SourceLocation {
+    pub fn location(&self) -> Location {
         match self {
             Expression::Literal(e) => e.location,
             Expression::Binary(e) => e.location,
@@ -98,6 +100,7 @@ impl Expression {
             Expression::Call(e) => e.location,
             Expression::Conditional(e) => e.location,
             Expression::Block(e) => e.location,
+            Expression::FunctionType(e) => e.location,
         }
     }
 }
@@ -131,7 +134,7 @@ pub struct FunctionCallExpr {
     /// Type of the function call expression
     pub expr_type: TypeId,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 /// A conditional expression (if/else)
@@ -146,7 +149,7 @@ pub struct ConditionalExpr {
     /// Type of the conditional expression
     pub expr_type: TypeId,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 /// A block expression containing statements and an optional return value
@@ -159,7 +162,7 @@ pub struct BlockExpr {
     /// Type of the block expression
     pub expr_type: TypeId,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 /// A function parameter
@@ -170,7 +173,7 @@ pub struct Parameter {
     /// Parameter type
     pub param_type: TypeId,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 /// A function declaration statement
@@ -185,7 +188,20 @@ pub struct FunctionDeclarationStmt {
     /// Function body (block expression)
     pub body: BlockExpr,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
+}
+
+/// A function type expression (e.g., fn(i32, string) -> string)
+#[derive(Debug)]
+pub struct FunctionTypeExpr {
+    /// Parameter types of the function
+    pub param_types: Vec<TypeId>,
+    /// Return type of the function
+    pub return_type: TypeId,
+    /// Type of the function type expression (will be a function type)
+    pub expr_type: TypeId,
+    /// Source code location information
+    pub location: Location,
 }
 
 /// A type definition statement (like struct)
@@ -196,7 +212,7 @@ pub struct TypeDefinitionStmt {
     /// Fields of the type with their names and types
     pub fields: Vec<(String, TypeId)>,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 /// A literal expression
@@ -207,7 +223,7 @@ pub struct LiteralExpr {
     /// Type of the literal expression
     pub expr_type: TypeId,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 /// A variable reference expression
@@ -216,7 +232,7 @@ pub struct VariableExpr {
     /// Name of the variable being referenced
     pub name: String,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 /// A unary expression (e.g., -x)
@@ -229,7 +245,7 @@ pub struct UnaryExpr {
     /// Type of the unary expression
     pub expr_type: TypeId,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 /// Possible values for literal expressions
@@ -271,7 +287,7 @@ pub struct BinaryExpr {
     /// Type of the binary expression
     pub expr_type: TypeId,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 /// A variable declaration statement
@@ -286,7 +302,7 @@ pub struct LetStatement {
     /// Type of the variable
     pub expr_type: TypeId,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 /// A variable assignment statement
@@ -297,7 +313,7 @@ pub struct AssignmentStatement {
     /// New value for the variable
     pub value: Expression,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 /// A conditional statement (if/else)
@@ -310,7 +326,7 @@ pub struct IfStatement {
     /// Optional block expression to execute if condition is false
     pub else_branch: Option<BlockExpr>,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 /// A return statement
@@ -319,7 +335,7 @@ pub struct ReturnStatement {
     /// Optional expression to return
     pub value: Option<Expression>,
     /// Source code location information
-    pub location: SourceLocation,
+    pub location: Location,
 }
 
 impl Statement {
@@ -364,6 +380,9 @@ impl Expression {
             Expression::Call(call) => visitor.visit_call_expression(call),
             Expression::Conditional(cond) => visitor.visit_conditional_expression(cond),
             Expression::Block(block) => visitor.visit_block_expression(block),
+            Expression::FunctionType(func_type) => {
+                visitor.visit_function_type_expression(func_type)
+            }
         }
     }
 }

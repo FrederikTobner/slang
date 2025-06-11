@@ -149,7 +149,7 @@ fn undefined_variable() {
 This test:
 
 1. Calls the print_value function with the undefined variable y
-2. Executes the programm and asserts that the output contains the sppecified error code "[E1234]"
+2. Executes the program and asserts that the output contains the specified error code "[E1234]"
 3. Verifies that the pattern "Undefined variable: y" occurs in stderr
 
 ## Dependencies

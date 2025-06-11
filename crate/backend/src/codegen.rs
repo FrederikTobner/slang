@@ -1,14 +1,16 @@
 use crate::bytecode::{Chunk, Function, OpCode};
 use crate::value::Value;
+use slang_error::{CompilerError, CompileResult, ErrorCode};
 use slang_ir::Visitor;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
-    FunctionDeclarationStmt, IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt,
+    FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt,
     UnaryExpr, UnaryOperator,
 };
+use slang_ir::location::Location;
 
 /// Compiles AST nodes into bytecode instructions
-struct CodeGenerator {
+pub struct CodeGenerator {
     /// The bytecode chunk being constructed
     pub chunk: Chunk,
     /// Current line number for debugging information
@@ -19,23 +21,44 @@ struct CodeGenerator {
     functions: Vec<String>,
     /// Stack of scopes for tracking local variables
     local_scopes: Vec<Vec<String>>,
+    /// Accumulated errors during compilation
+    errors: Vec<CompilerError>,
 }
 
-pub fn generate_bytecode(statements: &[Statement]) -> Result<Chunk, String> {
+pub fn generate_bytecode(statements: &[Statement]) -> CompileResult<Chunk> {
     let compiler = CodeGenerator::new();
     compiler.compile(statements)
 }
 
 impl CodeGenerator {
     /// Creates a new compiler with an empty chunk
-    fn new() -> Self {
+    pub fn new() -> Self {
         CodeGenerator {
             chunk: Chunk::new(),
             line: 1,
             variables: Vec::new(),
             functions: Vec::new(),
             local_scopes: Vec::new(),
+            errors: Vec::new(),
         }
+    }
+
+    /// Updates the current line from a source location
+    fn set_current_location(&mut self, location: &Location) {
+        self.line = location.line;
+    }
+
+    /// Creates a CompilerError with the current location and adds it to the error list
+    fn add_error(&mut self, message: String) {
+        let error = CompilerError::new(
+            ErrorCode::GenericCompileError,
+            message,
+            self.line,
+            0, // column - we don't track this in codegen currently
+            0, // position - we don't track this in codegen currently  
+            None, // token_length - not applicable for codegen errors
+        );
+        self.errors.push(error);
     }
 
     /// Compiles a list of statements into bytecode
@@ -46,18 +69,49 @@ impl CodeGenerator {
     ///
     /// ### Returns
     ///
-    /// A reference to the compiled bytecode chunk, or an error message
-    fn compile(mut self, statements: &[Statement]) -> Result<Chunk, String> {
+    /// A CompileResult containing the compiled bytecode chunk or errors
+    fn compile(mut self, statements: &[Statement]) -> CompileResult<Chunk> {
         for stmt in statements {
-            match stmt.accept(&mut self) {
-                Ok(_) => (),
-                Err(e) => return Err(e),
-            }
+            stmt.accept(&mut self).unwrap_or_else(|_| {
+                // Error already added to self.errors
+            });
         }
 
         self.emit_op(OpCode::Return);
 
-        Ok(self.chunk)
+        if self.errors.is_empty() {
+            Ok(self.chunk)
+        } else {
+            Err(self.errors)
+        }
+    }
+
+    /// Compiles statements and appends them to the existing chunk
+    ///
+    /// ### Arguments
+    ///
+    /// * `statements` - The statements to compile
+    ///
+    /// ### Returns
+    ///
+    /// CompileResult indicating success or containing errors
+    pub fn compile_statements(&mut self, statements: &[Statement]) -> CompileResult<()> {
+        for stmt in statements {
+            stmt.accept(self).unwrap_or_else(|_| {
+                // Error already added to self.errors
+            });
+        }
+        
+        if self.errors.is_empty() {
+            Ok(())
+        } else {
+            Err(std::mem::take(&mut self.errors))
+        }
+    }
+
+    /// Gets a reference to the current chunk
+    pub fn get_chunk(&self) -> &Chunk {
+        &self.chunk
     }
 
     /// Emits a single byte to the bytecode chunk
@@ -76,21 +130,20 @@ impl CodeGenerator {
     /// * `op` - The opcode to emit
     fn emit_op(&mut self, op: OpCode) {
         self.chunk.write_op(op, self.line);
-    }
-
-    /// Adds a constant value to the chunk and emits code to load it
+    }    /// Adds a constant value to the chunk and emits code to load it
     ///
     /// ### Arguments
     ///
     /// * `value` - The constant value to add
-    fn emit_constant(&mut self, value: Value) {
+    fn emit_constant(&mut self, value: Value) -> Result<(), ()> {
         let constant_index = self.chunk.add_constant(value);
         if constant_index > 255 {
-            panic!("Too many constants in one chunk");
+            self.add_error("Too many constants in one chunk".to_string());
+            return Err(());
         }
-
         self.emit_op(OpCode::Constant);
         self.emit_byte(constant_index as u8);
+        Ok(())
     }
 
     /// Emits a jump instruction with placeholder offset
@@ -126,15 +179,29 @@ impl CodeGenerator {
 
     fn begin_scope(&mut self) {
         self.local_scopes.push(Vec::new());
+        self.emit_op(OpCode::BeginScope);
     }
 
     fn end_scope(&mut self) {
         self.local_scopes.pop();
+        self.emit_op(OpCode::EndScope);
     }
 }
 
-impl Visitor<Result<(), String>> for CodeGenerator {
-    fn visit_statement(&mut self, stmt: &Statement) -> Result<(), String> {
+impl Visitor<Result<(), ()>> for CodeGenerator {
+    fn visit_statement(&mut self, stmt: &Statement) -> Result<(), ()> {
+        // Update current line from the statement's location
+        let location = match stmt {
+            Statement::Let(let_stmt) => let_stmt.location,
+            Statement::Assignment(assign_stmt) => assign_stmt.location,
+            Statement::TypeDefinition(type_stmt) => type_stmt.location,
+            Statement::Expression(expr) => expr.location(),
+            Statement::FunctionDeclaration(fn_decl) => fn_decl.location,
+            Statement::Return(return_stmt) => return_stmt.location,
+            Statement::If(if_stmt) => if_stmt.location,
+        };
+        self.set_current_location(&location);
+        
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
             Statement::Assignment(assign_stmt) => self.visit_assignment_statement(assign_stmt),
@@ -148,10 +215,26 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         }
     }
 
+    fn visit_expression(&mut self, expr: &Expression) -> Result<(), ()> {
+        // Update current line from the expression's location
+        self.set_current_location(&expr.location());
+        
+        match expr {
+            Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
+            Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
+            Expression::Variable(var) => self.visit_variable_expression(var),
+            Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
+            Expression::Call(call_expr) => self.visit_call_expression(call_expr),
+            Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
+            Expression::Block(block_expr) => self.visit_block_expression(block_expr),
+            Expression::FunctionType(func_type_expr) => self.visit_function_type_expression(func_type_expr),
+        }
+    }
+
     fn visit_function_declaration_statement(
         &mut self,
         fn_decl: &FunctionDeclarationStmt,
-    ) -> Result<(), String> {
+    ) -> Result<(), ()> {
         self.functions.push(fn_decl.name.clone());
         let function_name_idx = self.chunk.add_identifier(fn_decl.name.clone());
 
@@ -175,7 +258,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         if let Some(return_expr) = &fn_decl.body.return_expr {
             return_expr.accept(self)?;
         } else {
-            self.emit_constant(Value::Unit);
+            self.emit_constant(Value::Unit(()))?;
         }
 
         self.emit_op(OpCode::Return);
@@ -198,22 +281,22 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_return_statement(&mut self, return_stmt: &slang_ir::ast::ReturnStatement) -> Result<(), String> {
+    fn visit_return_statement(&mut self, return_stmt: &slang_ir::ast::ReturnStatement) -> Result<(), ()> {
         if let Some(expr) = &return_stmt.value {
             self.visit_expression(expr)?;
         } else {
-            self.emit_constant(Value::Unit);
+            self.emit_constant(Value::Unit(()))?;
         }
         self.emit_op(OpCode::Return);
         Ok(())
     }
 
-    fn visit_expression_statement(&mut self, expr: &Expression) -> Result<(), String> {
+    fn visit_expression_statement(&mut self, expr: &Expression) -> Result<(), ()> {
         self.visit_expression(expr)?;
         Ok(())
     }
 
-    fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> Result<(), String> {
+    fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> Result<(), ()> {
         let is_local = !self.local_scopes.is_empty();
 
         if is_local {
@@ -228,7 +311,8 @@ impl Visitor<Result<(), String>> for CodeGenerator {
 
         let var_index = self.chunk.add_identifier(let_stmt.name.clone());
         if var_index > 255 {
-            return Err("Too many variables in one scope".to_string());
+            self.add_error("Too many variables in one scope".to_string());
+            return Err(());
         }
 
         self.emit_op(OpCode::SetVariable);
@@ -242,11 +326,12 @@ impl Visitor<Result<(), String>> for CodeGenerator {
     fn visit_assignment_statement(
         &mut self,
         assign_stmt: &slang_ir::ast::AssignmentStatement,
-    ) -> Result<(), String> {
+    ) -> Result<(), ()> {
         self.visit_expression(&assign_stmt.value)?;
         let var_index = self.chunk.add_identifier(assign_stmt.name.clone());
         if var_index > 255 {
-            return Err("Too many variables in one scope".to_string());
+            self.add_error("Too many variables in one scope".to_string());
+            return Err(());
         }
         self.emit_op(OpCode::SetVariable);
         self.emit_byte(var_index as u8);
@@ -254,19 +339,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_expression(&mut self, expr: &Expression) -> Result<(), String> {
-        match expr {
-            Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
-            Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
-            Expression::Variable(var) => self.visit_variable_expression(var),
-            Expression::Unary(unary_expr) => self.visit_unary_expression(unary_expr),
-            Expression::Call(call_expr) => self.visit_call_expression(call_expr),
-            Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
-            Expression::Block(block_expr) => self.visit_block_expression(block_expr),
-        }
-    }
-
-    fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> Result<(), String> {
+    fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> Result<(), ()> {
         for arg in &call_expr.arguments {
             self.visit_expression(arg)?;
         }
@@ -281,47 +354,47 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> Result<(), String> {
+    fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> Result<(), ()> {
         match &lit_expr.value {
             slang_ir::ast::LiteralValue::I32(i) => {
-                self.emit_constant(Value::I32(*i));
+                self.emit_constant(Value::I32(*i))?;
             }
             slang_ir::ast::LiteralValue::I64(i) => {
-                self.emit_constant(Value::I64(*i));
+                self.emit_constant(Value::I64(*i))?;
             }
             slang_ir::ast::LiteralValue::U32(i) => {
-                self.emit_constant(Value::U32(*i));
+                self.emit_constant(Value::U32(*i))?;
             }
             slang_ir::ast::LiteralValue::U64(i) => {
-                self.emit_constant(Value::U64(*i));
+                self.emit_constant(Value::U64(*i))?;
             }
             slang_ir::ast::LiteralValue::UnspecifiedInteger(i) => {
-                self.emit_constant(Value::I64(*i));
+                self.emit_constant(Value::I64(*i))?;
             }
             slang_ir::ast::LiteralValue::F32(f) => {
-                self.emit_constant(Value::F32(*f));
+                self.emit_constant(Value::F32(*f))?;
             }
             slang_ir::ast::LiteralValue::F64(f) => {
-                self.emit_constant(Value::F64(*f));
+                self.emit_constant(Value::F64(*f))?;
             }
             slang_ir::ast::LiteralValue::UnspecifiedFloat(f) => {
-                self.emit_constant(Value::F64(*f));
+                self.emit_constant(Value::F64(*f))?;
             }
             slang_ir::ast::LiteralValue::String(s) => {
-                self.emit_constant(Value::String(Box::new(s.clone())));
+                self.emit_constant(Value::String(Box::new(s.clone())))?;
             }
             slang_ir::ast::LiteralValue::Boolean(b) => {
-                self.emit_constant(Value::Boolean(*b));
+                self.emit_constant(Value::Boolean(*b))?;
             }
             slang_ir::ast::LiteralValue::Unit => {
-                self.emit_constant(Value::Unit);
+                self.emit_constant(Value::Unit(()))?;
             }
         }
 
         Ok(())
     }
 
-    fn visit_binary_expression(&mut self, bin_expr: &BinaryExpr) -> Result<(), String> {
+    fn visit_binary_expression(&mut self, bin_expr: &BinaryExpr) -> Result<(), ()> {
         match bin_expr.operator {
             BinaryOperator::And => {
                 self.visit_expression(&bin_expr.left)?;
@@ -359,10 +432,11 @@ impl Visitor<Result<(), String>> for CodeGenerator {
                     BinaryOperator::Equal => self.emit_op(OpCode::Equal),
                     BinaryOperator::NotEqual => self.emit_op(OpCode::NotEqual),
                     _ => {
-                        return Err(format!(
+                        self.add_error(format!(
                             "Unsupported binary operator: {:?}",
                             bin_expr.operator
                         ));
+                        return Err(());
                     }
                 }
             }
@@ -371,7 +445,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> Result<(), String> {
+    fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> Result<(), ()> {
         self.visit_expression(&unary_expr.right)?;
 
         match unary_expr.operator {
@@ -385,10 +459,11 @@ impl Visitor<Result<(), String>> for CodeGenerator {
     fn visit_variable_expression(
         &mut self,
         var_expr: &slang_ir::ast::VariableExpr,
-    ) -> Result<(), String> {
+    ) -> Result<(), ()> {
         let var_index = self.chunk.add_identifier(var_expr.name.clone());
         if var_index > 255 {
-            return Err("Too many variables".to_string());
+            self.add_error("Too many variables".to_string());
+            return Err(());
         }
         self.emit_op(OpCode::GetVariable);
         self.emit_byte(var_index as u8);
@@ -398,13 +473,13 @@ impl Visitor<Result<(), String>> for CodeGenerator {
     fn visit_type_definition_statement(
         &mut self,
         _stmt: &TypeDefinitionStmt,
-    ) -> Result<(), String> {
+    ) -> Result<(), ()> {
         // Type definitions don't generate code at runtime
         // They're just used by the semantic analyzer
         Ok(())
     }
 
-    fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) -> Result<(), String> {
+    fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) -> Result<(), ()> {
         self.visit_expression(&cond_expr.condition)?;
 
         let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
@@ -421,7 +496,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> Result<(), String> {
+    fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> Result<(), ()> {
         self.visit_expression(&if_stmt.condition)?;
 
         let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
@@ -446,7 +521,7 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_block_expression(&mut self, block_expr: &BlockExpr) -> Result<(), String> {
+    fn visit_block_expression(&mut self, block_expr: &BlockExpr) -> Result<(), ()> {
         self.begin_scope();
 
         for stmt in &block_expr.statements {
@@ -456,11 +531,17 @@ impl Visitor<Result<(), String>> for CodeGenerator {
         if let Some(return_expr) = &block_expr.return_expr {
             self.visit_expression(return_expr)?;
         } else {
-            self.emit_constant(Value::Unit);
+            self.emit_constant(Value::Unit(()))?;
         }
 
         self.end_scope();
 
+        Ok(())
+    }
+
+    fn visit_function_type_expression(&mut self, _func_type_expr: &FunctionTypeExpr) -> Result<(), ()> {
+        // Function type expressions are compile-time constructs that don't generate runtime bytecode
+        // They are used for type checking and don't produce any values at runtime
         Ok(())
     }
 }

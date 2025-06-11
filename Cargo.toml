@@ -12,12 +12,14 @@ members = [
         "crate/types",
         "crate/derive",
         "crate/shared",
+        "crate/error",
 ]
 
 [features]
 default = []
 print-byte_code = ["slang_backend/print-byte_code"]
 print-ast = ["slang_ir/print-ast"]
+print-tokens = ["slang_frontend/print-tokens"]
 trace-execution = ["slang_backend/trace-execution"]
 
 [dependencies]
@@ -29,6 +31,7 @@ slang_ir = { path = "crate/ir", features = [] }
 slang_backend = { path = "crate/backend", features = [] }
 slang_types = { path = "crate/types", features = [] }
 slang_shared = { path = "crate/shared", features = [] }
+slang_error = { path = "crate/error", features = [] }
 
 
 [dev-dependencies]

@@ -1,6 +1,12 @@
 use crate::bytecode::{Chunk, NativeFunction, OpCode};
-use crate::value::{Value, ValueOperation};
+use crate::value::{Value, ArithmeticOps, LogicalOps, ComparisonOps};
+use crate::native;
 use std::collections::HashMap;
+
+/// Represents a single scope with its variables
+struct Scope {
+    variables: HashMap<String, Value>,
+}
 
 /// Call frame to track function calls
 struct CallFrame {
@@ -20,13 +26,29 @@ pub struct VM {
     ip: usize,
     /// Stack for values
     stack: Vec<Value>,
-    /// Global variables
-    variables: HashMap<String, Value>,
+    /// Stack of scopes, with global scope at index 0
+    scopes: Vec<Scope>,
     /// Call frames for function calls
     frames: Vec<CallFrame>,
     /// Index of the current call frame
     current_frame: Option<usize>,
 }
+
+
+/// Execute a bytecode chunk in the VM
+///
+/// ### Arguments
+///
+/// * `chunk` - The bytecode chunk to run
+///
+/// ### Returns
+///
+/// Ok(()) if successful, or an error message
+pub fn execute_bytecode(chunk: &Chunk) -> Result<(), String> {
+    let mut vm = VM::new();
+    vm.interpret(chunk)
+}
+
 
 impl Default for VM {
     fn default() -> Self {
@@ -40,7 +62,7 @@ impl VM {
         let mut vm = VM {
             ip: 0,
             stack: Vec::new(),
-            variables: HashMap::new(),
+            scopes: vec![Scope { variables: HashMap::new() }], // Global scope
             frames: Vec::new(),
             current_frame: None,
         };
@@ -50,7 +72,7 @@ impl VM {
 
     /// Registers built-in functions
     fn register_native_functions(&mut self) {
-        self.define_native("print_value", 1, VM::native_print_value);
+        self.define_native("print_value", 1, native::print_value);
     }
 
     /// Defines a native (built-in) function
@@ -72,28 +94,9 @@ impl VM {
             function,
         }));
 
-        self.variables.insert(name.to_string(), native_fn);
+        self.set_variable(name.to_string(), native_fn);
     }
 
-    /// Built-in function to print a value
-    ///
-    /// ### Arguments
-    ///
-    /// * `args` - Arguments to the function (should be exactly 1)
-    ///
-    /// ### Returns
-    ///
-    /// Success with i32(0) if successful, or an error message
-    fn native_print_value(args: &[Value]) -> Result<Value, String> {
-        if args.len() != 1 {
-            return Err("print_value expects exactly 1 argument".to_string());
-        }
-
-        println!("{}", args[0]);
-
-        // Return 0 to indicate success
-        Ok(Value::I32(0))
-    }
 
     /// Interprets and executes a bytecode chunk
     ///
@@ -165,7 +168,7 @@ impl VM {
             OpCode::Return => {
                 if let Some(frame_index) = self.current_frame {
                     let return_value = if self.stack.is_empty() {
-                        Value::Unit // Default return value for functions without explicit return
+                        Value::Unit(()) 
                     } else {
                         self.pop()?
                     };
@@ -174,12 +177,10 @@ impl VM {
                     let return_address = frame.return_address;
                     let stack_offset = frame.stack_offset;
 
-                    // Clear the stack back to where the function call started
                     while self.stack.len() > stack_offset {
                         self.pop()?;
                     }
 
-                    // Push the return value
                     self.stack.push(return_value);
 
                     self.ip = return_address;
@@ -208,12 +209,12 @@ impl VM {
                 let value = if let Some(frame_idx) = self.current_frame {
                     if let Some(value) = self.frames[frame_idx].locals.get(var_name) {
                         value.clone()
-                    } else if let Some(value) = self.variables.get(var_name) {
+                    } else if let Some(value) = self.get_variable(var_name) {
                         value.clone()
                     } else {
                         return Err(format!("Undefined variable '{}'", var_name));
                     }
-                } else if let Some(value) = self.variables.get(var_name) {
+                } else if let Some(value) = self.get_variable(var_name) {
                     value.clone()
                 } else {
                     return Err(format!("Undefined variable '{}'", var_name));
@@ -234,14 +235,12 @@ impl VM {
 
                 if let Some(frame_idx) = self.current_frame {
                     if self.frames[frame_idx].param_names.contains(&var_name) {
-                        // Local variable
                         self.frames[frame_idx].locals.insert(var_name, value);
                     } else {
-                        self.variables.insert(var_name, value);
+                        self.set_variable(var_name, value);
                     }
                 } else {
-                    // Global scope
-                    self.variables.insert(var_name, value);
+                    self.set_variable(var_name, value);
                 }
             }
             OpCode::Pop => {
@@ -258,7 +257,7 @@ impl VM {
                 let var_name = chunk.identifiers[var_index].clone();
                 let value = &chunk.constants[constant_index];
 
-                self.variables.insert(var_name, value.clone());
+                self.set_variable(var_name, value.clone());
             }
             OpCode::Call => {
                 let arg_count = self.read_byte(chunk) as usize;
@@ -272,7 +271,6 @@ impl VM {
 
                 match function_value {
                     Value::Function(func) => {
-                        // Check argument count
                         if arg_count != func.arity as usize {
                             return Err(format!(
                                 "Expected {} arguments but got {}",
@@ -377,6 +375,17 @@ impl VM {
             OpCode::NotEqual => {
                 self.binary_op(|a, b| a.not_equal(b))?;
             }
+            OpCode::BeginScope => {
+                self.scopes.push(Scope {
+                    variables: HashMap::new(),
+                });
+            }
+            OpCode::EndScope => {
+                if self.scopes.len() <= 1 {
+                    return Err("Cannot end global scope".to_string());
+                }
+                self.scopes.pop();
+            }
         }
 
         Ok(())
@@ -446,5 +455,22 @@ impl VM {
         let result = op(&a, &b)?;
         self.stack.push(result);
         Ok(())
+    }
+
+    /// Helper method to find a variable in any scope (from innermost to outermost)
+    fn get_variable(&self, name: &str) -> Option<&Value> {
+        for scope in self.scopes.iter().rev() {
+            if let Some(value) = scope.variables.get(name) {
+                return Some(value);
+            }
+        }
+        None
+    }
+
+    /// Helper method to set a variable (creates in current scope or updates existing)
+    fn set_variable(&mut self, name: String, value: Value) {
+        if let Some(current_scope) = self.scopes.last_mut() {
+            current_scope.variables.insert(name, value);
+        }
     }
 }

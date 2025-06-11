@@ -1,13 +1,11 @@
+use crate::compilation_pipeline::CompilationResult;
+use crate::compiler::{CompileOptions, Compiler};
 use crate::error::{CliError, CliResult};
 use crate::exit;
 use clap::{Parser as ClapParser, Subcommand};
 use colored::Colorize;
 use slang_backend::bytecode::Chunk;
-use slang_backend::codegen;
-use slang_backend::vm::VM;
-use slang_frontend::error::{CompileResult, report_errors};
-use slang_frontend::{lexer, parser, semantic_analyzer};
-use slang_shared::compilation_context::CompilationContext;
+use slang_backend::vm;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
@@ -19,7 +17,8 @@ use zip::{ZipArchive, ZipWriter, write::FileOptions};
     version,
     about = "Slang programming language",
     long_about = r#"Slang is a simple programming language designed for educational purposes.
-It features a REPL, compilation to bytecode, and execution of both source files and compiled bytecode."#
+It features compilation to bytecode and execution of both source files and compiled bytecode."#,
+    arg_required_else_help = true
 )]
 pub struct Parser {
     #[command(subcommand)]
@@ -29,9 +28,6 @@ pub struct Parser {
 /// Available commands for the Slang CLI
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Run the interactive REPL
-    Repl {},
-
     /// Compile a Slang source file to bytecode
     Compile {
         /// Input source file
@@ -58,162 +54,84 @@ pub enum Commands {
 /// The extension for compiled Slang bytecode files
 const SLANG_BYTECODE_EXTENSION: &str = "sip";
 
-/// Run the interactive REPL
-pub fn repl() {
-    let mut vm = VM::new();
-    println!("Slang REPL - Type 'exit' to exit");
-
-    loop {
-        let mut input = String::new();
-        print!(">>> ");
-        std::io::stdout().flush().unwrap();
-
-        if std::io::stdin().read_line(&mut input).is_ok() {
-            let trimmed = input.trim();
-            if trimmed == "exit" {
-                break;
-            } else if trimmed.is_empty() {
-                continue;
-            }
-        } else {
-            println!("Error reading input. Try again.");
-            continue;
-        }
-
-        // Compile the input
-        match compile_source_to_bytecode(&input) {
-            Ok(chunk) => {
-                #[cfg(feature = "print-byte_code")]
-                {
-                    println!("\n=== Bytecode ===");
-                    chunk.disassemble("REPL");
-                }
-
-                if let Err(e) = vm.interpret(&chunk) {
-                    eprintln!("{}: {}", "Runtime error".red(), e);
-                }
-            }
-            Err(errors) => {
-                report_errors(&errors, &input); 
-            }
-        }
-    }
-}
-
-/// Compile a Slang source file to bytecode
-///
-/// ### Arguments
-/// * `input` - The input source file
-/// * `output` - The output file path (if provided)
-pub fn compile_file(input: &str, output: Option<String>) {
-    let output_path = resolve_output_path(input, output);
-    println!("Compiling {} to {}", input, output_path);
-
-    match read_source_file(input) {
-        Ok(source) => match compile_source_to_bytecode(&source) {
-            Ok(chunk) => {
-                if let Err(err) = write_bytecode(&chunk, &output_path) {
-                    exit::with_code(err.exit_code(), &err.to_string())
-                } else {
-                    println!("Successfully compiled to {}", output_path);
-                }
-            }
-            Err(errors) => {
-                report_errors(&errors, &source); 
-                exit::with_code(
-                    exit::Code::Software,
-                    &format!(
-                        "{}: Compilation failed due to previous error(s)",
-                        "error".red()
-                    ),
-                );
-            }
-        },
-        Err(err) => exit::with_code(err.exit_code(), &err.to_string()),
-    }
-}
-
-/// Execute a Slang source file directly
-///
-/// ### Arguments
-/// * `input` - The input source file
-pub fn execute_file(input: &str) {
-    println!("Executing source file: {}", input);
-
-    match read_source_file(input) {
-        Ok(source) => match compile_source_to_bytecode(&source) {
-            Ok(chunk) => {
-                if let Err(e) = execute_bytecode(&chunk) {
-                    exit::with_code(
-                        exit::Code::Software,
-                        &format!("{}: {}", "Runtime Error".red(), e),
-                    );
-                }
-            }
-            Err(errors) => {
-                report_errors(&errors, &source); 
-                exit::with_code(
-                    exit::Code::Software,
-                    &format!(
-                        "{}: Compilation failed due to previous error(s)",
-                        "error".red()
-                    ),
-                );
-            }
-        },
-        Err(err) => exit::with_code(err.exit_code(), &err.to_string()),
-    }
+/// Represents different execution modes for source file processing
+enum ExecutionMode {
+    /// Compile source to bytecode
+    Compile { output_path: String },
+    /// Execute source directly
+    Execute,
 }
 
 /// Run a compiled Slang bytecode file
 ///
 /// ### Arguments
 /// * `input` - The input compiled bytecode file
-pub fn run_file(input: &str) {
+pub fn run_file(input: &str) -> CliResult<()> {
     println!("Running compiled file: {}", input);
 
-    match read_bytecode_file(input) {
-        Ok(chunk) => {
-            if let Err(e) = execute_bytecode(&chunk) {
-                exit::with_code(
-                    exit::Code::Software,
-                    &format!("{}: {}", "Runtime Error".red(), e),
-                );
-            }
-        }
-        Err(err) => exit::with_code(err.exit_code(), &err.to_string()),
-    }
+    // Validate file extension for better user experience
+    validate_file_extension(input, SLANG_BYTECODE_EXTENSION, "bytecode execution")?;
+
+    let chunk = read_bytecode_from_file(input)?;
+    vm::execute_bytecode(&chunk).map_err(|e| CliError::Generic {
+        message: format!("{}: {} (in file '{}')", "Runtime Error".red(), e, input),
+        exit_code: exit::Code::Software,
+    })?;
+
+    Ok(())
 }
 
-/// Compile source code to bytecode
+/// Process a source file for either compilation or execution
 ///
 /// ### Arguments
-///
-/// * `source` - The source code to compile
+/// * `input` - The input source file path
+/// * `mode` - The execution mode (compile or execute)
 ///
 /// ### Returns
-///
-/// The compiled bytecode chunk or compilation errors
-fn compile_source_to_bytecode(source: &str) -> CompileResult<Chunk> {
-    let lexer_result = lexer::tokenize(source);
-    let mut context = CompilationContext::new();
-    let statements = parser::parse(&lexer_result.tokens, &lexer_result.line_info, &mut context)?;
-    #[cfg(feature = "print-ast")]
-    {
-        let mut printer = slang_ir::ast_printer::ASTPrinter::new();
-        printer.print(&statements);
+/// Result indicating success or failure
+fn process_source_file(input: &str, mode: ExecutionMode) -> CliResult<()> {
+    let source = read_source_file(input)?;
+    let compiler = Compiler::new();
+    let recovery_mode = matches!(mode, ExecutionMode::Execute);
+
+    let compile_options = CompileOptions {
+        recovery_mode,
+        file_name: Some(input.to_string()),
+    };
+
+    let result = compiler.compile_source(&source, compile_options);
+
+    match result {
+        CompilationResult::Success {
+            chunk, diagnostics, ..
+        } => {
+            let has_diagnostics = diagnostics.error_count() > 0 || diagnostics.warning_count() > 0;
+            if has_diagnostics {
+                diagnostics.report_all(&source);
+            }
+
+            match mode {
+                ExecutionMode::Compile { output_path } => {
+                    write_bytecode(&chunk, &output_path)?;
+                    println!("Successfully compiled to {}", output_path);
+                }
+                ExecutionMode::Execute => {
+                    vm::execute_bytecode(&chunk).map_err(|e| CliError::Generic {
+                        message: format!("{}: {} (in file '{}')", "Runtime Error".red(), e, input),
+                        exit_code: exit::Code::Software,
+                    })?;
+                }
+            }
+            Ok(())
+        }
+        CompilationResult::Failed { diagnostics, .. } => {
+            diagnostics.report_all(&source);
+            Err(CliError::Generic {
+                message: format!("Compilation failed for file '{}'", input),
+                exit_code: exit::Code::Software,
+            })
+        }
     }
-    semantic_analyzer::execute(&statements, &mut context)?;
-    codegen::generate_bytecode(&statements).map_err(|err_msg| {
-        vec![slang_frontend::error::CompilerError::new(
-            slang_frontend::error_codes::ErrorCode::GenericCompileError,
-            err_msg,
-            0,
-            0,
-            0,
-            None,
-        )]
-    })
 }
 
 /// Determine the output path for a compiled file
@@ -238,29 +156,41 @@ fn resolve_output_path(input: &str, output: Option<String>) -> String {
     }
 }
 
-/// Read a source file into a string
+/// Read source code from a file
 ///
 /// ### Arguments
-///
 /// * `path` - The path to the source file
 ///
 /// ### Returns
-///
-/// The file contents or an error message
+/// The file contents as a string, or a CliError on failure with enhanced context
 fn read_source_file(path: &str) -> CliResult<String> {
-    fs::read_to_string(path).map_err(|e| CliError::from_io_error(e, path))
+    fs::read_to_string(path).map_err(|e| {
+        let error = CliError::from_io_error(e, path);
+        if let CliError::Io {
+            source,
+            path,
+            exit_code,
+        } = error
+        {
+            CliError::Io {
+                source,
+                path: format!("{} (attempted to read source file)", path),
+                exit_code,
+            }
+        } else {
+            error
+        }
+    })
 }
 
-/// Write a bytecode chunk to a file
+/// Write a bytecode chunk to a compressed archive file
 ///
 /// ### Arguments
-///
 /// * `chunk` - The bytecode chunk to write
-/// * `output_path` - The path to write to
+/// * `output_path` - The path to write the archive to
 ///
 /// ### Returns
-///
-/// Ok(()) if successful, or an error message
+/// Ok(()) if successful, or a CliError on failure
 fn write_bytecode(chunk: &Chunk, output_path: &str) -> CliResult<()> {
     let path = Path::new(output_path);
 
@@ -282,7 +212,7 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> CliResult<()> {
     zip.start_file("bytecode.bin", options)
         .map_err(|e| CliError::Zip {
             source: e,
-            context: "Failed to create zip entry".to_string(),
+            context: "Failed to create zip entry",
             exit_code: exit::Code::IoErr,
         })?;
 
@@ -292,7 +222,7 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> CliResult<()> {
             .serialize(&mut cursor)
             .map_err(|e| CliError::Serialization {
                 source: Box::new(e),
-                context: "Failed to serialize bytecode".to_string(),
+                context: "Failed to serialize bytecode",
                 exit_code: exit::Code::Software,
             })?;
 
@@ -306,23 +236,21 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> CliResult<()> {
 
     zip.finish().map_err(|e| CliError::Zip {
         source: e,
-        context: "Failed to finalize zip file".to_string(),
+        context: "Failed to finalize zip file",
         exit_code: exit::Code::IoErr,
     })?;
 
     Ok(())
 }
 
-/// Read a bytecode chunk from a file
+/// Read a bytecode chunk from a compressed archive file
 ///
 /// ### Arguments
-///
-/// * `input_path` - The path to read from
+/// * `input_path` - The path to read the archive from
 ///
 /// ### Returns
-///
-/// The bytecode chunk or an error message
-fn read_bytecode_file(input_path: &str) -> CliResult<Chunk> {
+/// The bytecode chunk, or a CliError on failure
+fn read_bytecode_from_file(input_path: &str) -> CliResult<Chunk> {
     let file = File::open(input_path).map_err(|e| CliError::Io {
         source: e,
         path: input_path.to_string(),
@@ -331,7 +259,7 @@ fn read_bytecode_file(input_path: &str) -> CliResult<Chunk> {
 
     let mut archive = ZipArchive::new(file).map_err(|e| CliError::Zip {
         source: e,
-        context: "Failed to read zip archive".to_string(),
+        context: "Failed to read zip archive",
         exit_code: exit::Code::Dataerr,
     })?;
 
@@ -346,7 +274,7 @@ fn read_bytecode_file(input_path: &str) -> CliResult<Chunk> {
         let mut cursor = std::io::Cursor::new(buffer);
         let chunk = Chunk::deserialize(&mut cursor).map_err(|e| CliError::Serialization {
             source: Box::new(e),
-            context: "Failed to deserialize bytecode".to_string(),
+            context: "Failed to deserialize bytecode",
             exit_code: exit::Code::Dataerr,
         })?;
 
@@ -359,16 +287,60 @@ fn read_bytecode_file(input_path: &str) -> CliResult<Chunk> {
     }
 }
 
-/// Execute a bytecode chunk in the VM
+/// Validate that a file has the expected extension for its operation
 ///
 /// ### Arguments
-///
-/// * `chunk` - The bytecode chunk to run
+/// * `path` - The file path to validate
+/// * `expected_ext` - The expected file extension (without the dot)
+/// * `operation` - Description of the operation for error messages
 ///
 /// ### Returns
-///
-/// Ok(()) if successful, or an error message
-fn execute_bytecode(chunk: &Chunk) -> Result<(), String> {
-    let mut vm = VM::new();
-    vm.interpret(chunk)
+/// Ok(()) if valid, or a CliError if the extension is incorrect
+fn validate_file_extension(path: &str, expected_ext: &str, operation: &str) -> CliResult<()> {
+    let path_obj = Path::new(path);
+    if let Some(ext) = path_obj.extension() {
+        if ext.to_str().unwrap_or("") == expected_ext {
+            Ok(())
+        } else {
+            Err(CliError::Generic {
+                message: format!(
+                    "Invalid file extension for {}: expected '.{}', got '.{}' (file: '{}')",
+                    operation,
+                    expected_ext,
+                    ext.to_str().unwrap_or("?"),
+                    path
+                ),
+                exit_code: exit::Code::Usage,
+            })
+        }
+    } else {
+        Err(CliError::Generic {
+            message: format!(
+                "Missing file extension for {}: expected '.{}' (file: '{}')",
+                operation, expected_ext, path
+            ),
+            exit_code: exit::Code::Usage,
+        })
+    }
 }
+
+/// Compile a Slang source file to bytecode with enhanced error handling
+///
+/// ### Arguments
+/// * `input` - The input source file
+/// * `output` - The output file path (if provided)
+pub fn compile_file(input: &str, output: Option<String>) -> CliResult<()> {
+    let output_path = resolve_output_path(input, output);
+    println!("Compiling {} to {}", input, output_path);
+    process_source_file(input, ExecutionMode::Compile { output_path })
+}
+
+/// Execute a Slang source file with enhanced error handling and diagnostics
+///
+/// ### Arguments
+/// * `input` - The input source file
+pub fn execute_file(input: &str) -> CliResult<()> {
+    println!("Executing source file: {}", input);
+    process_source_file(input, ExecutionMode::Execute)
+}
+

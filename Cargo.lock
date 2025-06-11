@@ -920,6 +920,7 @@ dependencies = [
  "predicates",
  "rstest",
  "slang_backend",
+ "slang_error",
  "slang_frontend",
  "slang_ir",
  "slang_shared",
@@ -933,7 +934,7 @@ name = "slang_backend"
 version = "0.1.0"
 dependencies = [
  "slang_derive",
- "slang_frontend",
+ "slang_error",
  "slang_ir",
 ]
 
@@ -947,10 +948,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "slang_error"
+version = "0.1.0"
+dependencies = [
+ "colored",
+ "slang_ir",
+ "thiserror",
+]
+
+[[package]]
 name = "slang_frontend"
 version = "0.1.0"
 dependencies = [
  "colored",
+ "slang_error",
  "slang_ir",
  "slang_shared",
  "slang_types",
@@ -967,6 +978,9 @@ dependencies = [
 name = "slang_shared"
 version = "0.1.0"
 dependencies = [
+ "colored",
+ "slang_error",
+ "slang_ir",
  "slang_types",
 ]
 
@@ -1018,6 +1032,26 @@ name = "termtree"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
+
+[[package]]
+name = "thiserror"
+version = "1.0.69"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.69"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "time"
