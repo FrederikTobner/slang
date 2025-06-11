@@ -1,5 +1,5 @@
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use crate::ErrorCode;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use rstest::rstest;
 
 #[rstest]
@@ -237,4 +237,3 @@ fn using_type_as_variable_name(#[case] type_name: &str) {
         ),
     );
 }
-

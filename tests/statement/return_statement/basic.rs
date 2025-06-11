@@ -77,3 +77,4 @@ fn coerce_float_return() {
     "#;
     execute_program_and_assert(program, "6");
 }
+

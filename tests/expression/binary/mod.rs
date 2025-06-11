@@ -1,4 +1,4 @@
-mod logical;
-mod equality;
-mod relational;
 mod arithmetic;
+mod equality;
+mod logical;
+mod relational;

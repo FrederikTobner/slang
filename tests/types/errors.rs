@@ -1,5 +1,5 @@
-use crate::test_utils::execute_program_expect_error;
 use crate::ErrorCode;
+use crate::test_utils::execute_program_expect_error;
 
 #[test]
 fn undefined_variable() {
@@ -7,7 +7,11 @@ fn undefined_variable() {
         print_value(y); 
     "#;
 
-    execute_program_expect_error(program, ErrorCode::UndefinedVariable, "Undefined variable: y");
+    execute_program_expect_error(
+        program,
+        ErrorCode::UndefinedVariable,
+        "Undefined variable: y",
+    );
 }
 
 #[test]

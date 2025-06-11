@@ -1,21 +1,20 @@
-
-use super::super::error::SemanticAnalysisError;
-use super::helpers::{bool_type, operation_type_mismatch_error, types_are_identical, is_unspecified_integer_type, is_unspecified_float_type};
-use slang_ir::ast::BinaryOperator;
+use super::super::traits::SemanticResult;
+use super::helpers::{
+    bool_type, is_unspecified_float_type, is_unspecified_integer_type,
+    operation_type_mismatch_error, types_are_identical,
+};
 use slang_ir::Location;
+use slang_ir::ast::BinaryOperator;
 use slang_shared::CompilationContext;
-use slang_types::{TypeId};
+use slang_types::TypeId;
 
 use super::super::type_system;
 
-/// Type alias for result of semantic analysis operations
-pub type SemanticResult = Result<TypeId, SemanticAnalysisError>;
-
 /// Checks if an operator is a relational operator (requires numeric types)
-/// 
+///
 /// ### Arguments
 /// * `operator` - The binary operator to check
-/// 
+///
 /// ### Returns
 /// * `true` if the operator requires numeric types, `false` otherwise
 fn is_strictly_relational_operator(operator: &BinaryOperator) -> bool {
@@ -29,12 +28,12 @@ fn is_strictly_relational_operator(operator: &BinaryOperator) -> bool {
 }
 
 /// Checks if types are compatible for unspecified literal coercion in relational operations
-/// 
+///
 /// ### Arguments
 /// * `context` - The compilation context
 /// * `left_type` - The type of the left operand
 /// * `right_type` - The type of the right operand
-/// 
+///
 /// ### Returns
 /// * `true` if one operand is an unspecified literal compatible with the other, `false` otherwise
 fn can_coerce_for_relational(
@@ -43,7 +42,8 @@ fn can_coerce_for_relational(
     right_type: &TypeId,
 ) -> bool {
     (is_unspecified_integer_type(left_type) && type_system::is_integer_type(context, right_type))
-        || (is_unspecified_integer_type(right_type) && type_system::is_integer_type(context, left_type))
+        || (is_unspecified_integer_type(right_type)
+            && type_system::is_integer_type(context, left_type))
         || (is_unspecified_float_type(left_type) && type_system::is_float_type(context, right_type))
         || (is_unspecified_float_type(right_type) && type_system::is_float_type(context, left_type))
 }
@@ -73,8 +73,7 @@ pub fn check_relational_operation(
 ) -> SemanticResult {
     // Strictly relational operators (>, <, >=, <=) require numeric types
     if is_strictly_relational_operator(operator)
-        && (!context.is_numeric_type(left_type)
-            || !context.is_numeric_type(right_type))
+        && (!context.is_numeric_type(left_type) || !context.is_numeric_type(right_type))
     {
         return Err(operation_type_mismatch_error(
             &operator.to_string(),

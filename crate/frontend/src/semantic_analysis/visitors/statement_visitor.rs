@@ -1,17 +1,13 @@
-use slang_ir::ast::*;
 use slang_ir::Location;
+use slang_ir::ast::*;
 use slang_shared::{CompilationContext, SymbolKind};
 use slang_types::{TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
 
-use super::super::{
-    traits::SemanticResult,
-    error::SemanticAnalysisError,
-    type_system,
-};
+use super::super::{error::SemanticAnalysisError, traits::SemanticResult, type_system};
 use super::expression_visitor::ExpressionVisitor;
 
 /// Handles semantic analysis for all statement types
-/// 
+///
 /// This visitor is responsible for analyzing statement-level constructs
 /// including function declarations, variable declarations, assignments,
 /// return statements, type definitions, and control flow statements.
@@ -22,7 +18,7 @@ pub struct StatementVisitor<'a> {
 
 impl<'a> StatementVisitor<'a> {
     /// Create a new statement visitor
-    /// 
+    ///
     /// # Arguments
     /// * `context` - The compilation context for symbol management
     pub fn new(context: &'a mut CompilationContext) -> Self {
@@ -33,11 +29,14 @@ impl<'a> StatementVisitor<'a> {
     }
 
     /// Create a new statement visitor with an inherited return type context
-    /// 
+    ///
     /// # Arguments
     /// * `context` - The compilation context for symbol management
     /// * `return_type` - The current function's return type for context inheritance
-    pub fn with_return_type(context: &'a mut CompilationContext, return_type: Option<TypeId>) -> Self {
+    pub fn with_return_type(
+        context: &'a mut CompilationContext,
+        return_type: Option<TypeId>,
+    ) -> Self {
         Self {
             context,
             current_return_type: return_type,
@@ -45,7 +44,7 @@ impl<'a> StatementVisitor<'a> {
     }
 
     /// Set the current return type for function analysis
-    /// 
+    ///
     /// This is used when analyzing function bodies to validate return statements
     pub fn set_return_type(&mut self, return_type: Option<TypeId>) {
         self.current_return_type = return_type;
@@ -57,23 +56,29 @@ impl<'a> StatementVisitor<'a> {
     }
 
     /// Visit a function declaration statement
-    pub fn visit_function_declaration(&mut self, fn_decl: &FunctionDeclarationStmt) -> SemanticResult {
+    pub fn visit_function_declaration(
+        &mut self,
+        fn_decl: &FunctionDeclarationStmt,
+    ) -> SemanticResult {
         let mut param_types = Vec::new();
         for param in &fn_decl.parameters {
             param_types.push(param.param_type.clone());
         }
-        
-        let function_type_id = self.context.register_function_type(
-            param_types.clone(), 
-            fn_decl.return_type.clone()
-        );
-        
-        if self.context.define_symbol(
-            fn_decl.name.clone(), 
-            SymbolKind::Function, 
-            function_type_id, 
-            false,
-        ).is_err() {
+
+        let function_type_id = self
+            .context
+            .register_function_type(param_types.clone(), fn_decl.return_type.clone());
+
+        if self
+            .context
+            .define_symbol(
+                fn_decl.name.clone(),
+                SymbolKind::Function,
+                function_type_id,
+                false,
+            )
+            .is_err()
+        {
             return Err(SemanticAnalysisError::SymbolRedefinition {
                 name: fn_decl.name.clone(),
                 kind: "function".to_string(),
@@ -86,12 +91,16 @@ impl<'a> StatementVisitor<'a> {
 
         self.context.begin_scope();
         for param in &fn_decl.parameters {
-            if self.context.define_symbol(
-                param.name.clone(), 
-                SymbolKind::Variable, 
-                param.param_type.clone(),
-                true,
-            ).is_err() {
+            if self
+                .context
+                .define_symbol(
+                    param.name.clone(),
+                    SymbolKind::Variable,
+                    param.param_type.clone(),
+                    true,
+                )
+                .is_err()
+            {
                 return Err(SemanticAnalysisError::SymbolRedefinition {
                     name: param.name.clone(),
                     kind: "parameter".to_string(),
@@ -106,7 +115,7 @@ impl<'a> StatementVisitor<'a> {
 
         self.current_return_type = previous_return_type;
         self.context.end_scope();
-        
+
         result.and(Ok(fn_decl.return_type.clone()))
     }
 
@@ -125,9 +134,7 @@ impl<'a> StatementVisitor<'a> {
                     &expected_type,
                     &expr.location(),
                 );
-            } else if expected_type != TypeId::unknown()
-                && expected_type != TypeId::unit()
-            {
+            } else if expected_type != TypeId::unknown() && expected_type != TypeId::unit() {
                 return Err(SemanticAnalysisError::MissingReturnValue {
                     expected: expected_type.clone(),
                     location: error_location,
@@ -188,32 +195,40 @@ impl<'a> StatementVisitor<'a> {
         let final_type = self.determine_let_statement_type(let_stmt, expr_type)?;
         let final_type = type_system::finalize_inferred_type(final_type);
 
-        if self.context.define_symbol(
-            let_stmt.name.clone(),
-            SymbolKind::Variable,
-            final_type.clone(),
-            let_stmt.is_mutable,
-        ).is_err() {
+        if self
+            .context
+            .define_symbol(
+                let_stmt.name.clone(),
+                SymbolKind::Variable,
+                final_type.clone(),
+                let_stmt.is_mutable,
+            )
+            .is_err()
+        {
             return Err(SemanticAnalysisError::VariableRedefinition {
                 name: let_stmt.name.clone(),
                 location: let_stmt.location,
             });
         }
-        
+
         Ok(final_type)
     }
 
     /// Visit an assignment statement
-    pub fn visit_assignment_statement(&mut self, assign_stmt: &AssignmentStatement) -> SemanticResult {
+    pub fn visit_assignment_statement(
+        &mut self,
+        assign_stmt: &AssignmentStatement,
+    ) -> SemanticResult {
         // First check if variable exists and get its type and mutability
-        let (var_type_id, is_mutable) = if let Some(var_info) = self.resolve_variable(&assign_stmt.name) {
-            (var_info.type_id.clone(), var_info.is_mutable())
-        } else {
-            return Err(SemanticAnalysisError::UndefinedVariable {
-                name: assign_stmt.name.clone(),
-                location: assign_stmt.location,
-            });
-        };
+        let (var_type_id, is_mutable) =
+            if let Some(var_info) = self.resolve_variable(&assign_stmt.name) {
+                (var_info.type_id.clone(), var_info.is_mutable())
+            } else {
+                return Err(SemanticAnalysisError::UndefinedVariable {
+                    name: assign_stmt.name.clone(),
+                    location: assign_stmt.location,
+                });
+            };
 
         // Check mutability
         if !is_mutable {
@@ -242,7 +257,10 @@ impl<'a> StatementVisitor<'a> {
     }
 
     /// Visit a type definition statement
-    pub fn visit_type_definition_statement(&mut self, type_def: &TypeDefinitionStmt) -> SemanticResult {
+    pub fn visit_type_definition_statement(
+        &mut self,
+        type_def: &TypeDefinitionStmt,
+    ) -> SemanticResult {
         if self.context.lookup_symbol(&type_def.name).is_some() {
             return Err(SemanticAnalysisError::SymbolRedefinition {
                 name: type_def.name.clone(),
@@ -267,7 +285,10 @@ impl<'a> StatementVisitor<'a> {
             field_types_for_registration.push((name.clone(), type_id.clone()));
         }
 
-        match self.context.register_struct_type(type_def.name.clone(), field_types_for_registration) {
+        match self
+            .context
+            .register_struct_type(type_def.name.clone(), field_types_for_registration)
+        {
             Ok(type_id) => Ok(type_id),
             Err(_) => Err(SemanticAnalysisError::SymbolRedefinition {
                 name: type_def.name.clone(),
@@ -304,9 +325,10 @@ impl<'a> StatementVisitor<'a> {
     }
 
     // Helper methods that will be replaced when integrating with expression visitor
-    
+
     fn resolve_variable(&self, name: &str) -> Option<&slang_shared::Symbol> {
-        self.context.lookup_symbol(name)
+        self.context
+            .lookup_symbol(name)
             .filter(|symbol| symbol.kind() == SymbolKind::Variable)
     }
 
@@ -325,14 +347,22 @@ impl<'a> StatementVisitor<'a> {
         // Handle coercion of unspecified int to specific integer types
         if actual_type == TypeId::unspecified_int() {
             if type_system::is_integer_type(self.context, expected_type) {
-                return type_system::check_unspecified_int_for_type(self.context, expr, expected_type);
+                return type_system::check_unspecified_int_for_type(
+                    self.context,
+                    expr,
+                    expected_type,
+                );
             }
         }
 
         // Handle coercion of unspecified float to specific float types
         if actual_type == TypeId::unspecified_float() {
             if type_system::is_float_type(self.context, expected_type) {
-                return type_system::check_unspecified_float_for_type(self.context, expr, expected_type);
+                return type_system::check_unspecified_float_for_type(
+                    self.context,
+                    expr,
+                    expected_type,
+                );
             }
         }
 
@@ -352,16 +382,18 @@ impl<'a> StatementVisitor<'a> {
     }
 
     // Helper methods for expression analysis
-    
+
     fn visit_expression(&mut self, expr: &Expression) -> SemanticResult {
         // Create a new expression visitor with the current return type context
-        let mut expr_visitor = ExpressionVisitor::with_return_type(self.context, self.current_return_type.clone());
+        let mut expr_visitor =
+            ExpressionVisitor::with_return_type(self.context, self.current_return_type.clone());
         expr_visitor.visit_expression(expr)
     }
 
     fn visit_block_expression(&mut self, block: &BlockExpr) -> SemanticResult {
         // Create a new expression visitor with the current return type context
-        let mut expr_visitor = ExpressionVisitor::with_return_type(self.context, self.current_return_type.clone());
+        let mut expr_visitor =
+            ExpressionVisitor::with_return_type(self.context, self.current_return_type.clone());
         expr_visitor.visit_block_expression(block)
     }
 

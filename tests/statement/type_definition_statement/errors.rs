@@ -1,5 +1,5 @@
-use crate::test_utils::execute_program_expect_error;
 use crate::ErrorCode;
+use crate::test_utils::execute_program_expect_error;
 
 #[test]
 fn missing_name() {
@@ -9,7 +9,11 @@ fn missing_name() {
             y: i32,
         }
     "#;
-    execute_program_expect_error(program, ErrorCode::ExpectedIdentifier, "Expected struct name after \'struct\' keyword");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedIdentifier,
+        "Expected struct name after \'struct\' keyword",
+    );
 }
 
 #[test]
@@ -20,7 +24,11 @@ fn missing_opening_brace() {
             y: i32
         }
     "#;
-    execute_program_expect_error(program, ErrorCode::ExpectedOpeningBrace, "Expected '{' after struct name");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedOpeningBrace,
+        "Expected '{' after struct name",
+    );
 }
 
 #[test]
@@ -31,7 +39,11 @@ fn missing_closing_brace() {
             y: i32
         // Missing closing brace
     "#;
-    execute_program_expect_error(program, ErrorCode::ExpectedComma, "Expected \',\' after field or \'}\'");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedComma,
+        "Expected \',\' after field or \'}\'",
+    );
 }
 
 #[test]
@@ -42,7 +54,11 @@ fn field_missing_type() {
             y: 
         }
     "#;
-    execute_program_expect_error(program, ErrorCode::ExpectedIdentifier, "Expected type identifier");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedIdentifier,
+        "Expected type identifier",
+    );
 }
 
 #[test]
@@ -53,7 +69,11 @@ fn missing_colon() {
             y: i32
         }
     "#;
-    execute_program_expect_error(program, ErrorCode::ExpectedComma, "Expected \',\' after field or \'}\'");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedComma,
+        "Expected \',\' after field or \'}\'",
+    );
 }
 
 #[test]
@@ -68,5 +88,9 @@ fn duplicate_definition() {
             y: i32,
         };
     "#;
-    execute_program_expect_error(program, ErrorCode::SymbolRedefinition, "Type \'Point\' is already defined in the current scope.");
+    execute_program_expect_error(
+        program,
+        ErrorCode::SymbolRedefinition,
+        "Type \'Point\' is already defined in the current scope.",
+    );
 }

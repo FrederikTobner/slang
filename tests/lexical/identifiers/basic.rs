@@ -1,5 +1,5 @@
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use crate::ErrorCode;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 
 #[test]
 fn valid_identifier() {
@@ -39,7 +39,11 @@ fn starting_with_number_error() {
     let program = r#"
         let 1invalid = 42;
     "#;
-    execute_program_expect_error(program, ErrorCode::ExpectedIdentifier, "Expected identifier");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedIdentifier,
+        "Expected identifier",
+    );
 }
 
 #[test]

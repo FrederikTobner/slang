@@ -15,3 +15,4 @@ fn false_literal() {
     "#;
     execute_program_and_assert(program, "false");
 }
+

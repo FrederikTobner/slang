@@ -57,3 +57,4 @@ fn native_function_reference() {
     "#;
     execute_program_and_assert(program, "<native fn print_value>");
 }
+

@@ -16,4 +16,5 @@ fn is_shown_when_no_subcommand() {
     cmd.assert()
         .code(2)
         .stderr(predicate::str::contains("Usage: slang [COMMAND]"));
-} 
+}
+

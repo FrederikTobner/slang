@@ -1,16 +1,14 @@
 use slang_ir::ast::*;
 use slang_shared::{CompilationContext, SymbolKind};
-use slang_types::{TypeId};
+use slang_types::TypeId;
 
 use super::super::{
-    traits::SemanticResult,
-    error::SemanticAnalysisError,
-    operations,
+    error::SemanticAnalysisError, operations, traits::SemanticResult,
     validation::TypeCheckingCoordinator,
 };
 
 /// Handles semantic analysis for all expression types
-/// 
+///
 /// This visitor is responsible for analyzing expression-level constructs
 /// including binary operations, unary operations, function calls, variable
 /// references, literals, conditionals, and block expressions.
@@ -21,23 +19,26 @@ pub struct ExpressionVisitor<'a> {
 
 impl<'a> ExpressionVisitor<'a> {
     /// Create a new expression visitor
-    /// 
+    ///
     /// # Arguments
     /// * `context` - The compilation context for type information and symbol lookup
     pub fn new(context: &'a mut CompilationContext) -> Self {
-        Self { 
+        Self {
             context,
             current_return_type: None,
         }
     }
 
     /// Create a new expression visitor with a specific return type context
-    /// 
+    ///
     /// # Arguments
     /// * `context` - The compilation context for type information and symbol lookup
     /// * `current_return_type` - The current function's return type for validation
-    pub fn with_return_type(context: &'a mut CompilationContext, current_return_type: Option<TypeId>) -> Self {
-        Self { 
+    pub fn with_return_type(
+        context: &'a mut CompilationContext,
+        current_return_type: Option<TypeId>,
+    ) -> Self {
+        Self {
             context,
             current_return_type,
         }
@@ -63,7 +64,9 @@ impl<'a> ExpressionVisitor<'a> {
             Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
             Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
             Expression::Block(block_expr) => self.visit_block_expression(block_expr),
-            Expression::FunctionType(func_type_expr) => self.visit_function_type_expression(func_type_expr),
+            Expression::FunctionType(func_type_expr) => {
+                self.visit_function_type_expression(func_type_expr)
+            }
         }
     }
 
@@ -205,9 +208,13 @@ impl<'a> ExpressionVisitor<'a> {
                 let coordinator = self.create_type_coordinator();
                 if !coordinator.check_assignment_compatibility(&param_type, &arg_type) {
                     // For unspecified literals, try range validation
-                    if arg_type == TypeId::unspecified_int() 
-                        || arg_type == TypeId::unspecified_float() {
-                        if coordinator.validate_literal_range(arg, &param_type).is_err() {
+                    if arg_type == TypeId::unspecified_int()
+                        || arg_type == TypeId::unspecified_float()
+                    {
+                        if coordinator
+                            .validate_literal_range(arg, &param_type)
+                            .is_err()
+                        {
                             return Err(SemanticAnalysisError::ArgumentTypeMismatch {
                                 function_name: call_expr.name.clone(),
                                 argument_position: i + 1,
@@ -294,8 +301,8 @@ impl<'a> ExpressionVisitor<'a> {
         for stmt in &block_expr.statements {
             // Create a statement visitor with the current return type context
             let mut stmt_visitor = super::statement_visitor::StatementVisitor::with_return_type(
-                self.context, 
-                self.current_return_type.clone()
+                self.context,
+                self.current_return_type.clone(),
             );
             match stmt {
                 Statement::Let(let_stmt) => {
@@ -334,7 +341,10 @@ impl<'a> ExpressionVisitor<'a> {
     }
 
     /// Visit a function type expression
-    pub fn visit_function_type_expression(&mut self, func_type_expr: &FunctionTypeExpr) -> SemanticResult {
+    pub fn visit_function_type_expression(
+        &mut self,
+        func_type_expr: &FunctionTypeExpr,
+    ) -> SemanticResult {
         // Validate all parameter types exist
         for param_type in &func_type_expr.param_types {
             if self.context.get_type_info(param_type).is_none() {
@@ -348,7 +358,11 @@ impl<'a> ExpressionVisitor<'a> {
         }
 
         // Validate return type exists
-        if self.context.get_type_info(&func_type_expr.return_type).is_none() {
+        if self
+            .context
+            .get_type_info(&func_type_expr.return_type)
+            .is_none()
+        {
             return Err(SemanticAnalysisError::InvalidFieldType {
                 struct_name: "function type".to_string(),
                 field_name: "return type".to_string(),
@@ -364,7 +378,8 @@ impl<'a> ExpressionVisitor<'a> {
 
     /// Resolve a symbol that can be used as a value (variables and functions)
     fn resolve_value(&self, name: &str) -> Option<&slang_shared::Symbol> {
-        self.context.lookup_symbol(name)
+        self.context
+            .lookup_symbol(name)
             .filter(|symbol| matches!(symbol.kind(), SymbolKind::Variable | SymbolKind::Function))
     }
 }

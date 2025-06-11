@@ -380,7 +380,9 @@ impl Expression {
             Expression::Call(call) => visitor.visit_call_expression(call),
             Expression::Conditional(cond) => visitor.visit_conditional_expression(cond),
             Expression::Block(block) => visitor.visit_block_expression(block),
-            Expression::FunctionType(func_type) => visitor.visit_function_type_expression(func_type),
+            Expression::FunctionType(func_type) => {
+                visitor.visit_function_type_expression(func_type)
+            }
         }
     }
 }

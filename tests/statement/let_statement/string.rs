@@ -1,5 +1,5 @@
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use crate::ErrorCode;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use rstest::rstest;
 
 #[test]
@@ -95,4 +95,3 @@ fn using_string_type_as_name() {
         "Symbol \'string\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.",
     );
 }
-

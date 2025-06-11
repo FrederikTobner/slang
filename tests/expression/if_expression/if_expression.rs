@@ -1,5 +1,5 @@
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use crate::ErrorCode;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use rstest::rstest;
 
 #[rstest]
@@ -187,7 +187,11 @@ fn must_have_else_branch() {
         let result: i32 = if x > 3 { 10 };
         print_value(result);
     "#;
-    execute_program_expect_error(program, ErrorCode::ExpectedElse, "Expected 'else' after if expression");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedElse,
+        "Expected 'else' after if expression",
+    );
 }
 
 #[test]
@@ -226,3 +230,4 @@ fn with_native_function_branches() {
     "#;
     execute_program_and_assert(program, "100");
 }
+

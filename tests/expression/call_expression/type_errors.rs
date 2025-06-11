@@ -1,48 +1,30 @@
+use crate::ErrorCode;
 use crate::test_utils::execute_program_expect_error;
 use rstest::rstest;
-use crate::ErrorCode;
 
 #[rstest]
 #[case("i32", "42")]
 #[case("u32", "42")]
 #[case("i64", "42")]
 #[case("u64", "42")]
-fn with_integer_variable(
-    #[case] type_name: &str,
-    #[case] value: &str,
-) {
-    let program = format!(
-        "let a: {} = {}; a();",
-        type_name, value
-    );
+fn with_integer_variable(#[case] type_name: &str, #[case] value: &str) {
+    let program = format!("let a: {} = {}; a();", type_name, value);
     execute_program_expect_error(
         &program,
         ErrorCode::VariableNotCallable,
-        &format!(
-            "Cannot call {} type 'a' as a function",
-            type_name
-        ),
+        &format!("Cannot call {} type 'a' as a function", type_name),
     );
 }
 
 #[rstest]
 #[case("f32", "42.0")]
 #[case("f64", "42.0")]
-fn with_float_variable(
-    #[case] type_name: &str,
-    #[case] value: &str,
-) {
-    let program = format!(
-        "let a: {} = {}; a();",
-        type_name, value
-    );
+fn with_float_variable(#[case] type_name: &str, #[case] value: &str) {
+    let program = format!("let a: {} = {}; a();", type_name, value);
     execute_program_expect_error(
         &program,
         ErrorCode::VariableNotCallable,
-        &format!(
-            "Cannot call {} type 'a' as a function",
-            type_name
-        ),
+        &format!("Cannot call {} type 'a' as a function", type_name),
     );
 }
 
@@ -62,13 +44,8 @@ fn with_string_variable() {
 #[rstest]
 #[case("true")]
 #[case("false")]
-fn with_boolean_variable(
-    #[case] value: &str,
-) {
-    let program = format!(
-        "let a: bool = {}; a();",
-        value
-    );
+fn with_boolean_variable(#[case] value: &str) {
+    let program = format!("let a: bool = {}; a();", value);
     execute_program_expect_error(
         &program,
         ErrorCode::VariableNotCallable,
@@ -88,3 +65,4 @@ fn with_unit_variable() {
         "Cannot call () type 'a' as a function",
     );
 }
+

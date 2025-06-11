@@ -1,5 +1,5 @@
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use crate::ErrorCode;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 
 #[test]
 fn basic_if_statement_true() {

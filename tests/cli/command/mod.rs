@@ -1,6 +1,7 @@
 mod compile;
-mod run;
 mod execute;
-mod mixed;
 mod help;
+mod mixed;
+mod run;
 mod version;
+

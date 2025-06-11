@@ -1,5 +1,5 @@
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use crate::ErrorCode;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 
 #[test]
 fn with_explicit_function_type_mismatch() {
@@ -10,9 +10,12 @@ fn with_explicit_function_type_mismatch() {
         
         let my_function : fn(i32) -> () = my_print;
         "#;
-        execute_program_expect_error(program, ErrorCode::TypeMismatch, "Type mismatch: variable my_function is fn(i32) -> () but expression is fn(string) -> ()");
+    execute_program_expect_error(
+        program,
+        ErrorCode::TypeMismatch,
+        "Type mismatch: variable my_function is fn(i32) -> () but expression is fn(string) -> ()",
+    );
 }
-
 
 #[test]
 fn with_explicit_function_type() {
@@ -40,9 +43,11 @@ fn assign_native_to_function_with_explicit_function_type_multiple_times() {
         my_function2("Hello from native function");
         my_function3("Hello from native function");
         "#;
-    execute_program_and_assert(program, "Hello from native function\nHello from native function\nHello from native function");
+    execute_program_and_assert(
+        program,
+        "Hello from native function\nHello from native function\nHello from native function",
+    );
 }
-
 
 #[test]
 fn with_explicit_unit_return_type() {

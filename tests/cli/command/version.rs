@@ -9,3 +9,4 @@ fn command() {
         .success()
         .stdout(predicate::str::is_match(r"slang \d+\.\d+\.\d+").unwrap());
 }
+

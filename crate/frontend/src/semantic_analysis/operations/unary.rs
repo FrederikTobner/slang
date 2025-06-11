@@ -1,14 +1,11 @@
-use super::super::error::SemanticAnalysisError;
+use super::super::{error::SemanticAnalysisError, traits::SemanticResult};
 use super::helpers;
-use slang_ir::ast::{Expression, LiteralValue, UnaryExpr, UnaryOperator};
 use slang_ir::Location;
+use slang_ir::ast::{Expression, LiteralValue, UnaryExpr, UnaryOperator};
 use slang_shared::CompilationContext;
-use slang_types::{TypeId};
+use slang_types::TypeId;
 
 use super::super::type_system;
-
-/// Type alias for result of semantic analysis operations
-pub type SemanticResult = Result<TypeId, SemanticAnalysisError>;
 
 /// Checks if a unary operation is valid for the given operand type.
 /// Handles both arithmetic negation (-) and logical negation (!).
@@ -67,7 +64,7 @@ pub fn check_negation_operation(
     }
 
     // Check if the type is numeric
-    let is_numeric = type_system::is_integer_type(context, operand_type) 
+    let is_numeric = type_system::is_integer_type(context, operand_type)
         || type_system::is_float_type(context, operand_type);
 
     if is_numeric {
@@ -85,7 +82,7 @@ pub fn check_negation_operation(
             });
         }
     }
-    
+
     Err(SemanticAnalysisError::InvalidUnaryOperation {
         operator: "-".to_string(),
         operand_type: operand_type.clone(),
@@ -103,10 +100,7 @@ pub fn check_negation_operation(
 /// ### Returns
 /// * `Ok(bool_type)` if the operand is boolean
 /// * `Err` with a descriptive error message if the operand is not boolean
-pub fn check_logical_not_operation(
-    operand_type: &TypeId,
-    location: &Location,
-) -> SemanticResult {
+pub fn check_logical_not_operation(operand_type: &TypeId, location: &Location) -> SemanticResult {
     if helpers::is_boolean_type(operand_type) {
         Ok(helpers::bool_type())
     } else {
@@ -144,6 +138,5 @@ pub fn is_signed_numeric_type(type_id: &TypeId) -> bool {
 /// * `true` if the type is an unsigned integer type
 /// * `false` otherwise
 pub fn is_unsigned_integer_type(type_id: &TypeId) -> bool {
-    *type_id == TypeId::u32()
-        || *type_id == TypeId::u64()
+    *type_id == TypeId::u32() || *type_id == TypeId::u64()
 }

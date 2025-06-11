@@ -204,17 +204,30 @@ impl SemanticAnalysisError {
                 format!("Variable '{}' already defined", name)
             }
 
-            SemanticAnalysisError::SymbolRedefinition { name, kind, .. } => {
-                match kind.as_str() {
-                    "function" => format!("Function '{}' is already defined in the current scope.", name),
-                    "variable" => format!("Variable '{}' is already defined in the current scope.", name),
-                    "type" => format!("Type '{}' is already defined in the current scope.", name),
-                    "parameter" => format!("Parameter '{}' is already defined in the current scope.", name),
-                    "variable (conflicts with type)" => format!("Symbol '{}' of kind 'variable (conflicts with type)' is already defined or conflicts with an existing symbol.", name),
-                    "variable (conflicts with function)" => format!("Symbol '{}' of kind 'variable (conflicts with function)' is already defined or conflicts with an existing symbol.", name),
-                    _ => format!("Symbol '{}' is already defined in the current scope.", name),
-                }
-            }
+            SemanticAnalysisError::SymbolRedefinition { name, kind, .. } => match kind.as_str() {
+                "function" => format!(
+                    "Function '{}' is already defined in the current scope.",
+                    name
+                ),
+                "variable" => format!(
+                    "Variable '{}' is already defined in the current scope.",
+                    name
+                ),
+                "type" => format!("Type '{}' is already defined in the current scope.", name),
+                "parameter" => format!(
+                    "Parameter '{}' is already defined in the current scope.",
+                    name
+                ),
+                "variable (conflicts with type)" => format!(
+                    "Symbol '{}' of kind 'variable (conflicts with type)' is already defined or conflicts with an existing symbol.",
+                    name
+                ),
+                "variable (conflicts with function)" => format!(
+                    "Symbol '{}' of kind 'variable (conflicts with function)' is already defined or conflicts with an existing symbol.",
+                    name
+                ),
+                _ => format!("Symbol '{}' is already defined in the current scope.", name),
+            },
 
             SemanticAnalysisError::InvalidFieldType {
                 struct_name,
@@ -390,10 +403,10 @@ impl SemanticAnalysisError {
 
             SemanticAnalysisError::InvalidExpression { message, .. } => message.clone(),
 
-            SemanticAnalysisError::VariableNotCallable { 
-                variable_name, 
-                variable_type, 
-                .. 
+            SemanticAnalysisError::VariableNotCallable {
+                variable_name,
+                variable_type,
+                ..
             } => {
                 format!(
                     "Cannot call {} type '{}' as a function",

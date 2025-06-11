@@ -1,5 +1,5 @@
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use crate::ErrorCode;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use rstest::rstest;
 
 #[rstest]
@@ -32,7 +32,7 @@ fn from_string_literal() {
         print_value(a);
     "#;
     execute_program_expect_error(
-        &program,
+        program,
         ErrorCode::TypeMismatch,
         "Type mismatch: variable a is bool but expression is string",
     );
@@ -95,4 +95,3 @@ fn using_boolean_type_as_name() {
         "Symbol \'bool\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.",
     );
 }
-

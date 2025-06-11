@@ -1,5 +1,5 @@
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use crate::ErrorCode;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 
 #[test]
 fn basic() {
@@ -38,5 +38,9 @@ fn unterminated() {
     let program = r#"
         print_value("unterminated string
     "#;
-    execute_program_expect_error(program, ErrorCode::ExpectedClosingQuote, "Expected closing quote");
+    execute_program_expect_error(
+        program,
+        ErrorCode::ExpectedClosingQuote,
+        "Expected closing quote",
+    );
 }

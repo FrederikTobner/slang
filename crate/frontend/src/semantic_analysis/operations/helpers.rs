@@ -1,10 +1,7 @@
 use super::super::error::SemanticAnalysisError;
 use slang_ir::Location;
 use slang_shared::CompilationContext;
-use slang_types::{TypeId};
-
-/// Type alias for result of semantic analysis operations
-pub type SemanticResult = Result<TypeId, SemanticAnalysisError>;
+use slang_types::TypeId;
 
 /// Helper functions for common type checking operations.
 /// This module provides utility functions that are shared across different operation types.

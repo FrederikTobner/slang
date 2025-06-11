@@ -1,6 +1,8 @@
-use crate::{Symbol, SymbolKind, SymbolTable};
 use crate::symbol_table::SymbolData;
-use slang_types::{PrimitiveType, StructType, TypeId, TypeInfo, TypeKind, TypeRegistry, FunctionType};
+use crate::{Symbol, SymbolKind, SymbolTable};
+use slang_types::{
+    FunctionType, PrimitiveType, StructType, TypeId, TypeInfo, TypeKind, TypeRegistry,
+};
 
 /// Compilation context that owns the type registry and symbol table
 pub struct CompilationContext {
@@ -31,7 +33,7 @@ impl CompilationContext {
         let mut define_primitive = |ptype: PrimitiveType| {
             let type_id = TypeId::from_primitive(ptype);
             symbol_table
-                .define(ptype.name().to_string(), SymbolData::Type, type_id.clone())
+                .define(ptype.name().to_string(), SymbolData::Type, type_id)
                 .unwrap_or_else(|_| {
                     panic!(
                         "Failed to define primitive type symbol for '{}'",
@@ -273,7 +275,7 @@ impl CompilationContext {
 
         let type_id = self.type_registry.register_type(name, type_kind);
         self.symbol_table
-            .define(name.to_string(), SymbolData::Type, type_id.clone())?;
+            .define(name.to_string(), SymbolData::Type, type_id)?;
         Ok(type_id)
     }
 
@@ -296,8 +298,13 @@ impl CompilationContext {
     }
 
     /// Registers a function type and returns its TypeId
-    pub fn register_function_type(&mut self, param_types: Vec<TypeId>, return_type: TypeId) -> TypeId {
-        self.type_registry.register_function_type(param_types, return_type)
+    pub fn register_function_type(
+        &mut self,
+        param_types: Vec<TypeId>,
+        return_type: TypeId,
+    ) -> TypeId {
+        self.type_registry
+            .register_function_type(param_types, return_type)
     }
 
     /// Checks if a type is a function type

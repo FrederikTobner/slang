@@ -1,13 +1,9 @@
-
-use super::super::error::SemanticAnalysisError;
+use super::super::traits::SemanticResult;
 use super::helpers;
-use slang_ir::ast::{BinaryExpr, BinaryOperator};
 use slang_ir::Location;
+use slang_ir::ast::{BinaryExpr, BinaryOperator};
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
-
-/// Type alias for result of semantic analysis operations
-pub type SemanticResult = Result<TypeId, SemanticAnalysisError>;
 
 /// Checks if a type is compatible with an arithmetic operation when both operands have the same type.
 /// Boolean types are not allowed for any arithmetic operation.
@@ -29,10 +25,9 @@ pub fn check_same_type_arithmetic(
     operator: &BinaryOperator,
     location: &Location,
 ) -> SemanticResult {
-    // Check for types that are never allowed in arithmetic operations
-    if helpers::is_boolean_type(type_id) 
-        || helpers::is_unit_type(type_id) 
-        || context.is_function_type(type_id) 
+    if helpers::is_boolean_type(type_id)
+        || helpers::is_unit_type(type_id)
+        || context.is_function_type(type_id)
     {
         return Err(helpers::operation_type_mismatch_error(
             &operator.to_string(),
@@ -42,7 +37,6 @@ pub fn check_same_type_arithmetic(
         ));
     }
 
-    // String types are only allowed for addition (concatenation)
     if helpers::is_string_type(type_id) && operator != &BinaryOperator::Add {
         return Err(helpers::operation_type_mismatch_error(
             &operator.to_string(),
@@ -52,14 +46,13 @@ pub fn check_same_type_arithmetic(
         ));
     }
 
-    // All other types (numeric types and string addition) are allowed
     Ok(type_id.clone())
 }
 
 /// Checks if mixed-type arithmetic operations are allowed, particularly handling
 /// unspecified literals that can be coerced to match the other operand's type.
 /// This function handles type coercion for arithmetic operations when operands have different types.
-/// 
+///
 /// ### Supported Cases
 /// - Unspecified integer literal + specific integer type
 /// - Unspecified float literal + specific float type  
@@ -80,7 +73,6 @@ pub fn check_mixed_arithmetic_operation(
     right_type: &TypeId,
     bin_expr: &BinaryExpr,
 ) -> SemanticResult {
-    // Handle unspecified integer literal with specific integer type
     if helpers::is_unspecified_integer_type(left_type) && is_integer_type(context, right_type) {
         return check_unspecified_int_for_type(context, &bin_expr.left, right_type);
     }
@@ -89,7 +81,6 @@ pub fn check_mixed_arithmetic_operation(
         return check_unspecified_int_for_type(context, &bin_expr.right, left_type);
     }
 
-    // Handle unspecified float literal with specific float type
     if helpers::is_unspecified_float_type(left_type) && is_float_type(context, right_type) {
         return check_unspecified_float_for_type(context, &bin_expr.left, right_type);
     }
@@ -98,7 +89,6 @@ pub fn check_mixed_arithmetic_operation(
         return check_unspecified_float_for_type(context, &bin_expr.right, left_type);
     }
 
-    // Handle string concatenation
     if bin_expr.operator == BinaryOperator::Add
         && helpers::is_string_type(left_type)
         && helpers::is_string_type(right_type)
@@ -106,7 +96,6 @@ pub fn check_mixed_arithmetic_operation(
         return Ok(left_type.clone());
     }
 
-    // If none of the above cases apply, the operation is not allowed
     Err(helpers::operation_type_mismatch_error(
         &bin_expr.operator.to_string(),
         left_type,
@@ -126,7 +115,9 @@ pub fn check_mixed_arithmetic_operation(
 /// * `true` if the type is a specific integer type
 /// * `false` otherwise
 fn is_integer_type(context: &CompilationContext, type_id: &TypeId) -> bool {
-    helpers::is_numeric_type(context, type_id) && !helpers::is_unspecified_integer_type(type_id) && !is_float_type(context, type_id)
+    helpers::is_numeric_type(context, type_id)
+        && !helpers::is_unspecified_integer_type(type_id)
+        && !is_float_type(context, type_id)
 }
 
 /// Helper function to check if a type is a float type.
@@ -141,7 +132,7 @@ fn is_integer_type(context: &CompilationContext, type_id: &TypeId) -> bool {
 /// * `false` otherwise
 fn is_float_type(_context: &CompilationContext, type_id: &TypeId) -> bool {
     use slang_types::PrimitiveType;
-    
+
     if let Some(primitive) = PrimitiveType::from_int(type_id.0) {
         matches!(primitive, PrimitiveType::F32 | PrimitiveType::F64)
     } else {

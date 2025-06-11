@@ -1,7 +1,7 @@
+use crate::compilation_pipeline::CompilationResult;
+use crate::compiler::{CompileOptions, Compiler};
 use crate::error::{CliError, CliResult};
 use crate::exit;
-use crate::compilation_pipeline::CompilationResult;
-use crate::compiler::{Compiler, CompileOptions};
 use clap::{Parser as ClapParser, Subcommand};
 use colored::Colorize;
 use slang_backend::bytecode::Chunk;
@@ -18,7 +18,7 @@ use zip::{ZipArchive, ZipWriter, write::FileOptions};
     about = "Slang programming language",
     long_about = r#"Slang is a simple programming language designed for educational purposes.
 It features compilation to bytecode and execution of both source files and compiled bytecode."#,
-arg_required_else_help = true,
+    arg_required_else_help = true
 )]
 pub struct Parser {
     #[command(subcommand)]
@@ -77,11 +77,9 @@ pub fn run_file(input: &str) -> CliResult<()> {
         message: format!("{}: {} (in file '{}')", "Runtime Error".red(), e, input),
         exit_code: exit::Code::Software,
     })?;
-    
+
     Ok(())
 }
-
-
 
 /// Process a source file for either compilation or execution
 ///
@@ -95,21 +93,23 @@ fn process_source_file(input: &str, mode: ExecutionMode) -> CliResult<()> {
     let source = read_source_file(input)?;
     let compiler = Compiler::new();
     let recovery_mode = matches!(mode, ExecutionMode::Execute);
-    
+
     let compile_options = CompileOptions {
         recovery_mode,
         file_name: Some(input.to_string()),
     };
-    
+
     let result = compiler.compile_source(&source, compile_options);
-    
+
     match result {
-        CompilationResult::Success { chunk, diagnostics, .. } => {
+        CompilationResult::Success {
+            chunk, diagnostics, ..
+        } => {
             let has_diagnostics = diagnostics.error_count() > 0 || diagnostics.warning_count() > 0;
             if has_diagnostics {
                 diagnostics.report_all(&source);
             }
-            
+
             match mode {
                 ExecutionMode::Compile { output_path } => {
                     write_bytecode(&chunk, &output_path)?;
@@ -166,7 +166,12 @@ fn resolve_output_path(input: &str, output: Option<String>) -> String {
 fn read_source_file(path: &str) -> CliResult<String> {
     fs::read_to_string(path).map_err(|e| {
         let error = CliError::from_io_error(e, path);
-        if let CliError::Io { source, path, exit_code } = error {
+        if let CliError::Io {
+            source,
+            path,
+            exit_code,
+        } = error
+        {
             CliError::Io {
                 source,
                 path: format!("{} (attempted to read source file)", path),
@@ -319,7 +324,6 @@ fn validate_file_extension(path: &str, expected_ext: &str, operation: &str) -> C
     }
 }
 
-
 /// Compile a Slang source file to bytecode with enhanced error handling
 ///
 /// ### Arguments
@@ -339,3 +343,4 @@ pub fn execute_file(input: &str) -> CliResult<()> {
     println!("Executing source file: {}", input);
     process_source_file(input, ExecutionMode::Execute)
 }
+

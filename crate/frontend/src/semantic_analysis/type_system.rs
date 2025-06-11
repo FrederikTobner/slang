@@ -1,10 +1,9 @@
-use super::error::SemanticAnalysisError;
-use slang_ir::ast::{BinaryExpr, BinaryOperator, Expression, LetStatement, LiteralValue, UnaryOperator};
+use super::{error::SemanticAnalysisError, traits::SemanticResult};
+use slang_ir::ast::{
+    BinaryExpr, BinaryOperator, Expression, LetStatement, LiteralValue, UnaryOperator,
+};
 use slang_shared::CompilationContext;
-use slang_types::{TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
-
-/// Type alias for result of type system operations
-pub type SemanticResult = Result<TypeId, SemanticAnalysisError>;
+use slang_types::{TypeId, TYPE_NAME_U32, TYPE_NAME_U64};
 
 /// Checks if a type is an integer type
 ///
@@ -182,8 +181,9 @@ pub fn determine_let_statement_type(
         return Ok(let_stmt.expr_type.clone());
     }
 
-    if context.get_function_type(&let_stmt.expr_type).is_some() && 
-       context.get_function_type(&expr_type).is_some() {
+    if context.get_function_type(&let_stmt.expr_type).is_some()
+        && context.get_function_type(&expr_type).is_some()
+    {
         if let_stmt.expr_type == expr_type {
             return Ok(let_stmt.expr_type.clone());
         } else {
@@ -288,27 +288,19 @@ pub fn check_mixed_arithmetic_operation(
     right_type: &TypeId,
     bin_expr: &BinaryExpr,
 ) -> SemanticResult {
-    if *left_type == TypeId::unspecified_int()
-        && is_integer_type(context, right_type)
-    {
+    if *left_type == TypeId::unspecified_int() && is_integer_type(context, right_type) {
         return check_unspecified_int_for_type(context, &bin_expr.left, right_type);
     }
 
-    if *right_type == TypeId::unspecified_int()
-        && is_integer_type(context, left_type)
-    {
+    if *right_type == TypeId::unspecified_int() && is_integer_type(context, left_type) {
         return check_unspecified_int_for_type(context, &bin_expr.right, left_type);
     }
 
-    if *left_type == TypeId::unspecified_float()
-        && is_float_type(context, right_type)
-    {
+    if *left_type == TypeId::unspecified_float() && is_float_type(context, right_type) {
         return check_unspecified_float_for_type(context, &bin_expr.left, right_type);
     }
 
-    if *right_type == TypeId::unspecified_float()
-        && is_float_type(context, left_type)
-    {
+    if *right_type == TypeId::unspecified_float() && is_float_type(context, left_type) {
         return check_unspecified_float_for_type(context, &bin_expr.right, left_type);
     }
 

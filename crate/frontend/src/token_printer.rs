@@ -17,11 +17,11 @@ impl TokenPrinter {
     /// * `tokens` - The tokens to print
     pub fn print(&self, tokens: &[Token]) {
         println!("{}", "=== TOKENS ===".bright_cyan().bold());
-        
+
         for (i, token) in tokens.iter().enumerate() {
             self.print_token(i, token);
         }
-        
+
         println!("{}", "=== END TOKENS ===".bright_cyan().bold());
     }
 
@@ -35,7 +35,7 @@ impl TokenPrinter {
         let token_type_str = self.format_token_type(&token.token_type);
         let lexeme_str = self.format_lexeme(&token.lexeme, &token.token_type);
         let position_str = format!("pos: {}", token.pos).dimmed();
-        
+
         println!(
             "{:3}: {} {} ({})",
             index.to_string().bright_black(),
@@ -57,45 +57,70 @@ impl TokenPrinter {
     fn format_token_type(&self, token_type: &Tokentype) -> String {
         match token_type {
             // Keywords
-            Tokentype::Let | Tokentype::Mut | Tokentype::Fn | Tokentype::Return 
-            | Tokentype::If | Tokentype::Else | Tokentype::Struct => {
-                format!("{:15}", format!("{:?}", token_type)).blue().bold().to_string()
-            }
-            
+            Tokentype::Let
+            | Tokentype::Mut
+            | Tokentype::Fn
+            | Tokentype::Return
+            | Tokentype::If
+            | Tokentype::Else
+            | Tokentype::Struct => format!("{:15}", format!("{:?}", token_type))
+                .blue()
+                .bold()
+                .to_string(),
+
             // Literals
-            Tokentype::IntegerLiteral | Tokentype::FloatLiteral | Tokentype::StringLiteral 
-            | Tokentype::BooleanLiteral => {
-                format!("{:15}", format!("{:?}", token_type)).green().to_string()
-            }
-            
+            Tokentype::IntegerLiteral
+            | Tokentype::FloatLiteral
+            | Tokentype::StringLiteral
+            | Tokentype::BooleanLiteral => format!("{:15}", format!("{:?}", token_type))
+                .green()
+                .to_string(),
+
             // Identifiers
-            Tokentype::Identifier => {
-                format!("{:15}", format!("{:?}", token_type)).cyan().to_string()
-            }
-            
+            Tokentype::Identifier => format!("{:15}", format!("{:?}", token_type))
+                .cyan()
+                .to_string(),
+
             // Operators
-            Tokentype::Plus | Tokentype::Minus | Tokentype::Multiply | Tokentype::Divide
-            | Tokentype::Equal | Tokentype::EqualEqual | Tokentype::NotEqual
-            | Tokentype::Less | Tokentype::Greater | Tokentype::LessEqual | Tokentype::GreaterEqual
-            | Tokentype::And | Tokentype::Or | Tokentype::Not => {
-                format!("{:15}", format!("{:?}", token_type)).yellow().to_string()
-            }
-            
+            Tokentype::Plus
+            | Tokentype::Minus
+            | Tokentype::Multiply
+            | Tokentype::Divide
+            | Tokentype::Equal
+            | Tokentype::EqualEqual
+            | Tokentype::NotEqual
+            | Tokentype::Less
+            | Tokentype::Greater
+            | Tokentype::LessEqual
+            | Tokentype::GreaterEqual
+            | Tokentype::And
+            | Tokentype::Or
+            | Tokentype::Not => format!("{:15}", format!("{:?}", token_type))
+                .yellow()
+                .to_string(),
+
             // Punctuation
-            Tokentype::Semicolon | Tokentype::Comma | Tokentype::Colon | Tokentype::Arrow
-            | Tokentype::LeftParen | Tokentype::RightParen | Tokentype::LeftBrace | Tokentype::RightBrace => {
-                format!("{:15}", format!("{:?}", token_type)).bright_black().to_string()
-            }
-            
+            Tokentype::Semicolon
+            | Tokentype::Comma
+            | Tokentype::Colon
+            | Tokentype::Arrow
+            | Tokentype::LeftParen
+            | Tokentype::RightParen
+            | Tokentype::LeftBrace
+            | Tokentype::RightBrace => format!("{:15}", format!("{:?}", token_type))
+                .bright_black()
+                .to_string(),
+
             // Special tokens
-            Tokentype::Eof => {
-                format!("{:15}", format!("{:?}", token_type)).bright_purple().to_string()
-            }
-            
+            Tokentype::Eof => format!("{:15}", format!("{:?}", token_type))
+                .bright_purple()
+                .to_string(),
+
             // Error tokens
-            Tokentype::Invalid => {
-                format!("{:15}", format!("{:?}", token_type)).red().bold().to_string()
-            }
+            Tokentype::Invalid => format!("{:15}", format!("{:?}", token_type))
+                .red()
+                .bold()
+                .to_string(),
         }
     }
 
@@ -111,15 +136,9 @@ impl TokenPrinter {
     /// A formatted string
     fn format_lexeme(&self, lexeme: &str, token_type: &Tokentype) -> String {
         match token_type {
-            Tokentype::StringLiteral => {
-                format!("\"{}\"", lexeme).green().to_string()
-            }
-            Tokentype::Invalid => {
-                format!("'{}'", lexeme).red().to_string()
-            }
-            Tokentype::Eof => {
-                "<EOF>".bright_purple().to_string()
-            }
+            Tokentype::StringLiteral => format!("\"{}\"", lexeme).green().to_string(),
+            Tokentype::Invalid => format!("'{}'", lexeme).red().to_string(),
+            Tokentype::Eof => "<EOF>".bright_purple().to_string(),
             _ => {
                 if lexeme.is_empty() {
                     "<empty>".dimmed().to_string()

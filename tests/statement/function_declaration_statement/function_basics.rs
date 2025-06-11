@@ -184,4 +184,3 @@ fn print_native_function() {
     "#;
     execute_program_and_assert(program, "<native fn print_value>");
 }
-

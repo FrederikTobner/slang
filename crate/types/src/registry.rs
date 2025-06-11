@@ -64,7 +64,7 @@ impl TypeRegistry {
             name: name.to_string(),
             kind,
         };
-        self.types.insert(id.clone(), type_info);
+        self.types.insert(id, type_info);
     }
 
     /// Gets type information for a given TypeId
@@ -164,30 +164,40 @@ impl TypeRegistry {
     ///
     /// ### Returns
     /// A TypeId representing the function type (either existing or newly registered)
-    pub fn register_function_type(&mut self, param_types: Vec<TypeId>, return_type: TypeId) -> TypeId {
+    pub fn register_function_type(
+        &mut self,
+        param_types: Vec<TypeId>,
+        return_type: TypeId,
+    ) -> TypeId {
         // Create a function type signature for lookup
         let function_signature = FunctionType::new(param_types.clone(), return_type.clone());
-        
-        if let Some(existing_type_id) = self.function_type_cache.get(&function_signature) {
-            return existing_type_id.clone();
+
+        if let Some(&existing_type_id) = self.function_type_cache.get(&function_signature) {
+            return existing_type_id;
         }
-        
+
         let kind = TypeKind::Function(function_signature.clone());
-        
-        let param_type_names: Vec<String> = param_types.iter().filter_map(|id| {
-            self.get_type_info(id).map(|info| info.name.clone())
-        }).collect();
-        
-        let return_type_name = self.get_type_info(&return_type)
-            .map(|info| info.name.clone())
-            .unwrap_or_else(|| format!("UnknownType({:?})", return_type.0));
-        
-        let name = format!("fn({}) -> {}", param_type_names.join(", "), return_type_name);
-        
+
+        let param_type_names: Vec<&str> = param_types
+            .iter()
+            .filter_map(|id| self.get_type_info(id).map(|info| info.name.as_str()))
+            .collect();
+
+        let return_type_name = self
+            .get_type_info(&return_type)
+            .map(|info| info.name.as_str())
+            .unwrap_or("UnknownType");
+
+        let name = format!(
+            "fn({}) -> {}",
+            param_type_names.join(", "),
+            return_type_name
+        );
+
         let type_id = self.register_type(&name, kind);
-        
-        self.function_type_cache.insert(function_signature, type_id.clone());
-        
+
+        self.function_type_cache.insert(function_signature, type_id);
+
         type_id
     }
 
@@ -212,10 +222,9 @@ impl TypeRegistry {
     /// ### Returns
     /// An Option containing the FunctionType if found, or None if not found or not a function
     pub fn get_function_type(&self, id: &TypeId) -> Option<&FunctionType> {
-        self.get_type_info(id)
-            .and_then(|info| match &info.kind {
-                TypeKind::Function(func_type) => Some(func_type),
-                _ => None,
-            })
+        self.get_type_info(id).and_then(|info| match &info.kind {
+            TypeKind::Function(func_type) => Some(func_type),
+            _ => None,
+        })
     }
 }

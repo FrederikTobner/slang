@@ -149,7 +149,7 @@ impl PrimitiveType {
 
 impl From<PrimitiveType> for usize {
     fn from(primitive: PrimitiveType) -> usize {
-        primitive as usize    
+        primitive as usize
     }
 }
 
@@ -160,7 +160,7 @@ impl From<PrimitiveType> for TypeId {
 }
 
 /// A unique identifier for a type in the type system
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeId(pub usize);
 
 impl Default for TypeId {
@@ -172,25 +172,24 @@ impl Default for TypeId {
 impl TypeId {
     /// Creates a new unique type identifier for custom types
     pub fn new() -> Self {
-        static NEXT_ID: std::sync::atomic::AtomicUsize =
-            std::sync::atomic::AtomicUsize::new(1000); // above primitive type range
+        static NEXT_ID: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1000); // above primitive type range
         TypeId(NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
     }
 
     /// Creates a TypeId for a primitive type - PREFERRED METHOD
-    /// 
+    ///
     /// This ensures consistent TypeId assignment for primitive types
     /// and is more robust than direct casting.
-    /// 
+    ///
     /// ### Arguments
     /// * `primitive` - The primitive type to create a TypeId for
-    /// 
+    ///
     /// ### Returns
     /// A TypeId that is guaranteed to be unique and consistent for the primitive type
     pub fn from_primitive(primitive: PrimitiveType) -> Self {
-        use std::sync::LazyLock;
         use std::collections::HashMap;
-        
+        use std::sync::LazyLock;
+
         static PRIMITIVE_IDS: LazyLock<HashMap<PrimitiveType, TypeId>> = LazyLock::new(|| {
             let mut map = HashMap::new();
 
@@ -199,8 +198,9 @@ impl TypeId {
             }
             map
         });
-        
-        PRIMITIVE_IDS.get(&primitive)
+
+        PRIMITIVE_IDS
+            .get(&primitive)
             .cloned()
             .unwrap_or_else(|| panic!("Unknown primitive type: {:?}", primitive))
     }
@@ -357,7 +357,10 @@ pub struct FunctionType {
 impl FunctionType {
     /// Creates a new FunctionType.
     pub fn new(param_types: Vec<TypeId>, return_type: TypeId) -> Self {
-        FunctionType { param_types, return_type }
+        FunctionType {
+            param_types,
+            return_type,
+        }
     }
 }
 

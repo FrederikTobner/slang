@@ -1,12 +1,8 @@
-
-use super::super::error::SemanticAnalysisError;
+use super::super::traits::SemanticResult;
 use super::helpers;
-use slang_ir::ast::BinaryOperator;
 use slang_ir::Location;
+use slang_ir::ast::BinaryOperator;
 use slang_types::TypeId;
-
-/// Type alias for result of semantic analysis operations
-pub type SemanticResult = Result<TypeId, SemanticAnalysisError>;
 
 /// Checks if types are compatible for logical operations (AND, OR).
 /// Both operands must be boolean types.

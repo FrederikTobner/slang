@@ -1,5 +1,5 @@
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use crate::ErrorCode;
+use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
 use rstest::rstest;
 
 #[rstest]
@@ -152,3 +152,4 @@ fn with_string_literal() {
         "Boolean not operator '!' can only be applied to boolean types, but got string",
     );
 }
+
