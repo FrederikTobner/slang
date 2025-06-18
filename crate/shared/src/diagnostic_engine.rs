@@ -59,7 +59,7 @@ pub struct Suggestion {
 /// use slang_shared::DiagnosticEngine;
 /// use slang_error::ErrorCode;
 /// use slang_ir::location::Location;
-///
+/// let source_code = "let x = 42\nlet y = x + 1"; // Example source code
 /// let mut engine = DiagnosticEngine::new();
 /// engine.set_file_name("example.sl".to_string());
 /// engine.emit_error(
@@ -116,7 +116,7 @@ impl<'a> DiagnosticEngine<'a> {
     ///
     /// ### Example
     /// ```rust
-    /// use slang_shared::{DiagnosticEngine, Diagnostic, ErrorSeverity};
+    /// use slang_shared::diagnostic_engine::{DiagnosticEngine, Diagnostic, ErrorSeverity};
     /// use slang_error::ErrorCode;
     /// use slang_ir::location::Location;
     ///
@@ -196,7 +196,7 @@ impl<'a> DiagnosticEngine<'a> {
     ///
     /// let mut engine = DiagnosticEngine::new();
     /// engine.emit_warning(
-    ///     ErrorCode::UnusedVariable,
+    ///     ErrorCode::VariableNotCallable,
     ///     "Variable 'x' is declared but never used".to_string(),
     ///     Location::new(15, 3, 5, 1)
     /// );
@@ -447,6 +447,7 @@ impl<'a> DiagnosticEngine<'a> {
     /// ```rust
     /// use slang_shared::DiagnosticEngine;
     ///
+    /// let source_code = "let x = 42\nlet y = x + 1"; // Example source code
     /// let engine = DiagnosticEngine::new();
     /// // ... collect some diagnostics ...
     /// engine.report_all(&source_code);

@@ -84,7 +84,7 @@ pub struct Scope {
 ///
 /// ### Example
 /// ```
-/// use slang_shared::{SymbolTable, SymbolData};
+/// use slang_shared::symbol_table::{SymbolTable, SymbolData};
 /// use slang_types::TypeId;
 ///
 /// let mut table = SymbolTable::new();
@@ -162,7 +162,7 @@ impl SymbolTable {
     ///
     /// ### Example
     /// ```
-    /// use slang_shared::{SymbolTable, SymbolData};
+    /// use slang_shared::symbol_table::{SymbolTable, SymbolData};
     /// use slang_types::TypeId;
     ///
     /// let mut table = SymbolTable::new();
@@ -229,7 +229,7 @@ impl SymbolTable {
     ///
     /// ### Example
     /// ```
-    /// use slang_shared::{SymbolTable, SymbolData};
+    /// use slang_shared::symbol_table::{SymbolTable, SymbolData};
     /// use slang_types::TypeId;
     ///
     /// let mut table = SymbolTable::new();

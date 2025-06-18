@@ -1,5 +1,5 @@
 
-use crate::compilation_pipeline::{CompilationResult, compile_to_bytecode};
+use crate::compilation_pipeline::{CompilationResult, CompilationPipeline};
 
 /// Configuration options for compilation
 #[derive(Default)]
@@ -31,6 +31,7 @@ impl Compiler {
     /// ### Returns
     /// The compilation result with diagnostics
     pub fn compile_source<'a>(&self, source: &'a str, options: CompileOptions) -> CompilationResult<'a> {
-        compile_to_bytecode(source, options.file_name, options.recovery_mode)
+        let pipeline = CompilationPipeline::new(source, options.file_name, options.recovery_mode);
+        pipeline.execute_all_stages()
     }
 }

@@ -13,7 +13,7 @@ fn main() {
     }
 }
 
-/// Main application logic separated from exit handling for testability
+/// Main application logic separated from exit handling 
 fn run() -> error::CliResult<()> {
     let input = cli::Parser::parse();
     #[cfg(windows)]

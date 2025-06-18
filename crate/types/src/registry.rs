@@ -1,11 +1,11 @@
 use crate::{FunctionType, PrimitiveType, TypeId, TypeInfo, TypeKind};
 use std::collections::HashMap;
 
-/// Registry that stores all available types in the language
+/// Registry that stores all types known to the current compilation session
 pub struct TypeRegistry {
     /// Map from TypeId to TypeInfo
     types: HashMap<TypeId, TypeInfo>,
-    /// Map from function signatures to TypeIds for fast function type deduplication
+    /// Map from function signatures to TypeIds for function type deduplication
     function_type_cache: HashMap<FunctionType, TypeId>,
 }
 

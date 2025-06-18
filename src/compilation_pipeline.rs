@@ -20,15 +20,12 @@ use slang_shared::{CompilationContext, DiagnosticEngine};
 ///
 /// ### Example Usage
 /// ```rust
-/// use slang::CompilationPipeline;
+/// use slang::compilation_pipeline::CompilationPipeline;
 ///
 /// let source = "let x = 42;";
 /// let result = CompilationPipeline::new(source, Some("example.sl".to_string()))
 ///     .with_recovery_mode(true)
-///     .tokenize()
-///     .and_then(|pipeline, tokens| pipeline.parse(tokens))
-///     .and_then(|pipeline, ast| pipeline.semantic_analysis(ast))
-///     .and_then(|pipeline, ast| pipeline.codegen(ast));
+///     .execute_all_stages();
 /// ```
 pub struct CompilationPipeline<'a> {
     /// The compilation context containing symbol tables and type information
@@ -57,19 +54,20 @@ impl<'a> CompilationPipeline<'a> {
     ///
     /// ### Example
     /// ```rust
+    /// use slang::compilation_pipeline::CompilationPipeline;
     /// let pipeline = CompilationPipeline::new(
     ///     "let x = 42;",
     ///     Some("example.sl".to_string())
     /// );
     /// ```
-    pub fn new(source: &'a str, file_name: Option<String>) -> Self {
+    pub fn new(source: &'a str, file_name: Option<String>, recovery: bool) -> Self {
         let context = CompilationContext::new();
         let mut diagnostics = DiagnosticEngine::new();
-
         if let Some(ref name) = file_name {
             diagnostics.set_file_name(name.clone());
         }
         diagnostics.set_source_text(source);
+        diagnostics.set_recovery_mode(recovery);
 
         Self {
             context,
@@ -77,29 +75,6 @@ impl<'a> CompilationPipeline<'a> {
             source,
             file_name,
         }
-    }
-
-    /// Enables or disables error recovery mode
-    ///
-    /// In recovery mode, the pipeline continues processing even after encountering
-    /// errors, allowing multiple issues to be discovered in a single compilation pass.
-    /// This is useful for IDEs and development tools that want to show all errors
-    /// rather than stopping at the first one.
-    ///
-    /// ### Arguments
-    /// * `enabled` - Whether to enable error recovery mode
-    ///
-    /// ### Returns
-    /// The pipeline with recovery mode configured
-    ///
-    /// ### Example
-    /// ```rust
-    /// let pipeline = CompilationPipeline::new(source, None)
-    ///     .with_recovery_mode(true);
-    /// ```
-    pub fn with_recovery_mode(mut self, enabled: bool) -> Self {
-        self.diagnostics.set_recovery_mode(enabled);
-        self
     }
 
     /// Tokenizes the source code into a stream of tokens
@@ -115,6 +90,9 @@ impl<'a> CompilationPipeline<'a> {
     ///
     /// ### Example
     /// ```rust
+    /// use slang::compilation_pipeline::{CompilationPipeline, PipelineStage};
+    /// let source = "let x = 42;";
+    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
     /// let result = pipeline.tokenize();
     /// match result {
     ///     PipelineStage::Success { pipeline, data: tokens } => {
@@ -162,6 +140,18 @@ impl<'a> CompilationPipeline<'a> {
     ///
     /// ### Example
     /// ```rust
+    /// use slang::compilation_pipeline::{CompilationPipeline, PipelineStage};
+    /// use slang_frontend::{Token, Tokentype};
+    /// let tokens = vec![
+    ///     Token::new(Tokentype::Let, "let".to_string(), 0),
+    ///     Token::new(Tokentype::Identifier, "x".to_string(), 4),
+    ///     Token::new(Tokentype::Equal, "=".to_string(), 6),
+    ///     Token::new(Tokentype::IntegerLiteral, "42".to_string(), 8),
+    ///     Token::new(Tokentype::Semicolon, ";".to_string(), 10),
+    ///     Token::new(Tokentype::Eof, "".to_string(), 11),
+    /// ];
+    /// let source = "let x = 42;";
+    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
     /// let result = pipeline.parse(tokens);
     /// ```
     pub fn parse(self, tokens: Vec<Token>) -> PipelineStage<'a, Vec<Statement>> {
@@ -236,6 +226,12 @@ impl<'a> CompilationPipeline<'a> {
     ///
     /// ### Example
     /// ```rust
+    /// use slang::compilation_pipeline::CompilationPipeline;
+    ///
+    /// let statements = vec![
+    ///     // Example AST statements
+    /// ];
+    /// let pipeline = CompilationPipeline::new("let x = 42;", Some("example.sl".to_string()));
     /// let result = pipeline.semantic_analysis(statements);
     /// ```
     pub fn semantic_analysis(
@@ -263,7 +259,6 @@ impl<'a> CompilationPipeline<'a> {
                         for error in errors {
                             diagnostics.emit_compiler_error(error);
                         }
-
                         // In recovery mode, continue with the statements we have
                         if diagnostics.is_recovery_mode() {
                             PipelineStage::Success {
@@ -307,6 +302,13 @@ impl<'a> CompilationPipeline<'a> {
     ///
     /// ### Example
     /// ```rust
+    /// use slang::compilation_pipeline::{CompilationPipeline, CompilationResult};
+    /// use slang_ir::ast::Statement;
+    /// 
+    /// let source = "let x = 42;";
+    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
+    /// // Assuming we have parsed statements
+    /// let statements: Vec<Statement> = vec![];
     /// let result = pipeline.codegen(statements);
     /// match result {
     ///     CompilationResult::Success { chunk, diagnostics } => {
@@ -336,6 +338,40 @@ impl<'a> CompilationPipeline<'a> {
         }
     }
 
+    /// Executes all compilation stages through the pipeline
+    ///
+    /// This function runs the complete compilation pipeline from tokenization through
+    /// code generation. It uses the `and_then` combinator to chain stages together,
+    /// ensuring that each stage only runs if the previous one succeeded (unless in
+    /// recovery mode).
+    ///
+    /// ### Arguments
+    /// * `pipeline` - The compilation pipeline to execute
+    ///
+    /// ### Returns
+    /// The final compilation result with either bytecode or error information
+    ///
+    /// ### Example
+    /// ```rust
+    /// use slang::compilation_pipeline::CompilationPipeline;
+    /// let source = "let x = 42;";
+    /// let file_name = Some("example.sl".to_string());
+    /// let recovery_mode = false;
+    /// let pipeline = CompilationPipeline::new(source, file_name)
+    ///     .with_recovery_mode(recovery_mode);
+    /// let result = pipeline.execute_all_stages();
+    /// ```
+    pub fn execute_all_stages(self) -> CompilationResult<'a> {
+        match self
+            .tokenize()
+            .and_then(|pipeline, tokens| pipeline.parse(tokens))
+            .and_then(|pipeline, statements| pipeline.semantic_analysis(statements))
+        {
+            PipelineStage::Success { pipeline, data } => pipeline.codegen(data),
+            PipelineStage::Failed { pipeline } => pipeline.finish(),
+        }
+    }
+
     /// Finalizes the pipeline and returns a failed compilation result
     ///
     /// This method is typically called when the pipeline needs to terminate
@@ -347,6 +383,10 @@ impl<'a> CompilationPipeline<'a> {
     ///
     /// ### Example
     /// ```rust
+    /// use slang::compilation_pipeline::{CompilationPipeline, CompilationResult};
+    /// 
+    /// let source = "let x = 42;";
+    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
     /// let result = pipeline.finish();
     /// // Always returns CompilationResult::Failed
     /// ```
@@ -369,16 +409,16 @@ impl<'a> CompilationPipeline<'a> {
 ///
 /// ### Example
 /// ```rust
-/// match pipeline_stage {
-///     PipelineStage::Success { pipeline, data } => {
-///         // Continue to next stage
-///         pipeline.next_stage(data)
-///     }
-///     PipelineStage::Failed { pipeline } => {
-///         // Handle failure or terminate
-///         pipeline.finish()
-///     }
-/// }
+/// use slang::compilation_pipeline::{CompilationPipeline, PipelineStage};
+/// let source = "let x = 42;";
+/// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
+/// match pipeline.tokenize()
+///     .and_then(|pipeline, tokens| pipeline.parse(tokens))
+///     .and_then(|pipeline, ast| pipeline.semantic_analysis(ast))
+///  {
+///            PipelineStage::Success { pipeline, data } => pipeline.codegen(data),
+///            PipelineStage::Failed { pipeline } => pipeline.finish(),
+///  };
 /// ```
 pub enum PipelineStage<'a, T> {
     /// The stage completed successfully with data for the next stage
@@ -410,6 +450,9 @@ impl<'a, T> PipelineStage<'a, T> {
     ///
     /// ### Example
     /// ```rust
+    /// use slang::compilation_pipeline::{CompilationPipeline, PipelineStage};
+    /// let source = "let x = 42;";
+    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
     /// let result = pipeline
     ///     .tokenize()
     ///     .and_then(|pipeline, tokens| pipeline.parse(tokens))
@@ -420,7 +463,7 @@ impl<'a, T> PipelineStage<'a, T> {
         F: FnOnce(CompilationPipeline<'a>, T) -> PipelineStage<'a, U>,
     {
         match self {
-            PipelineStage::Success { pipeline, data } => f(pipeline, data),
+            PipelineStage::Success { pipeline, data} => f(pipeline, data),
             PipelineStage::Failed { pipeline } => PipelineStage::Failed { pipeline },
         }
     }
@@ -438,13 +481,19 @@ impl<'a, T> PipelineStage<'a, T> {
 ///
 /// ### Example
 /// ```rust
+/// use slang::compilation_pipeline::{CompilationResult, CompilationPipeline};
+///
+/// let source = "let x = 42; print_value(x);";
+/// let mut vm = slang_backend::VM::new();
+/// let CompilationPipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
+/// let compilation_result =  CompilationPipeline.execute_all_stages();
 /// match compilation_result {
 ///     CompilationResult::Success { chunk, diagnostics } => {
 ///         // Execute the bytecode or handle warnings
 ///         if diagnostics.warning_count() > 0 {
 ///             diagnostics.report_all(&source);
 ///         }
-///         vm.execute(chunk);
+///         vm.interpret(&chunk);
 ///     }
 ///     CompilationResult::Failed { diagnostics } => {
 ///         // Report all errors and warnings
@@ -466,110 +515,4 @@ pub enum CompilationResult<'a> {
         /// The diagnostic engine containing all errors, warnings, and notes
         diagnostics: DiagnosticEngine<'a>,
     },
-}
-
-/// Creates a compilation pipeline with the given configuration
-///
-/// This is a convenience function for creating and configuring a compilation pipeline
-/// in a single call. It's equivalent to calling `CompilationPipeline::new()` followed
-/// by `with_recovery_mode()`.
-///
-/// ### Arguments
-/// * `source` - The source code to compile
-/// * `file_name` - Optional file name for better error reporting
-/// * `recovery_mode` - Whether to enable error recovery mode
-///
-/// ### Returns
-/// A configured compilation pipeline ready for processing
-///
-/// ### Example
-/// ```rust
-/// let pipeline = create_pipeline(
-///     "let x = 42;",
-///     Some("example.sl".to_string()),
-///     true  // Enable recovery mode
-/// );
-/// ```
-pub fn create_pipeline(
-    source: &str,
-    file_name: Option<String>,
-    recovery_mode: bool,
-) -> CompilationPipeline {
-    CompilationPipeline::new(source, file_name).with_recovery_mode(recovery_mode)
-}
-
-/// Executes all compilation stages through the pipeline
-///
-/// This function runs the complete compilation pipeline from tokenization through
-/// code generation. It uses the `and_then` combinator to chain stages together,
-/// ensuring that each stage only runs if the previous one succeeded (unless in
-/// recovery mode).
-///
-/// ### Arguments
-/// * `pipeline` - The compilation pipeline to execute
-///
-/// ### Returns
-/// The final compilation result with either bytecode or error information
-///
-/// ### Example
-/// ```rust
-/// let pipeline = create_pipeline(source, file_name, recovery_mode);
-/// let result = execute_compilation_stages(pipeline);
-/// ```
-pub fn execute_compilation_stages(pipeline: CompilationPipeline) -> CompilationResult {
-    match pipeline
-        .tokenize()
-        .and_then(|pipeline, tokens| pipeline.parse(tokens))
-        .and_then(|pipeline, statements| pipeline.semantic_analysis(statements))
-    {
-        PipelineStage::Success { pipeline, data } => pipeline.codegen(data),
-        PipelineStage::Failed { pipeline } => pipeline.finish(),
-    }
-}
-
-/// Compiles source code to bytecode using the diagnostic-aware pipeline
-///
-/// This is the highest-level compilation function that combines pipeline creation
-/// and execution into a single call. It's the main entry point for most compilation
-/// tasks and provides the complete end-to-end compilation experience.
-///
-/// ### Arguments
-/// * `source` - The source code to compile
-/// * `file_name` - Optional file name for better error reporting and debugging
-/// * `recovery_mode` - Whether to enable error recovery mode for collecting multiple errors
-///
-/// ### Returns
-/// The compilation result with either executable bytecode or comprehensive error information
-///
-/// ### Example
-/// ```rust
-/// let result = compile_to_bytecode(
-///     "let x = 42; print(x);",
-///     Some("example.sl".to_string()),
-///     true  // Enable recovery mode
-/// );
-///
-/// match result {
-///     CompilationResult::Success { chunk, diagnostics } => {
-///         // Handle any warnings
-///         if diagnostics.warning_count() > 0 {
-///             diagnostics.report_all(source);
-///         }
-///         // Execute the bytecode
-///         vm.execute(chunk);
-///     }
-///     CompilationResult::Failed { diagnostics } => {
-///         // Report all errors
-///         diagnostics.report_all(source);
-///         std::process::exit(1);
-///     }
-/// }
-/// ```
-pub fn compile_to_bytecode(
-    source: &str,
-    file_name: Option<String>,
-    recovery_mode: bool,
-) -> CompilationResult {
-    let pipeline = create_pipeline(source, file_name, recovery_mode);
-    execute_compilation_stages(pipeline)
 }

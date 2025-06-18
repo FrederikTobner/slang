@@ -34,7 +34,3 @@ slang run input.sip
 ## Language Syntax
 
 For details about the language grammar, see [GRAMMAR.md](GRAMMAR.md).
-
-### Debug Feature Flags
-
-The following compilation flags can be used to debug the compiler.
