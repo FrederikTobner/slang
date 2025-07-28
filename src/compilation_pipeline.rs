@@ -23,8 +23,7 @@ use slang_shared::{CompilationContext, DiagnosticEngine};
 /// use slang::compilation_pipeline::CompilationPipeline;
 ///
 /// let source = "let x = 42;";
-/// let result = CompilationPipeline::new(source, Some("example.sl".to_string()))
-///     .with_recovery_mode(true)
+/// let result = CompilationPipeline::new(source, Some("example.sl".to_string()), true)
 ///     .execute_all_stages();
 /// ```
 pub struct CompilationPipeline<'a> {
@@ -57,7 +56,8 @@ impl<'a> CompilationPipeline<'a> {
     /// use slang::compilation_pipeline::CompilationPipeline;
     /// let pipeline = CompilationPipeline::new(
     ///     "let x = 42;",
-    ///     Some("example.sl".to_string())
+    ///     Some("example.sl".to_string()),
+    ///     false
     /// );
     /// ```
     pub fn new(source: &'a str, file_name: Option<String>, recovery: bool) -> Self {
@@ -92,7 +92,7 @@ impl<'a> CompilationPipeline<'a> {
     /// ```rust
     /// use slang::compilation_pipeline::{CompilationPipeline, PipelineStage};
     /// let source = "let x = 42;";
-    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
+    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()), false);
     /// let result = pipeline.tokenize();
     /// match result {
     ///     PipelineStage::Success { pipeline, data: tokens } => {
@@ -152,7 +152,7 @@ impl<'a> CompilationPipeline<'a> {
     ///     Token::new(Tokentype::Eof, "".to_string(), 11),
     /// ];
     /// let source = "let x = 42;";
-    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
+    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()), false);
     /// let result = pipeline.parse(tokens);
     /// ```
     pub fn parse(self, tokens: Vec<Token>) -> PipelineStage<'a, Vec<Statement>> {
@@ -233,7 +233,7 @@ impl<'a> CompilationPipeline<'a> {
     /// let statements = vec![
     ///     // Example AST statements
     /// ];
-    /// let pipeline = CompilationPipeline::new("let x = 42;", Some("example.sl".to_string()));
+    /// let pipeline = CompilationPipeline::new("let x = 42;", Some("example.sl".to_string()), false);
     /// let result = pipeline.semantic_analysis(statements);
     /// ```
     pub fn semantic_analysis(
@@ -308,7 +308,7 @@ impl<'a> CompilationPipeline<'a> {
     /// use slang_ir::ast::Statement;
     ///
     /// let source = "let x = 42;";
-    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
+    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()), false);
     /// // Assuming we have parsed statements
     /// let statements: Vec<Statement> = vec![];
     /// let result = pipeline.codegen(statements);
@@ -359,8 +359,7 @@ impl<'a> CompilationPipeline<'a> {
     /// let source = "let x = 42;";
     /// let file_name = Some("example.sl".to_string());
     /// let recovery_mode = false;
-    /// let pipeline = CompilationPipeline::new(source, file_name)
-    ///     .with_recovery_mode(recovery_mode);
+    /// let pipeline = CompilationPipeline::new(source, file_name, recovery_mode);
     /// let result = pipeline.execute_all_stages();
     /// ```
     pub fn execute_all_stages(self) -> CompilationResult<'a> {
@@ -388,7 +387,7 @@ impl<'a> CompilationPipeline<'a> {
     /// use slang::compilation_pipeline::{CompilationPipeline, CompilationResult};
     ///
     /// let source = "let x = 42;";
-    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
+    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()), false);
     /// let result = pipeline.finish();
     /// // Always returns CompilationResult::Failed
     /// ```
@@ -413,7 +412,7 @@ impl<'a> CompilationPipeline<'a> {
 /// ```rust
 /// use slang::compilation_pipeline::{CompilationPipeline, PipelineStage};
 /// let source = "let x = 42;";
-/// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
+/// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()), false);
 /// match pipeline.tokenize()
 ///     .and_then(|pipeline, tokens| pipeline.parse(tokens))
 ///     .and_then(|pipeline, ast| pipeline.semantic_analysis(ast))
@@ -454,7 +453,7 @@ impl<'a, T> PipelineStage<'a, T> {
     /// ```rust
     /// use slang::compilation_pipeline::{CompilationPipeline, PipelineStage};
     /// let source = "let x = 42;";
-    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
+    /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()), false);
     /// let result = pipeline
     ///     .tokenize()
     ///     .and_then(|pipeline, tokens| pipeline.parse(tokens))
@@ -487,7 +486,7 @@ impl<'a, T> PipelineStage<'a, T> {
 ///
 /// let source = "let x = 42; print_value(x);";
 /// let mut vm = slang_backend::VM::new();
-/// let CompilationPipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
+/// let CompilationPipeline = CompilationPipeline::new(source, Some("example.sl".to_string()), false);
 /// let compilation_result =  CompilationPipeline.execute_all_stages();
 /// match compilation_result {
 ///     CompilationResult::Success { chunk, diagnostics } => {

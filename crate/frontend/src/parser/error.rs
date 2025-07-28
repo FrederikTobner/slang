@@ -29,6 +29,15 @@ impl ParseError {
         }
     }
 
+    /// Converts this parse error into a compiler error with line information
+    /// 
+    /// ### Arguments
+    /// 
+    /// * `line_info` - Line information for calculating line and column positions
+    /// 
+    /// ### Returns
+    /// 
+    /// A `CompilerError` with proper line/column information for display
     pub fn to_compiler_error(&self, line_info: &LineInfo) -> CompilerError {
         let line_pos = line_info.get_line_col(self.position);
         CompilerError::new(

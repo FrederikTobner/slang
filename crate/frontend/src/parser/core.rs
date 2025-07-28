@@ -226,7 +226,10 @@ impl<'a> Parser<'a> {
         )
     }
 
-    /// Skip until a safe synchronization point (e.g., semicolon or statement start)
+    /// Skip tokens until a safe synchronization point for error recovery
+    /// 
+    /// This function helps the parser recover from errors by advancing to the next
+    /// statement boundary, allowing parsing to continue after an error.
     pub(super) fn synchronize(&mut self) {
         self.advance();
 
@@ -248,7 +251,15 @@ impl<'a> Parser<'a> {
 
     // Utility methods
 
-    /// Creates a SourceLocation from a token's position
+    /// Creates a SourceLocation from a token's position and line information
+    /// 
+    /// ### Arguments
+    /// 
+    /// * `token` - The token to create location information for
+    /// 
+    /// ### Returns
+    /// 
+    /// A Location struct with line, column, position and length information
     pub(super) fn source_location_from_token(&self, token: &Token) -> slang_ir::location::Location {
         let (line, column) = self.line_info.get_line_col(token.pos);
         slang_ir::location::Location::new(token.pos, line, column, token.lexeme.len())
