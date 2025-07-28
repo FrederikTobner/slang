@@ -3,9 +3,6 @@ pub mod operations;
 use std::fmt;
 use std::io::Read;
 
-use crate::bytecode::Function;
-use crate::bytecode::NativeFunction;
-
 // Re-export the traits and combined trait for convenience
 pub use operations::{ArithmeticOps, LogicalOps, ComparisonOps, ValueOperation};
 
@@ -136,18 +133,12 @@ impl DeserializeFromReader for Box<Function> {
 
 impl DeserializeFromReader for Box<NativeFunction> {
     fn deserialize(reader: &mut dyn Read) -> std::io::Result<Self> {
-        // For now, we'll just read the name since NativeFunction might have 
-        // more complex deserialization requirements
         let name_string = Box::<String>::deserialize(reader)?;
         
-        // Read arity
         let mut arity_bytes = [0u8; 1];
         reader.read_exact(&mut arity_bytes)?;
         let arity = arity_bytes[0];
-        
-        // For the function pointer, we can't really deserialize it from bytes,
-        // so we'll use a placeholder function. In a real implementation, you might
-        // have a registry of native functions that you look up by name.
+
         let placeholder_fn: fn(&[crate::value::Value]) -> Result<crate::value::Value, String> = 
             |_args| Err("Placeholder native function".to_string());
             
@@ -226,7 +217,7 @@ impl DisplayValue for Box<NativeFunction> {
     }
 }
 
-// Macro to define the Value enum with automatic type tag management
+/// Macro to define the Value enum with automatic type tag management
 macro_rules! define_value_enum {
     (
         $(
@@ -286,6 +277,38 @@ macro_rules! define_value_enum {
             }
         }
     };
+}
+/// Function representation in bytecode
+#[derive(Debug, Clone)]
+pub struct Function {
+    /// Name of the function
+    pub name: String,
+    /// Number of parameters
+    pub arity: u8,
+    /// Offset in the chunk where this function's code begins
+    pub code_offset: usize,
+    /// Local variable names used by this function
+    pub locals: Vec<String>,
+}
+
+/// Type for native function implementations
+pub type NativeFn = fn(&[Value]) -> Result<Value, String>;
+
+/// Native (built-in) function representation
+#[derive(Clone)]
+pub struct NativeFunction {
+    /// Name of the native function
+    pub name: String,
+    /// Number of parameters
+    pub arity: u8,
+    /// The Rust function that implements this native function
+    pub function: NativeFn,
+}
+
+impl std::fmt::Debug for NativeFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<native fn {}>", self.name)
+    }
 }
 
 // Use the macro to define the Value enum with automatic type tag management

@@ -1,16 +1,6 @@
 # Performance Testing Suite for Slang Compiler
 
-This directory contains a streamlined performance testing suite for the Slang compiler using [Criterion.rs](https://github.com/bheisler/criterion.rs) for comprehensive benchmarking and performance analysis.
-
-## Overview
-
-The performance testing suite provides:
-
-- **Direct Criterion Integration**: Uses Criterion's built-in statistical analysis and reporting
-- **Compilation Pipeline Testing**: Direct usage of `CompilationPipeline` and `compilation_pipeline` APIs
-- **Comprehensive Coverage**: All major compiler stages from lexing to execution
-- **Clean Architecture**: Minimal abstractions, maximum clarity
-- **Professional Reports**: HTML reports with graphs and statistical analysis
+This directory contains a streamlined performance testing suite for the Slang compiler using [Divan](https://github.com/nvzqz/divan) for comprehensive benchmarking and performance analysis.
 
 ## Architecture
 
@@ -23,9 +13,9 @@ The performance testing suite provides:
 - **`codegen_benchmarks.rs`** - Code generation and compilation performance
 - **`e2e_benchmarks.rs`** - End-to-end compilation pipeline benchmarks
 
-### Common Utilities (`common/` directory)
+### Common Utilities (`utils/` directory)
 
-- **`program_builder.rs`** - Test program generation with controlled complexity
+- **`pipeline.rs`** - Compilation pipeline utilities for stage-specific testing
 - **`mod.rs`** - Module organization for common utilities
 
 **Key Design Principle**: All benchmarks use `CompilationPipeline` and `compilation_pipeline` directly - no abstraction layers.
@@ -50,92 +40,101 @@ cargo bench --bench e2e_benchmarks
 cargo bench -- --test
 
 # Run with specific parameters
-cargo bench -- --sample-size 50 --measurement-time 3
+cargo bench -- --sample-count 10 --max-time 5
+
+# Filter specific benchmarks
+cargo bench -- lexer_performance
+cargo bench -- --exact error_handling
+
+# Get detailed memory analysis
+cargo bench -- --color always
 ```
 
 ### Viewing Results
 
-Benchmark results are saved to `target/criterion/` with detailed Criterion reports:
+Divan provides immediate, comprehensive results in the terminal:
 
-- **Interactive HTML reports** - Open `target/criterion/report/index.html`
-- **Individual benchmark data** - Detailed statistics and graphs for each test
-- **Automatic baseline comparison** - Track performance changes over time
-- **Statistical analysis** - Built-in confidence intervals and outlier detection
+- **Real-time output** - Results displayed immediately after each benchmark
+- **Memory profiling** - Built-in allocation tracking with detailed statistics
+- **Statistical analysis** - Automatic confidence intervals and performance metrics
+- **Compact format** - Clean tabular output with timing and memory data
+- **Comparison support** - Easy performance regression detection
 
 ## Benchmark Details
 
 ### 1. Lexer Benchmarks (`lexer_benchmarks.rs`)
 
-Tests tokenization performance across different scenarios:
+Tests tokenization performance with integrated memory tracking:
 
 - **Token scaling** - Performance vs. number of tokens (100 to 10,000 tokens)
 - **Error handling** - Lexical error recovery and reporting performance
+- **Memory usage** - Allocation patterns during tokenization
 
 ### 2. Parser Benchmarks (`parser_benchmarks.rs`)
 
-Measures AST generation performance:
+Measures AST generation performance with memory profiling:
 
 - **Expression parsing** - Simple to complex expressions
 - **Function definitions** - Parsing function declarations
 - **Scalability** - Performance with increasing input complexity
-- **Error recovery** - Parser error handling performance
+- **Memory efficiency** - AST allocation patterns and memory usage
 
 ### 3. Semantic Benchmarks (`semantic_benchmarks.rs`)
 
-Evaluates semantic analysis performance:
+Evaluates semantic analysis performance with allocation tracking:
 
 - **Type checking** - Type inference and validation
 - **Scope resolution** - Variable and function scope handling
 - **Function complexity** - Performance with many functions
-- **Error analysis** - Semantic error detection performance
+- **Memory patterns** - Symbol table and type information allocation
 
 ### 4. VM Benchmarks (`vm_benchmarks.rs`)
 
-Tests bytecode execution performance:
+Tests bytecode execution performance with memory monitoring:
 
 - **Arithmetic operations** - Basic mathematical operations
 - **Function calls** - Function call overhead and recursion
 - **Memory operations** - Variable allocation and management
-- **Scalability** - Performance with increasing operation counts
+- **Runtime efficiency** - Stack and heap usage during execution
 
 ### 5. Code Generation Benchmarks (`codegen_benchmarks.rs`)
 
-Measures compilation to bytecode performance:
+Measures compilation to bytecode performance with allocation analysis:
 
 - **Function generation** - Compiling function definitions
 - **Expression compilation** - Complex expression code generation  
 - **Nested scopes** - Handling nested block structures
-- **Scalability** - Performance with large programs
+- **Bytecode efficiency** - Code generation memory usage patterns
 
 ### 6. End-to-End Benchmarks (`e2e_benchmarks.rs`)
 
-Full compilation pipeline performance:
+Full compilation pipeline performance with comprehensive memory tracking:
 
 - **Integration testing** - Complete compilation process
 - **Pipeline stages** - Individual stage performance measurement
 - **Real-world programs** - Performance on typical code patterns
-- **Scalability testing** - Large program compilation performance
+- **Total resource usage** - End-to-end timing and memory consumption
 
 ## Test Program Generation
 
-The `program_builder.rs` module provides utilities for generating test programs with controlled characteristics:
+The `programs/` module provides utilities for generating test programs with controlled characteristics:
 
-### Available Templates
+### Available Test Programs
 
-- **`simple_arithmetic()`** - Basic arithmetic operations
-- **`function_heavy(n)`** - Programs with many function definitions
+- **`programs/core.rs`** - Basic arithmetic and expression programs
+- **`programs/errors.rs`** - Programs designed to trigger specific error conditions
+- **`programs/functions.rs`** - Function definition and call patterns
+- **`programs/templates.rs`** - Dynamic program generation with scaling complexity
+- **`programs/types.rs`** - Type system testing programs
+- **`programs/vm.rs`** - Virtual machine execution test programs
+
+### Program Templates
+
+The `ProgramTemplates` provides scalable test generation:
+
 - **`variable_heavy(n)`** - Programs with many variable declarations  
+- **`function_heavy(n)`** - Programs with many function definitions
 - **`deeply_nested(depth)`** - Nested block structures
-- **`complex_expressions()`** - Complex mathematical expressions
-
-### Generated Program Metadata
-
-Each program includes complexity information:
-
-- Variable count and types
-- Function definitions and calls
-- Expression complexity and nesting depth
-- Control flow statements
 
 ## Implementation Details
 
@@ -161,70 +160,91 @@ match pipeline.tokenize().and_then(|pipeline, tokens| pipeline.parse(tokens)) {
 }
 ```
 
-### Criterion Configuration
+### Divan Configuration and Memory Profiling
 
-Benchmarks use standard Criterion patterns:
+Benchmarks use Divan's modern benchmarking patterns with integrated memory tracking:
 
 ```rust
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
+use divan::{Bencher, black_box, AllocProfiler};
 
-let mut group = c.benchmark_group("Benchmark Name");
-group.sample_size(100);
-group.measurement_time(Duration::from_secs(5));
+// Global allocator for memory profiling
+#[global_allocator]
+static ALLOC: AllocProfiler = AllocProfiler::system();
 
-// Throughput benchmarks
-group.throughput(Throughput::Elements(size as u64));
-group.bench_with_input(BenchmarkId::new("test", size), &size, |b, &size| {
-    let program = generate_program(size);
-    b.iter(|| {
-        compile_program(&program).expect("Should succeed")
+// Parameterized benchmarks
+#[divan::bench(args = [100, 500, 1000, 5000, 10000])]
+fn lexer_performance(bencher: Bencher, size: usize) {
+    let program = ProgramTemplates::variable_heavy(size);
+    
+    bencher.bench_local(|| {
+        let lexer = slang_frontend::Lexer::new(&program.source);
+        black_box(lexer.tokenize())
     });
-});
+}
+
+// Simple benchmarks
+#[divan::bench]
+fn parser_expression(bencher: Bencher) {
+    let program = &COMPLEX_ARITHMETIC;
+    
+    bencher.bench_local(|| {
+        black_box(parse_program(&program.source))
+    });
+}
 ```
+
+### Memory Tracking Features
+
+Divan's `AllocProfiler` provides comprehensive memory analysis:
+
+- **`max alloc`** - Peak number of allocations and bytes during benchmark
+- **`alloc`** - Total allocations during benchmark execution  
+- **`grow`** - Memory growth operations and total bytes grown
 
 ## Development Workflow
 
-### Continuous Integration
+### Real-time Performance Analysis
 
-The benchmarking suite integrates well with CI/CD:
+Divan provides immediate, actionable performance data:
 
-- **Baseline comparison** - Criterion automatically compares against previous runs
-- **Regression detection** - Performance changes are clearly visible in reports
-- **Automated reporting** - HTML reports can be published as CI artifacts
-- **Historical tracking** - Criterion maintains performance history
+- **Real-time feedback** - Results appear immediately in the terminal
+- **Memory insights** - Built-in allocation profiling reveals memory bottlenecks
+- **Statistical confidence** - Automatic statistical analysis of timing variance
+- **Comparison support** - Easy before/after performance comparison
+- **Fast execution** - Optimized measurement reduces benchmark runtime
 
 ### Local Development
 
 Use benchmarks during development:
 
-- **Quick testing** - Use `cargo bench -- --test` for fast feedback
-- **Targeted benchmarking** - Run specific benchmarks for areas being modified
-- **Performance validation** - Verify optimization effectiveness
-- **Regression prevention** - Catch performance issues early
+- **Quick feedback** - Use `cargo bench -- --test` for fast validation
+- **Targeted testing** - Run specific benchmarks for areas being modified
+- **Memory debugging** - Use allocation profiling to identify memory issues
+- **Performance validation** - Verify optimization effectiveness immediately
 
 ## Best Practices
 
 ### Writing Benchmarks
 
 - **Use direct APIs** - Call `CompilationPipeline` and `compilation_pipeline` directly
-- **Include error cases** - Test error handling performance where relevant
-- **Isolate components** - Test individual compiler stages separately  
+- **Leverage memory profiling** - Use `AllocProfiler` to understand allocation patterns
+- **Include diverse test cases** - Test various input sizes and complexity levels
 - **Document purpose** - Clear comments about what each benchmark measures
-- **Use appropriate sizes** - Match test complexity to what you're measuring
+- **Use `black_box`** - Prevent compiler optimizations from skewing results
 
 ### Performance Analysis
 
-- **Establish baselines** - Run benchmarks consistently to build baseline data
-- **Monitor trends** - Look for gradual performance changes over time
+- **Monitor both metrics** - Track timing and memory usage together
+- **Look for patterns** - Identify scaling behavior and memory allocation trends
 - **Consider variance** - Account for measurement noise and system conditions
-- **Use profiling** - Leverage external profilers for detailed analysis when needed
+- **Compare consistently** - Use same environment for performance comparisons
 
 ### Maintenance
 
 - **Keep tests relevant** - Update test programs to reflect real-world usage
 - **Review regularly** - Remove obsolete benchmarks and add new ones as needed
 - **Update documentation** - Keep benchmark descriptions current
-- **Validate assumptions** - Ensure benchmarks still test what they claim to test
+- **Validate measurements** - Ensure benchmarks still test what they claim to test
 
 ## Troubleshooting
 
@@ -232,34 +252,35 @@ Use benchmarks during development:
 
 - **High variance** - System load affecting measurements (close other applications)
 - **Compilation failures** - Invalid generated test programs (check language syntax)
-- **Performance regression false positives** - System configuration changes
-- **Missing baseline data** - First run after clean checkout
+- **Memory allocation inconsistencies** - Different system memory states
+- **Missing allocator setup** - Ensure `AllocProfiler` is configured as global allocator
 
 ### Performance Tips
 
 - **Use release mode** - Always benchmark with `cargo bench` (release mode)
 - **Consistent environment** - Use same hardware/OS configuration for comparisons
 - **Reduce system noise** - Close unnecessary applications during benchmarking
-- **Multiple runs** - Run benchmarks multiple times for statistical confidence
+- **Monitor memory** - Watch for memory leaks or unexpected allocation patterns
 
 ## Contributing
 
 When adding new benchmarks:
 
 1. **Follow patterns** - Use existing benchmarks as templates
-2. **Include documentation** - Document what the benchmark measures and why
-3. **Add appropriate test cases** - Include relevant scale and error testing
+2. **Include memory profiling** - Set up `AllocProfiler` for allocation tracking
+3. **Add appropriate test cases** - Include relevant scale and complexity testing
 4. **Update this README** - Document new benchmark capabilities
 5. **Test thoroughly** - Ensure benchmarks run reliably and measure correctly
 
 ## Architecture Benefits
 
-The current simplified architecture provides:
+The current Divan-based architecture provides:
 
-- **Clarity** - Direct usage of main APIs without abstraction layers
-- **Maintainability** - Fewer components to maintain and update
-- **Reliability** - Proven Criterion.rs framework for all analysis
-- **Performance** - No overhead from custom measurement infrastructure
+- **Modern framework** - Latest benchmarking technology with active development
+- **Integrated profiling** - Built-in memory allocation tracking without external tools
+- **Fast execution** - Optimized measurement infrastructure for quick feedback
+- **Clean output** - Readable terminal results with timing and memory data
+- **Minimal overhead** - Efficient measurement with low performance impact
 - **Extensibility** - Easy to add new benchmarks following established patterns
 
-The benchmarking suite focuses on providing reliable, actionable performance data while maintaining simplicity and ease of use.
+The benchmarking suite focuses on providing reliable, actionable performance data with integrated memory analysis while maintaining simplicity and fast execution.

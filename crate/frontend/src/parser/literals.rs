@@ -1,15 +1,15 @@
 // Literal parsing module
 // Contains logic for parsing literal values (integers, floats, strings, booleans)
 
-use slang_error::ErrorCode;
-use crate::token::Tokentype;
+use super::core::Parser;
 use super::error::ParseError;
+use crate::token::Tokentype;
+use slang_error::ErrorCode;
 use slang_ir::ast::{Expression, LiteralExpr, LiteralValue};
 use slang_types::{
-    PrimitiveType, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_I32, TYPE_NAME_I64,
-    TYPE_NAME_U32, TYPE_NAME_U64,
+    PrimitiveType, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32,
+    TYPE_NAME_U64,
 };
-use super::core::Parser;
 
 /// Literal parser module providing static methods for parsing literal expressions
 pub struct LiteralParser;

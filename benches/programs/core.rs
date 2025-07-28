@@ -10,10 +10,8 @@ let result = a + b * 2;
 "#,
 );
 
-pub const SIMPLE_EXPRESSION: BenchmarkProgram = BenchmarkProgram::new(
-    "simple_expression",
-    "let x = 1 + 2 * 3;",
-);
+pub const SIMPLE_EXPRESSION: BenchmarkProgram =
+    BenchmarkProgram::new("simple_expression", "let x = 1 + 2 * 3;");
 
 pub const NESTED_EXPRESSIONS: BenchmarkProgram = BenchmarkProgram::new(
     "nested_expressions",

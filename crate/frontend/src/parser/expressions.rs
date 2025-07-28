@@ -1,6 +1,7 @@
 // Expression parsing module
 // Contains logic for parsing expressions with proper operator precedence
 
+use super::core::Parser;
 use super::error::ParseError;
 use crate::token::Tokentype;
 use slang_error::ErrorCode;
@@ -9,10 +10,9 @@ use slang_ir::ast::{
     VariableExpr,
 };
 use slang_types::PrimitiveType;
-use super::core::Parser;
 
 /// Expression parser that handles operator precedence parsing
-/// 
+///
 /// This parser uses the precedence climbing method to parse expressions
 /// according to the language's operator precedence rules:
 /// 1. Logical OR (||) - lowest precedence
@@ -31,7 +31,7 @@ impl ExpressionParser {
     ///
     /// ### Arguments
     /// * `parser` - Reference to the core parser
-    /// 
+    ///
     /// ### Returns
     /// The parsed expression or an error message
     pub fn parse_expression(parser: &mut Parser) -> Result<Expression, ParseError> {
@@ -307,12 +307,8 @@ impl ExpressionParser {
                 parser.advance(); // consume the right paren
                 let end_pos = parser.previous().pos + parser.previous().lexeme.len();
                 let (line, column) = parser.line_info.get_line_col(start_pos);
-                let location = slang_ir::location::Location::new(
-                    start_pos,
-                    line,
-                    column,
-                    end_pos - start_pos,
-                );
+                let location =
+                    slang_ir::location::Location::new(start_pos, line, column, end_pos - start_pos);
                 return Ok(Expression::Literal(LiteralExpr {
                     value: LiteralValue::Unit,
                     expr_type: PrimitiveType::Unit.into(),
@@ -344,10 +340,7 @@ impl ExpressionParser {
 
             let token = parser.previous();
             let location = parser.source_location_from_token(token);
-            return Ok(Expression::Variable(VariableExpr {
-                name,
-                location,
-            }));
+            return Ok(Expression::Variable(VariableExpr { name, location }));
         }
 
         Err(parser.error(

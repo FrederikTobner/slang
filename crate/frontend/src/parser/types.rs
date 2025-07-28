@@ -1,16 +1,16 @@
 // Type parsing module
 // Contains logic for parsing type expressions and type resolution
 
-use slang_error::ErrorCode;
-use crate::token::Tokentype;
+use super::core::Parser;
 use super::error::ParseError;
+use crate::token::Tokentype;
+use slang_error::ErrorCode;
 use slang_ir::ast::{Expression, FunctionTypeExpr};
 use slang_shared::SymbolKind;
 use slang_types::{
     PrimitiveType, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64,
     TYPE_NAME_INT, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNKNOWN, TypeId,
 };
-use super::core::Parser;
 
 /// Type parser module providing static methods for parsing type expressions
 pub struct TypeParser;
@@ -26,15 +26,12 @@ impl TypeParser {
         if parser.check(&Tokentype::Fn) {
             parser.advance(); // consume 'fn'
 
-            // Expect '('
             if !parser.match_token(&Tokentype::LeftParen) {
-                return Err(parser.error(
-                    ErrorCode::ExpectedOpeningParen,
-                    "Expected '(' after 'fn'",
-                ));
+                return Err(
+                    parser.error(ErrorCode::ExpectedOpeningParen, "Expected '(' after 'fn'")
+                );
             }
 
-            // Parse parameter types
             let mut param_types = Vec::new();
             if !parser.check(&Tokentype::RightParen) {
                 loop {
@@ -45,7 +42,6 @@ impl TypeParser {
                 }
             }
 
-            // Expect ')'
             if !parser.match_token(&Tokentype::RightParen) {
                 return Err(parser.error(
                     ErrorCode::ExpectedClosingParen,
@@ -53,7 +49,6 @@ impl TypeParser {
                 ));
             }
 
-            // Expect '->'
             if !parser.match_token(&Tokentype::Arrow) {
                 return Err(parser.error(
                     ErrorCode::InvalidSyntax,
@@ -61,16 +56,16 @@ impl TypeParser {
                 ));
             }
 
-            // Parse return type
             let return_type = Self::parse_type(parser)?;
 
-            // Register the function type and return its type ID
-            let function_type_id = parser.context.register_function_type(param_types, return_type);
+            let function_type_id = parser
+                .context
+                .register_function_type(param_types, return_type);
             return Ok(function_type_id);
         }
 
         if parser.check(&Tokentype::LeftParen) {
-            parser.advance(); 
+            parser.advance();
             if !parser.match_token(&Tokentype::RightParen) {
                 return Err(parser.error(
                     ErrorCode::ExpectedClosingParen,
@@ -132,19 +127,13 @@ impl TypeParser {
     ///
     /// The parsed function type expression or an error message
     pub fn parse_function_type_expression(parser: &mut Parser) -> Result<Expression, ParseError> {
-        // Extract position information upfront to avoid borrowing issues
         let fn_token_pos = parser.previous().pos;
         let (start_line, start_column) = parser.line_info.get_line_col(fn_token_pos);
 
-        // Expect '('
         if !parser.match_token(&Tokentype::LeftParen) {
-            return Err(parser.error(
-                ErrorCode::ExpectedOpeningParen,
-                "Expected '(' after 'fn'",
-            ));
+            return Err(parser.error(ErrorCode::ExpectedOpeningParen, "Expected '(' after 'fn'"));
         }
 
-        // Parse parameter types
         let mut param_types = Vec::new();
         if !parser.check(&Tokentype::RightParen) {
             loop {
@@ -181,7 +170,6 @@ impl TypeParser {
             end_pos - fn_token_pos,
         );
 
-        // Will be determined by the semantic analyzer
         let expr_type = PrimitiveType::Unknown.into();
 
         Ok(Expression::FunctionType(FunctionTypeExpr {

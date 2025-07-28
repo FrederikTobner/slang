@@ -1,101 +1,86 @@
-use criterion::{Criterion, criterion_group, criterion_main};
-use slang::compilation_pipeline::CompilationPipeline;
-use std::time::Duration;
-
 mod programs;
+mod utils;
 
-use programs::E2E_PROGRAMS;
+use divan::{Bencher, black_box, AllocProfiler};
+use programs::e2e::{E2E_SIMPLE_ARITHMETIC, E2E_FIBONACCI_RECURSIVE, E2E_NESTED_SCOPES, E2E_FUNCTION_DEFINITIONS, E2E_CONTROL_FLOW};
 use programs::templates::ProgramTemplates;
+use slang::compilation_pipeline::CompilationPipeline;
+use utils::pipeline::compile_to_bytecode;
 
 const E2E_COMPLEXITY_LEVELS: [usize; 5] = [10, 20, 50, 100, 200];
 const FIBONACCI_VALUES: [usize; 5] = [5, 10, 15, 20, 25];
 const MEDIUM_TO_LARGE: [usize; 5] = [10, 50, 100, 200, 500];
 
-/// Benchmark end-to-end compilation and execution performance
-fn e2e_integration_performance(c: &mut Criterion) {
-    let mut group = c.benchmark_group("End-to-End Integration Performance");
+#[global_allocator]
+static ALLOC: AllocProfiler = AllocProfiler::system();
 
-    group
-        .sample_size(50)
-        .measurement_time(Duration::new(5, 0))
-        .bench_function("end_to_end_compilation", |b| {
-            b.iter(|| {
-                for program in E2E_PROGRAMS.iter() {
-                    let _ =
-                        CompilationPipeline::new(program.source, Some(program.name.to_string()), false)
-                            .execute_all_stages();
-                }
-            });
-        });
-}
-
-/// Benchmark end-to-end scalability
-fn e2e_scalability(c: &mut Criterion) {
-    let mut group = c.benchmark_group("End-to-End Scalability");
-
-    let mut programs = E2E_COMPLEXITY_LEVELS
-        .iter()
-        .map(|&complexity| ProgramTemplates::function_heavy(complexity))
-        .collect::<Vec<_>>();
-    for &complexity in &E2E_COMPLEXITY_LEVELS {
-        programs.push(ProgramTemplates::function_heavy(complexity));
-    }
-
-    group
-        .sample_size(50)
-        .measurement_time(Duration::new(10, 0))
-        .bench_function("e2e_program_complexity", |b| {
-            b.iter(|| {
-                for program in &programs {
-                    let compilation_pipeline =
-                        CompilationPipeline::new(&program.source, Some("test.sl".to_string()), false);
-                    let _ = compilation_pipeline.execute_all_stages();
-                }
-            });
-        });
-
-    group.bench_function("e2e_fibonacci_recursive", |b| {
-        b.iter(|| {
-            for &n in &FIBONACCI_VALUES {
-                let program = ProgramTemplates::function_heavy(n);
-                let _ = CompilationPipeline::new(&program.source, Some("test.sl".to_string()), false)
-                    .execute_all_stages();
-            }
-        });
-    });
-    let mut programs = vec![];
-    for count in MEDIUM_TO_LARGE {
-        programs.push(ProgramTemplates::variable_heavy(count));
-    }
-    group.bench_function("e2e_many_variables", |b| {
-        b.iter(|| {
-            for program in &programs {
-                let compilation_pipeline =
-                    CompilationPipeline::new(&program.source, Some("test.sl".to_string()), false);
-                let _ = compilation_pipeline.execute_all_stages();
-            }
-        });
+#[divan::bench]
+fn end_to_end_compilation(bencher: Bencher) {
+    bencher.bench(|| {
+        let programs = [&E2E_SIMPLE_ARITHMETIC, &E2E_FIBONACCI_RECURSIVE, &E2E_NESTED_SCOPES, &E2E_FUNCTION_DEFINITIONS, &E2E_CONTROL_FLOW];
+        for program in programs.iter() {
+            let _ = black_box(CompilationPipeline::new(
+                program.source,
+                Some(program.name.to_string()),
+                false,
+            )
+            .execute_all_stages());
+        }
     });
 }
 
-/// Benchmark pipeline stages individually
-fn pipeline_stages(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Pipeline Stages");
+#[divan::bench(args = E2E_COMPLEXITY_LEVELS)]
+fn e2e_program_complexity(bencher: Bencher, complexity: usize) {
+    let program = ProgramTemplates::function_heavy(complexity);
+    
+    bencher.bench(|| {
+        let compilation_pipeline = CompilationPipeline::new(
+            &program.source,
+            Some("test.sl".to_string()),
+            false,
+        );
+        let _ = black_box(compilation_pipeline.execute_all_stages());
+    });
+}
 
+#[divan::bench(args = FIBONACCI_VALUES)]
+fn e2e_fibonacci_recursive(bencher: Bencher, n: usize) {
+    
+    let program = ProgramTemplates::function_heavy(n);
+    
+    bencher.bench(|| {
+        let _ = black_box(
+            CompilationPipeline::new(&program.source, Some("test.sl".to_string()), false)
+                .execute_all_stages()
+        );
+    });
+}
+
+#[divan::bench(args = MEDIUM_TO_LARGE)]
+fn e2e_many_variables(bencher: Bencher, count: usize) {
+    
+    let program = ProgramTemplates::variable_heavy(count);
+    
+    bencher.bench(|| {
+        let compilation_pipeline =
+            CompilationPipeline::new(&program.source, Some("test.sl".to_string()), false);
+        let _ = black_box(compilation_pipeline.execute_all_stages());
+    });
+}
+
+#[divan::bench]
+fn pipeline_stages(bencher: Bencher) {
+    
     let test_program = ProgramTemplates::function_heavy(100);
-    group.sample_size(50).bench_function("pipeline_stages", |b| {
-        b.iter(|| {
-            let compilation_pipeline =
-                CompilationPipeline::new(&test_program.source, Some("test.sl".to_string()), false);
-            let _ = compilation_pipeline.execute_all_stages();
-        });
+    
+    bencher.bench(|| {
+        black_box(
+            compile_to_bytecode(&test_program.source)
+                .expect("Pipeline stages should execute successfully")
+        );
     });
 }
 
-criterion_group!(
-    benches,
-    e2e_integration_performance,
-    e2e_scalability,
-    pipeline_stages
-);
-criterion_main!(benches);
+fn main() {
+    divan::main();
+}

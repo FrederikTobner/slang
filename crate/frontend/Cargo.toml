@@ -17,4 +17,3 @@ print-tokens = []
 [lib]
 name = "slang_frontend"
 path = "src/lib.rs"
-

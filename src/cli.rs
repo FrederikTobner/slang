@@ -343,4 +343,3 @@ pub fn execute_file(input: &str) -> CliResult<()> {
     println!("Executing source file: {}", input);
     process_source_file(input, ExecutionMode::Execute)
 }
-

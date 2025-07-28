@@ -1,57 +1,64 @@
 mod programs;
+mod utils;
 
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
-use std::time::Duration;
-
+use divan::{Bencher, black_box};
+use programs::errors::{ERROR_INVALID_CHAR, ERROR_UNTERMINATED_STRING, ERROR_INVALID_NUMBER};
 use programs::templates::ProgramTemplates;
-use programs::LEXER_ERROR_PROGRAMS;
+use divan::AllocProfiler;
 
-/// Benchmark the lexer performance with different input sizes
-fn lexer_performance(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Lexer Performance");
+#[global_allocator]
+static ALLOC: AllocProfiler = AllocProfiler::system();
 
-    group.sample_size(100);
-    group.measurement_time(Duration::from_secs(5));
+#[divan::bench(args = [100, 500, 1000, 5000, 10000])]
+fn lexer_performance(bencher: Bencher, size: usize) {
+    let program = ProgramTemplates::variable_heavy(size);
     
-    let sizes = [100, 500, 1000, 5000, 10000];
-    
-    for size in sizes.iter() {
-        let program = ProgramTemplates::variable_heavy(*size);
-        group.throughput(Throughput::Elements(*size as u64));
+        bencher.bench_local(|| {
         
-        group.bench_with_input(
-            BenchmarkId::new("tokenize", size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    let _ = slang_frontend::lexer::tokenize(&program.source);
-                })
-            },
-        );
-    }
-    
-    group.finish();
+        let lexer = slang_frontend::Lexer::new(&program.source);
+        let result = black_box(lexer.tokenize());
+        
+        result
+    });
 }
 
-/// Benchmark lexer error handling performance
-fn lexer_error_handling(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Lexer Error Handling");
+#[divan::bench]  
+fn lexer_error_handling_0(bencher: Bencher) {
+    let program = &ERROR_INVALID_CHAR;
     
-    // Use relaxed statistical requirements for error handling
-    group.sample_size(50);
-    group.measurement_time(Duration::from_secs(3));
-    
-    for program in LEXER_ERROR_PROGRAMS.iter() {
-        group.bench_function(program.name, |b| {
-            b.iter(|| {
-                // we expect this to return an error
-                let _ = slang_frontend::lexer::tokenize(program.source);
-            })
-        });
-    }
-    
-    group.finish();
+    bencher.bench_local(|| {
+        
+        let lexer = slang_frontend::Lexer::new(&program.source);
+        let result = black_box(lexer.tokenize());
+        
+        result
+    });
 }
 
-criterion_group!(benches, lexer_performance, lexer_error_handling);
-criterion_main!(benches);
+#[divan::bench]
+fn lexer_error_handling_1(bencher: Bencher) {
+    let program = &ERROR_UNTERMINATED_STRING;
+    
+    bencher.bench_local(|| {
+        let lexer = slang_frontend::Lexer::new(&program.source);
+        let result = black_box(lexer.tokenize());
+        
+        result
+    });
+}
+
+#[divan::bench]
+fn lexer_error_handling_2(bencher: Bencher) {
+    let program = &ERROR_INVALID_NUMBER;
+    
+    bencher.bench_local(|| {
+        let lexer = slang_frontend::Lexer::new(&program.source);
+        let result = black_box(lexer.tokenize());
+        
+        result
+    });
+}
+
+fn main() {
+    divan::main();
+}

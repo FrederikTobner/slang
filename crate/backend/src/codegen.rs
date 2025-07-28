@@ -1,5 +1,5 @@
-use crate::bytecode::{Chunk, Function, OpCode};
-use crate::value::Value;
+use crate::bytecode::{Chunk, OpCode};
+use crate::value::{Value, Function};
 use slang_error::{CompilerError, CompileResult, ErrorCode};
 use slang_ir::Visitor;
 use slang_ir::ast::{

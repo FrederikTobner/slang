@@ -1,9 +1,9 @@
 use crate::Visitor;
 use crate::ast::{
     AssignmentStatement, BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression,
-    FunctionCallExpr, FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr,
-    LiteralValue, ReturnStatement, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
-    VariableExpr,
+    FunctionCallExpr, FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement,
+    LiteralExpr, LiteralValue, ReturnStatement, Statement, TypeDefinitionStmt, UnaryExpr,
+    UnaryOperator, VariableExpr,
 };
 use slang_types::{
     TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64,

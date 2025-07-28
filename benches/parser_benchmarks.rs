@@ -1,63 +1,47 @@
 mod programs;
+mod utils;
 
-use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
-use slang::compilation_pipeline::{CompilationPipeline, PipelineStage};
-use slang_ir::ast::Statement;
-use std::time::Duration;
-use programs::{PARSER_PROGRAMS, PARSER_ERROR_PROGRAMS};
+use divan::{Bencher, black_box, AllocProfiler};
+use programs::core::{SIMPLE_EXPRESSION, NESTED_EXPRESSIONS};
+use programs::errors::{ERROR_MISSING_SEMICOLON, ERROR_UNMATCHED_PAREN};
+use utils::pipeline::parse_only;
 
-/// Helper function to parse only using CompilationPipeline
-fn parse_only(program: &str) -> Result<Vec<Statement>, String> {
-    let pipeline = CompilationPipeline::new(program, Some("benchmark.sl".to_string()), false);
+#[global_allocator]
+static ALLOC: AllocProfiler = AllocProfiler::system();
 
-    match pipeline
-        .tokenize()
-        .and_then(|pipeline, tokens| pipeline.parse(tokens))
-    {
-        PipelineStage::Success { data, .. } => Ok(data),
-        PipelineStage::Failed { .. } => Err("AST compilation failed".to_string()),
-    }
+#[divan::bench]
+fn parser_performance_simple(bencher: Bencher) {
+    let program = &SIMPLE_EXPRESSION;
+    
+    bencher.bench_local(|| {
+        let result = black_box(parse_only(&program.source).expect("Parse should succeed"));
+        
+        result
+    });
 }
 
-/// Benchmark parser performance with different AST complexities
-fn parser_performance(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Parser Performance");
-
-    group.sample_size(100);
-    group.measurement_time(Duration::from_secs(5));
-
-    for program in PARSER_PROGRAMS.iter() {
-        group.bench_with_input(BenchmarkId::new("parse", program.name), &program.source, |b, program_source| {
-            b.iter(|| parse_only(program_source).expect("Parse should succeed"));
-        });
-    }
-
-    group.finish();
+#[divan::bench]
+fn parser_performance_complex(bencher: Bencher) {
+    let program = &NESTED_EXPRESSIONS;
+    
+    bencher.bench_local(|| {
+        let result = black_box(parse_only(&program.source).expect("Parse should succeed"));
+        
+        result
+    });
 }
 
-/// Benchmark parser scalability with increasing input sizes
-fn parser_scalability(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Parser Scalability");
-    group.sample_size(50);
-
-    let sizes = [10, 25, 50, 100, 200];
-
-    for size in sizes.iter() {
-        group.throughput(Throughput::Elements(*size as u64));
-        group.bench_with_input(
-            BenchmarkId::new("nested_expressions", size),
-            size,
-            |b, &size| {
-                let program = generate_nested_expressions(size);
-                b.iter(|| parse_only(&program).expect("Parse should succeed"));
-            },
-        );
-    }
-
-    group.finish();
+#[divan::bench(args = [10, 25, 50, 100, 200])]
+fn parser_scalability_nested_expressions(bencher: Bencher, depth: usize) {
+    let program = generate_nested_expressions(depth);
+    
+    bencher.bench_local(|| {
+        let result = black_box(parse_only(&program).expect("Parse should succeed"));
+        
+        result
+    });
 }
 
-/// Generate nested expressions for scalability testing
 fn generate_nested_expressions(depth: usize) -> String {
     let mut expr = "x".to_string();
     for i in 0..depth {
@@ -66,30 +50,31 @@ fn generate_nested_expressions(depth: usize) -> String {
     format!("let result = {};", expr)
 }
 
-/// Benchmark parser error handling and recovery
-fn parser_error_recovery(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Parser Error Recovery");
-
-    for program in PARSER_ERROR_PROGRAMS.iter() {
-        group.bench_with_input(
-            BenchmarkId::new("error_recovery", program.name),
-            &program.source,
-            |b, program_source| {
-                b.iter(|| {
-                    // Expect parsing to fail
-                    let _ = parse_only(program_source);
-                });
-            },
-        );
-    }
-
-    group.finish();
+#[divan::bench]
+fn parser_error_recovery_0(bencher: Bencher) {
+    let program = &ERROR_MISSING_SEMICOLON;
+    
+    bencher.bench_local(|| {
+        
+        // Expect parsing to fail
+        let result = black_box(parse_only(&program.source));
+        
+        result
+    });
 }
 
-criterion_group!(
-    benches,
-    parser_performance,
-    parser_scalability,
-    parser_error_recovery
-);
-criterion_main!(benches);
+#[divan::bench]
+fn parser_error_recovery_1(bencher: Bencher) {
+    let program = &ERROR_UNMATCHED_PAREN;
+    
+    bencher.bench_local(|| {
+        // Expect parsing to fail
+        let result = black_box(parse_only(&program.source));
+        
+        result
+    });
+}
+
+fn main() {
+    divan::main();
+}

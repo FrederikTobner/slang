@@ -104,7 +104,8 @@ impl<'a> CompilationPipeline<'a> {
     /// }
     /// ```
     pub fn tokenize(mut self) -> PipelineStage<'a, Vec<Token>> {
-        let tokenize_result = slang_frontend::lexer::tokenize(self.source);
+        let lexer = slang_frontend::lexer::Lexer::new(self.source);
+        let tokenize_result = lexer.tokenize();
         match tokenize_result {
             Ok(result) => PipelineStage::Success {
                 pipeline: self,
@@ -163,7 +164,8 @@ impl<'a> CompilationPipeline<'a> {
                 file_name,
             } => {
                 let line_info = LineInfo::new(&source);
-                match slang_frontend::parser::parse(&tokens, &line_info, &mut context) {
+                let mut parser = slang_frontend::parser::Parser::new(&tokens, &line_info, &mut context);
+                match parser.parse() {
                     Ok(statements) => PipelineStage::Success {
                         pipeline: Self {
                             context,
@@ -304,7 +306,7 @@ impl<'a> CompilationPipeline<'a> {
     /// ```rust
     /// use slang::compilation_pipeline::{CompilationPipeline, CompilationResult};
     /// use slang_ir::ast::Statement;
-    /// 
+    ///
     /// let source = "let x = 42;";
     /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
     /// // Assuming we have parsed statements
@@ -384,7 +386,7 @@ impl<'a> CompilationPipeline<'a> {
     /// ### Example
     /// ```rust
     /// use slang::compilation_pipeline::{CompilationPipeline, CompilationResult};
-    /// 
+    ///
     /// let source = "let x = 42;";
     /// let pipeline = CompilationPipeline::new(source, Some("example.sl".to_string()));
     /// let result = pipeline.finish();
@@ -463,7 +465,7 @@ impl<'a, T> PipelineStage<'a, T> {
         F: FnOnce(CompilationPipeline<'a>, T) -> PipelineStage<'a, U>,
     {
         match self {
-            PipelineStage::Success { pipeline, data} => f(pipeline, data),
+            PipelineStage::Success { pipeline, data } => f(pipeline, data),
             PipelineStage::Failed { pipeline } => PipelineStage::Failed { pipeline },
         }
     }
@@ -516,3 +518,4 @@ pub enum CompilationResult<'a> {
         diagnostics: DiagnosticEngine<'a>,
     },
 }
+

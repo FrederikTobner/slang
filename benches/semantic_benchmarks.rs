@@ -1,87 +1,62 @@
 mod programs;
+mod utils;
 
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
-use std::time::Duration;
-use slang::compilation_pipeline::{CompilationPipeline, PipelineStage};
-use slang_ir::ast::Statement;
+use divan::{Bencher, black_box, AllocProfiler};
 use programs::templates::ProgramTemplates;
-use programs::{SEMANTIC_PROGRAMS, SEMANTIC_ERROR_PROGRAMS};
+use programs::types::SIMPLE_TYPES;
+use programs::functions::FUNCTION_CALLS;
+use programs::errors::{ERROR_UNDEFINED_VARIABLE, ERROR_TYPE_MISMATCH};
+use utils::pipeline::semantic_analysis_only;
 
-/// Helper function to perform semantic analysis using CompilationPipeline
-fn semantic_analysis_only(program: &str) -> Result<Vec<Statement>, String> {
-    let pipeline = CompilationPipeline::new(program, Some("benchmark.sl".to_string()), false);
+
+#[global_allocator]
+static ALLOC: AllocProfiler = AllocProfiler::system();
+
+#[divan::bench]
+fn semantic_analysis_performance_simple(bencher: Bencher) {
+    let program = &SIMPLE_TYPES;
     
-    match pipeline
-        .tokenize()
-        .and_then(|pipeline, tokens| pipeline.parse(tokens))
-        .and_then(|pipeline, statements| pipeline.semantic_analysis(statements))
-    {
-        PipelineStage::Success { data, .. } => Ok(data),
-        PipelineStage::Failed { .. } => {
-            Err("Semantic analysis failed".to_string())
-        }
-    }
+    bencher.bench_local(|| {
+        black_box(semantic_analysis_only(&program.source).expect("Semantic analysis should succeed"))
+    });
 }
 
-/// Benchmark semantic analysis performance
-fn semantic_analysis_performance(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Semantic Analysis Performance");
-    group.sample_size(100);
-    group.measurement_time(Duration::from_secs(5));
+#[divan::bench]
+fn semantic_analysis_performance_complex(bencher: Bencher) {
+    let program = &FUNCTION_CALLS;
     
-    for program in SEMANTIC_PROGRAMS.iter() {
-        group.bench_with_input(BenchmarkId::new("semantic_analysis", program.name), &program.source, |b, program_source| {
-            b.iter(|| {
-                semantic_analysis_only(program_source).expect("Semantic analysis should succeed")
-            });
-        });
-    }
-    
-    group.finish();
+    bencher.bench_local(|| {
+        black_box(semantic_analysis_only(&program.source).expect("Semantic analysis should succeed"))
+    });
 }
 
-/// Benchmark semantic analysis scalability
-fn semantic_scalability(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Semantic Analysis Scalability");
-    group.sample_size(50);
+#[divan::bench(args = [10, 25, 50, 100, 200])]
+fn semantic_scalability_variables(bencher: Bencher, count: usize) {
+    let program = generate_variable_declarations(count);
     
-    let variable_counts = [10, 25, 50, 100, 200];
-    for count in variable_counts.iter() {
-        group.throughput(Throughput::Elements(*count as u64));
-        group.bench_with_input(BenchmarkId::new("variable_declarations", count), count, |b, &count| {
-            let program = generate_variable_declarations(count);
-            b.iter(|| {
-                semantic_analysis_only(&program).expect("Semantic analysis should succeed")
-            });
-        });
-    }
-    
-    let scope_depths = [5, 10, 15, 20, 30];
-    for depth in scope_depths.iter() {
-        group.throughput(Throughput::Elements(*depth as u64));
-        group.bench_with_input(BenchmarkId::new("scope_depth", depth), depth, |b, &depth| {
-            let program = ProgramTemplates::deeply_nested(depth);
-            b.iter(|| {
-                semantic_analysis_only(&program.source).expect("Semantic analysis should succeed")
-            });
-        });
-    }
-    
-    let function_complexities = [5, 10, 25, 50, 100];
-    for complexity in function_complexities.iter() {
-        group.throughput(Throughput::Elements(*complexity as u64));
-        group.bench_with_input(BenchmarkId::new("function_complexity", complexity), complexity, |b, &complexity| {
-            let program = ProgramTemplates::function_heavy(complexity);
-            b.iter(|| {
-                semantic_analysis_only(&program.source).expect("Semantic analysis should succeed")
-            });
-        });
-    }
-    
-    group.finish();
+    bencher.bench_local(|| {
+        black_box(semantic_analysis_only(&program).expect("Semantic analysis should succeed"));
+    });
 }
 
-/// Generate variable declarations for scalability testing
+#[divan::bench(args = [5, 10, 15, 20, 30])]
+fn semantic_scalability_scope_depth(bencher: Bencher, depth: usize) {
+    let program = ProgramTemplates::deeply_nested(depth);
+    
+    bencher.bench_local(|| {
+        black_box(semantic_analysis_only(&program.source).expect("Semantic analysis should succeed"));
+    });
+}
+
+#[divan::bench(args = [5, 10, 25, 50, 100])]
+fn semantic_scalability_function_complexity(bencher: Bencher, complexity: usize) {
+    let program = ProgramTemplates::function_heavy(complexity);
+    
+    bencher.bench_local(|| {
+        black_box(semantic_analysis_only(&program.source).expect("Semantic analysis should succeed"));
+    });
+}
+
 fn generate_variable_declarations(count: usize) -> String {
     let mut program = String::new();
     for i in 0..count {
@@ -90,22 +65,24 @@ fn generate_variable_declarations(count: usize) -> String {
     program
 }
 
-/// Benchmark semantic error handling
-fn semantic_error_handling(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Semantic Error Handling");
-    group.sample_size(100);
+#[divan::bench]
+fn semantic_error_handling_0(bencher: Bencher) {
+    let program = &ERROR_UNDEFINED_VARIABLE;
     
-    for program in SEMANTIC_ERROR_PROGRAMS.iter() {
-        group.bench_with_input(BenchmarkId::new("semantic_error", program.name), &program.source, |b, program_source| {
-            b.iter(|| {
-                // Expect semantic analysis to fail but measure error handling time
-                let _ = semantic_analysis_only(program_source);
-            });
-        });
-    }
-    
-    group.finish();
+    bencher.bench_local(|| {
+        black_box(semantic_analysis_only(&program.source))
+    });
 }
 
-criterion_group!(benches, semantic_analysis_performance, semantic_scalability, semantic_error_handling);
-criterion_main!(benches);
+#[divan::bench]
+fn semantic_error_handling_1(bencher: Bencher) {
+    let program = &ERROR_TYPE_MISMATCH;
+    
+    bencher.bench_local(|| {
+         black_box(semantic_analysis_only(&program.source))
+    });
+}
+
+fn main() {
+    divan::main();
+}

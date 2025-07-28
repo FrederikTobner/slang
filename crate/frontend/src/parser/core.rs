@@ -1,19 +1,17 @@
 // Core parser infrastructure module
 // Contains the main Parser struct and fundamental parsing methods
 
-use slang_error::{LineInfo, CompileResult, CompilerError, ErrorCode};
-use crate::token::{Token, Tokentype};
 use super::error::ParseError;
-use slang_ir::ast::{
-    BlockExpr, Expression, Statement,
-};
+use super::expressions::ExpressionParser;
+use super::literals::LiteralParser;
+use super::statements::StatementParser;
+use super::types::TypeParser;
+use super::utilities::UtilitiesParser;
+use crate::token::{Token, Tokentype};
+use slang_error::{CompileResult, CompilerError, ErrorCode, LineInfo};
+use slang_ir::ast::{BlockExpr, Expression, Statement};
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
-use super::statements::StatementParser;
-use super::expressions::ExpressionParser;
-use super::types::TypeParser;
-use super::literals::LiteralParser;
-use super::utilities::UtilitiesParser;
 
 /// Parser that converts tokens into an abstract syntax tree
 pub struct Parser<'a> {
@@ -29,15 +27,6 @@ pub struct Parser<'a> {
     pub(super) context: &'a mut CompilationContext,
 }
 
-pub fn parse<'a>(
-    tokens: &'a [Token],
-    line_info: &'a LineInfo,
-    context: &'a mut CompilationContext,
-) -> CompileResult<Vec<Statement>> {
-    let mut parser = Parser::new(tokens, line_info, context);
-    parser.parse()
-}
-
 impl<'a> Parser<'a> {
     /// Creates a new parser for the given tokens and line information
     ///
@@ -46,7 +35,7 @@ impl<'a> Parser<'a> {
     /// * `tokens` - The tokens to parse
     /// * `line_info` - Line information for error reporting
     /// * `context` - The compilation context
-    pub(super) fn new(
+    pub fn new(
         tokens: &'a [Token],
         line_info: &'a LineInfo,
         context: &'a mut CompilationContext,
@@ -65,7 +54,7 @@ impl<'a> Parser<'a> {
     /// ### Returns
     ///
     /// The parsed statements or an error message
-    pub(super) fn parse(&mut self) -> CompileResult<Vec<Statement>> {
+    pub fn parse(&mut self) -> CompileResult<Vec<Statement>> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
@@ -86,7 +75,7 @@ impl<'a> Parser<'a> {
     }
 
     // Token management methods
-    
+
     /// Advances to the next token and returns the previous token
     ///
     /// ### Returns
@@ -260,17 +249,14 @@ impl<'a> Parser<'a> {
     // Utility methods
 
     /// Creates a SourceLocation from a token's position
-    pub(super) fn source_location_from_token(
-        &self,
-        token: &Token,
-    ) -> slang_ir::location::Location {
+    pub(super) fn source_location_from_token(&self, token: &Token) -> slang_ir::location::Location {
         let (line, column) = self.line_info.get_line_col(token.pos);
         slang_ir::location::Location::new(token.pos, line, column, token.lexeme.len())
     }
 
     // TEMPORARY: Include all original parsing methods for Phase 1 compatibility
     // These will be moved to their respective modules in later phases
-    
+
     // Include all original methods from parser_old.rs here temporarily
     // This is a temporary measure to ensure the parser works in Phase 1
 
@@ -284,13 +270,13 @@ impl<'a> Parser<'a> {
     }
 
     // Expression parsing methods now delegated to ExpressionParser
-    
+
     pub(super) fn expression(&mut self) -> Result<Expression, ParseError> {
         ExpressionParser::parse_expression(self)
     }
 
     // Type and literal parsing methods (temporary - will move to respective modules in Phase 4)
-    
+
     pub(super) fn parse_type(&mut self) -> Result<TypeId, ParseError> {
         TypeParser::parse_type(self)
     }

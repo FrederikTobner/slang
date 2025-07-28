@@ -1,14 +1,12 @@
 // Utilities module
 // Contains helper functions and common parsing patterns
 
-use slang_error::ErrorCode;
-use crate::token::Tokentype;
-use super::error::ParseError;
-use slang_ir::ast::{
-    BlockExpr, ConditionalExpr, Expression, FunctionCallExpr, Statement,
-};
-use slang_types::PrimitiveType;
 use super::core::Parser;
+use super::error::ParseError;
+use crate::token::Tokentype;
+use slang_error::ErrorCode;
+use slang_ir::ast::{BlockExpr, ConditionalExpr, Expression, FunctionCallExpr, Statement};
+use slang_types::PrimitiveType;
 
 /// Utilities parser module providing static methods for common parsing patterns
 pub struct UtilitiesParser;
@@ -101,12 +99,8 @@ impl UtilitiesParser {
         let else_branch = Self::parse_block_expression(parser)?;
 
         let end_pos = parser.previous().pos + parser.previous().lexeme.len();
-        let location = slang_ir::location::Location::new(
-            if_token_pos,
-            line,
-            column,
-            end_pos - if_token_pos,
-        );
+        let location =
+            slang_ir::location::Location::new(if_token_pos, line, column, end_pos - if_token_pos);
 
         Ok(Expression::Conditional(ConditionalExpr {
             condition: Box::new(condition),

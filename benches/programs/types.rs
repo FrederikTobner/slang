@@ -28,7 +28,4 @@ let string_result = b + " world";
 );
 
 /// Array containing type programs for semantic analysis testing
-pub const TYPE_SEMANTIC_PROGRAMS: &[&BenchmarkProgram] = &[
-    &SIMPLE_TYPES,
-    &TYPE_CHECKING,
-];
+pub const TYPE_SEMANTIC_PROGRAMS: &[&BenchmarkProgram] = &[&SIMPLE_TYPES, &TYPE_CHECKING];

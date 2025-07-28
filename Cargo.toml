@@ -25,14 +25,14 @@ trace-execution = ["slang_backend/trace-execution"]
 
 [dependencies]
 clap = { version = "4.5.36", features = ["derive"] }
-zip = "2.6.1"
 colored = "2.0.4"
+slang_backend = { path = "crate/backend", features = [] }
+slang_error = { path = "crate/error", features = [] }
 slang_frontend = { path = "crate/frontend", features = [] }
 slang_ir = { path = "crate/ir", features = [] }
-slang_backend = { path = "crate/backend", features = [] }
-slang_types = { path = "crate/types", features = [] }
 slang_shared = { path = "crate/shared", features = [] }
-slang_error = { path = "crate/error", features = [] }
+slang_types = { path = "crate/types", features = [] }
+zip = "2.6.1"
 
 
 [dev-dependencies]
@@ -42,7 +42,8 @@ predicates = "3.0.4"
 tempfile = "3.8.1"
 rstest = "0.18.2"
 # Performance tests
-criterion = { version = "0.5", features = ["html_reports"] }
+divan = "0.1.21"
+peak_alloc = "0.2"
 
 
 [[bench]]

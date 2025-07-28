@@ -1,5 +1,5 @@
-use slang_error::{CompileResult, CompilerError, LineInfo, ErrorCode};
 use crate::token::{Token, Tokentype};
+use slang_error::{CompileResult, CompilerError, ErrorCode, LineInfo};
 
 pub struct LexerResult<'a> {
     /// The list of tokens generated from the input
@@ -8,8 +8,8 @@ pub struct LexerResult<'a> {
     pub line_info: LineInfo<'a>,
 }
 
-/// Lexer state for tracking position during tokenization
-struct LexerState<'a> {
+/// Lexer for tracking position during tokenization
+pub struct Lexer<'a> {
     /// Source text being tokenized
     input: &'a str,
     /// Iterator over source characters
@@ -28,7 +28,7 @@ struct LexerState<'a> {
     errors: Vec<CompilerError>,
 }
 
-impl<'a> LexerState<'a> {
+impl<'a> Lexer<'a> {
     /// Creates a new lexer state for the given input
     ///
     /// ### Arguments
@@ -36,8 +36,8 @@ impl<'a> LexerState<'a> {
     ///
     /// ### Returns
     /// A new LexerState object
-    fn new(input: &'a str) -> Self {
-        LexerState {
+    pub fn new(input: &'a str) -> Self {
+        Lexer {
             input,
             chars: input.chars().peekable(),
             current_pos: 0,
@@ -89,11 +89,17 @@ impl<'a> LexerState<'a> {
     /// * `message` - The error message
     /// * `start_pos` - The starting position of the error
     /// * `token_length` - The length of the problematic token
-    fn add_error(&mut self, error_code: ErrorCode, message: String, start_pos: usize, token_length: Option<usize>) {
+    fn add_error(
+        &mut self,
+        error_code: ErrorCode,
+        message: String,
+        start_pos: usize,
+        token_length: Option<usize>,
+    ) {
         // Calculate column position from start_pos
         let line_start = self.input[..start_pos].rfind('\n').map_or(0, |pos| pos + 1);
         let column = start_pos - line_start + 1;
-        
+
         self.errors.push(CompilerError::new(
             error_code,
             message,
@@ -142,57 +148,46 @@ impl<'a> LexerState<'a> {
             line_info: info,
         })
     }
-}
 
-/// Converts source code text into a sequence of tokens with line information
-///
-/// ### Arguments
-///
-/// * `input` - The source code to tokenize
-///
-/// ### Returns
-///
-/// A CompileResult containing LexerResult (tokens and line information) or lexer errors
-pub fn tokenize(input: &str) -> CompileResult<LexerResult> {
-    let mut state = LexerState::new(input);
+    pub fn tokenize(mut self) -> CompileResult<LexerResult<'a>> {
+        while let Some(&c) = self.peek() {
+            let token_start_pos = self.current_pos;
 
-    while let Some(&c) = state.peek() {
-        let token_start_pos = state.current_pos;
-
-        match c {
-            c if c.is_whitespace() => handle_whitespace(&mut state),
-            c if c.is_alphabetic() => handle_identifier(&mut state, token_start_pos),
-            c if c.is_ascii_digit() => handle_number(&mut state, token_start_pos),
-            '"' => handle_string(&mut state),
-            ':' => handle_simple_token(&mut state, Tokentype::Colon, ":", token_start_pos),
-            '+' => handle_simple_token(&mut state, Tokentype::Plus, "+", token_start_pos),
-            '-' => handle_dash(&mut state, token_start_pos),
-            '*' => handle_simple_token(&mut state, Tokentype::Multiply, "*", token_start_pos),
-            '/' => handle_slash(&mut state, token_start_pos),
-            '=' => handle_equals(&mut state, token_start_pos),
-            '<' => handle_less_than(&mut state, token_start_pos),
-            '>' => handle_greater_than(&mut state, token_start_pos),
-            '!' => handle_exclamation(&mut state, token_start_pos),
-            ';' => handle_simple_token(&mut state, Tokentype::Semicolon, ";", token_start_pos),
-            '{' => handle_simple_token(&mut state, Tokentype::LeftBrace, "{", token_start_pos),
-            '}' => handle_simple_token(&mut state, Tokentype::RightBrace, "}", token_start_pos),
-            ',' => handle_simple_token(&mut state, Tokentype::Comma, ",", token_start_pos),
-            '(' => handle_simple_token(&mut state, Tokentype::LeftParen, "(", token_start_pos),
-            ')' => handle_simple_token(&mut state, Tokentype::RightParen, ")", token_start_pos),
-            '&' => handle_ampersand(&mut state, token_start_pos),
-            '|' => handle_pipe(&mut state, token_start_pos),
-            _ => handle_invalid_char(&mut state, token_start_pos),
+            match c {
+                c if c.is_whitespace() => handle_whitespace(&mut self),
+                c if c.is_alphabetic() => handle_identifier(&mut self, token_start_pos),
+                c if c.is_ascii_digit() => handle_number(&mut self, token_start_pos),
+                '"' => handle_string(&mut self),
+                ':' => handle_simple_token(&mut self, Tokentype::Colon, ":", token_start_pos),
+                '+' => handle_simple_token(&mut self, Tokentype::Plus, "+", token_start_pos),
+                '-' => handle_dash(&mut self, token_start_pos),
+                '*' => handle_simple_token(&mut self, Tokentype::Multiply, "*", token_start_pos),
+                '/' => handle_slash(&mut self, token_start_pos),
+                '=' => handle_equals(&mut self, token_start_pos),
+                '<' => handle_less_than(&mut self, token_start_pos),
+                '>' => handle_greater_than(&mut self, token_start_pos),
+                '!' => handle_exclamation(&mut self, token_start_pos),
+                ';' => handle_simple_token(&mut self, Tokentype::Semicolon, ";", token_start_pos),
+                '{' => handle_simple_token(&mut self, Tokentype::LeftBrace, "{", token_start_pos),
+                '}' => handle_simple_token(&mut self, Tokentype::RightBrace, "}", token_start_pos),
+                ',' => handle_simple_token(&mut self, Tokentype::Comma, ",", token_start_pos),
+                '(' => handle_simple_token(&mut self, Tokentype::LeftParen, "(", token_start_pos),
+                ')' => handle_simple_token(&mut self, Tokentype::RightParen, ")", token_start_pos),
+                '&' => handle_ampersand(&mut self, token_start_pos),
+                '|' => handle_pipe(&mut self, token_start_pos),
+                _ => handle_invalid_char(&mut self, token_start_pos),
+            }
         }
-    }
 
-    state.finish()
+        self.finish()
+    }
 }
 
 /// Handles whitespace characters in the input
 ///
 /// ### Arguments
 /// * `state` - The current lexer state
-fn handle_whitespace(state: &mut LexerState) {
+fn handle_whitespace(state: &mut Lexer) {
     let c = state.advance().unwrap();
 
     if c == '\n' {
@@ -205,7 +200,7 @@ fn handle_whitespace(state: &mut LexerState) {
 /// ### Arguments
 /// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the identifier in the input
-fn handle_identifier(state: &mut LexerState, start_pos: usize) {
+fn handle_identifier(state: &mut Lexer, start_pos: usize) {
     let mut identifier = String::new();
 
     while let Some(&c) = state.peek() {
@@ -237,7 +232,7 @@ fn handle_identifier(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the number in the input
-fn handle_number(state: &mut LexerState, start_pos: usize) {
+fn handle_number(state: &mut Lexer, start_pos: usize) {
     let mut number = String::new();
     let mut is_float = false;
 
@@ -279,7 +274,7 @@ fn handle_number(state: &mut LexerState, start_pos: usize) {
 ///
 /// ### Arguments
 /// * `state` - The current lexer state
-fn handle_string(state: &mut LexerState) {
+fn handle_string(state: &mut Lexer) {
     let start_pos = state.current_pos;
     state.advance(); // consume opening quote
     let mut string = String::new();
@@ -302,12 +297,12 @@ fn handle_string(state: &mut LexerState) {
 
     if !closed {
         let error_message = "Expected closing quote for string literal".to_string();
-        let invalid_lexeme = format!("\"{}",string);
+        let invalid_lexeme = format!("\"{}", string);
         state.add_error(
-            ErrorCode::ExpectedClosingQuote, 
-            error_message, 
-            start_pos, 
-            Some(invalid_lexeme.len())
+            ErrorCode::ExpectedClosingQuote,
+            error_message,
+            start_pos,
+            Some(invalid_lexeme.len()),
         );
     } else {
         state.add_token(Tokentype::StringLiteral, string, start_pos);
@@ -322,7 +317,7 @@ fn handle_string(state: &mut LexerState) {
 /// * `lexeme` - The string representation of the token
 /// * `start_pos` - The starting position of the token in the input
 fn handle_simple_token(
-    state: &mut LexerState,
+    state: &mut Lexer,
     token_type: Tokentype,
     lexeme: &str,
     start_pos: usize,
@@ -336,7 +331,7 @@ fn handle_simple_token(
 /// ### Arguments
 /// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the dash in the input
-fn handle_dash(state: &mut LexerState, start_pos: usize) {
+fn handle_dash(state: &mut Lexer, start_pos: usize) {
     state.advance();
     if state.peek() == Some(&'>') {
         state.advance();
@@ -351,7 +346,7 @@ fn handle_dash(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the slash in the input
-fn handle_slash(state: &mut LexerState, start_pos: usize) {
+fn handle_slash(state: &mut Lexer, start_pos: usize) {
     state.advance();
 
     if state.peek() == Some(&'/') {
@@ -367,7 +362,7 @@ fn handle_slash(state: &mut LexerState, start_pos: usize) {
 ///
 /// ### Arguments
 /// * `state` - The current lexer state
-fn handle_line_comment(state: &mut LexerState) {
+fn handle_line_comment(state: &mut Lexer) {
     state.advance();
 
     while let Some(&c) = state.peek() {
@@ -384,7 +379,7 @@ fn handle_line_comment(state: &mut LexerState) {
 ///
 /// ### Arguments
 /// * `state` - The current lexer state
-fn handle_block_comment(state: &mut LexerState) {
+fn handle_block_comment(state: &mut Lexer) {
     state.advance();
 
     let mut nesting = 1;
@@ -424,7 +419,7 @@ fn handle_block_comment(state: &mut LexerState) {
 /// ### Arguments
 /// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the equals in the input
-fn handle_equals(state: &mut LexerState, start_pos: usize) {
+fn handle_equals(state: &mut Lexer, start_pos: usize) {
     state.advance();
     if state.peek() == Some(&'=') {
         state.advance();
@@ -439,7 +434,7 @@ fn handle_equals(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the less than in the input
-fn handle_less_than(state: &mut LexerState, start_pos: usize) {
+fn handle_less_than(state: &mut Lexer, start_pos: usize) {
     state.advance();
     if state.peek() == Some(&'=') {
         state.advance();
@@ -454,7 +449,7 @@ fn handle_less_than(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the greater than in the input
-fn handle_greater_than(state: &mut LexerState, start_pos: usize) {
+fn handle_greater_than(state: &mut Lexer, start_pos: usize) {
     state.advance();
     if state.peek() == Some(&'=') {
         state.advance();
@@ -469,7 +464,7 @@ fn handle_greater_than(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the exclamation mark in the input
-fn handle_exclamation(state: &mut LexerState, start_pos: usize) {
+fn handle_exclamation(state: &mut Lexer, start_pos: usize) {
     state.advance();
     if state.peek() == Some(&'=') {
         state.advance();
@@ -484,7 +479,7 @@ fn handle_exclamation(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the ampersand in the input
-fn handle_ampersand(state: &mut LexerState, start_pos: usize) {
+fn handle_ampersand(state: &mut Lexer, start_pos: usize) {
     state.advance();
     if state.peek() == Some(&'&') {
         state.advance();
@@ -499,7 +494,7 @@ fn handle_ampersand(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the pipe in the input
-fn handle_pipe(state: &mut LexerState, start_pos: usize) {
+fn handle_pipe(state: &mut Lexer, start_pos: usize) {
     state.advance();
     if state.peek() == Some(&'|') {
         state.advance();
@@ -514,7 +509,7 @@ fn handle_pipe(state: &mut LexerState, start_pos: usize) {
 /// ### Arguments
 /// * `state` - The current lexer state
 /// * `start_pos` - The starting position of the invalid character in the input
-fn handle_invalid_char(state: &mut LexerState, start_pos: usize) {
+fn handle_invalid_char(state: &mut Lexer, start_pos: usize) {
     let invalid_char = state.advance().unwrap();
     state.add_token(Tokentype::Invalid, invalid_char.to_string(), start_pos);
 }

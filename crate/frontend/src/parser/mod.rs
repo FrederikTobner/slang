@@ -10,5 +10,4 @@ mod statements;
 mod types;
 mod utilities;
 
-// Re-export the main parse function
-pub use self::core::parse;
+pub use core::Parser;

@@ -38,9 +38,7 @@ impl ProgramTemplates {
         source.push_str("multiply(x, y);\n");
         source.push_str("print_value(x);\n");
 
-        GeneratedProgram {
-            source,
-        }
+        GeneratedProgram { source }
     }
 
     pub fn variable_heavy(var_count: usize) -> GeneratedProgram {
@@ -58,9 +56,7 @@ impl ProgramTemplates {
             source.push_str("print_value(var_0);\n");
         }
 
-        GeneratedProgram {
-            source,
-        }
+        GeneratedProgram { source }
     }
 
     pub fn deeply_nested(depth: usize) -> GeneratedProgram {
@@ -85,8 +81,6 @@ impl ProgramTemplates {
             source.push_str("}\n");
         }
 
-        GeneratedProgram {
-            source,
-        }
+        GeneratedProgram { source }
     }
 }

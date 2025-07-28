@@ -59,38 +59,6 @@ pub enum OpCode {
     EndScope,
 }
 
-/// Function representation in bytecode
-#[derive(Debug, Clone)]
-pub struct Function {
-    /// Name of the function
-    pub name: String,
-    /// Number of parameters
-    pub arity: u8,
-    /// Offset in the chunk where this function's code begins
-    pub code_offset: usize,
-    /// Local variable names used by this function
-    pub locals: Vec<String>,
-}
-
-/// Type for native function implementations
-pub type NativeFn = fn(&[Value]) -> Result<Value, String>;
-
-/// Native (built-in) function representation
-#[derive(Clone)]
-pub struct NativeFunction {
-    /// Name of the native function
-    pub name: String,
-    /// Number of parameters
-    pub arity: u8,
-    /// The Rust function that implements this native function
-    pub function: NativeFn,
-}
-
-impl std::fmt::Debug for NativeFunction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<native fn {}>", self.name)
-    }
-}
 
 /// A chunk of bytecode representing a compiled program
 #[derive(Debug)]

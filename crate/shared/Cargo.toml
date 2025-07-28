@@ -15,4 +15,3 @@ slang_types = { path = "../types" }
 slang_error = { path = "../error" }
 slang_ir = { path = "../ir" }
 colored = "2.0.4"
-

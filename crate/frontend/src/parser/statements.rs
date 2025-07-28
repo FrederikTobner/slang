@@ -1,16 +1,16 @@
 // Statement parsing module
 // Contains logic for parsing all statement types
 
-use super::error::ParseError;
-use slang_error::ErrorCode;
-use slang_ir::ast::{
-    AssignmentStatement, Expression, FunctionDeclarationStmt, IfStatement, LetStatement, 
-    Parameter, Statement, TypeDefinitionStmt, ReturnStatement
-};
-use slang_ir::Location;
-use slang_types::PrimitiveType;
-use crate::token::Tokentype;
 use super::core::Parser;
+use super::error::ParseError;
+use crate::token::Tokentype;
+use slang_error::ErrorCode;
+use slang_ir::Location;
+use slang_ir::ast::{
+    AssignmentStatement, Expression, FunctionDeclarationStmt, IfStatement, LetStatement, Parameter,
+    ReturnStatement, Statement, TypeDefinitionStmt,
+};
+use slang_types::PrimitiveType;
 
 /// Statement parser that handles all statement types
 pub struct StatementParser;
@@ -67,8 +67,7 @@ impl StatementParser {
 
         let token = parser.advance();
         let name = token.lexeme.clone();
-        let location =
-            Location::new(token_pos, line, column, name.len());
+        let location = Location::new(token_pos, line, column, name.len());
         let mut var_type = PrimitiveType::Unknown.into();
 
         if parser.match_token(&Tokentype::Colon) {
@@ -214,10 +213,7 @@ impl StatementParser {
         let end_pos = parser.previous().pos + parser.previous().lexeme.len();
         let location = Location::new(token_pos, line, column, end_pos - token_pos);
 
-        Ok(Statement::Return(ReturnStatement {
-            value,
-            location,
-        }))
+        Ok(Statement::Return(ReturnStatement { value, location }))
     }
 
     /// Parses a type definition statement (struct)
@@ -265,7 +261,9 @@ impl StatementParser {
             fields.push((field_name, field_type));
 
             if !parser.match_token(&Tokentype::Comma) && !parser.check(&Tokentype::RightBrace) {
-                return Err(parser.error(ErrorCode::ExpectedComma, "Expected ',' after field or '}'"));
+                return Err(
+                    parser.error(ErrorCode::ExpectedComma, "Expected ',' after field or '}'")
+                );
             }
         }
 
@@ -361,7 +359,9 @@ impl StatementParser {
 
         let else_branch = if parser.match_token(&Tokentype::Else) {
             if !parser.match_token(&Tokentype::LeftBrace) {
-                return Err(parser.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after else"));
+                return Err(
+                    parser.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after else")
+                );
             }
             Some(parser.parse_block_expression()?)
         } else {

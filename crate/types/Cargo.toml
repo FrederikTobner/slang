@@ -12,4 +12,3 @@ path = "src/lib.rs"
 
 [dependencies]
 slang_derive = { path = "../derive" }
-

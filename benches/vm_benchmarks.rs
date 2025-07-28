@@ -1,103 +1,80 @@
 mod programs;
+mod utils;
 
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
-use slang_backend::VM;
-use std::time::Duration;
-use slang::compilation_pipeline::{CompilationPipeline, CompilationResult};
+use divan::{Bencher, black_box, AllocProfiler};
 use programs::templates::ProgramTemplates;
-use programs::{VM_PROGRAMS, VM_VALUE_OPERATION_PROGRAMS};
+use programs::vm::{VM_SIMPLE_ARITHMETIC, VM_FUNCTION_CALLS, VM_INTEGER_ARITHMETIC, VM_FLOATING_POINT};
+use utils::pipeline::execute_program;
 
-/// Helper function to execute a program using compilation_pipeline
-fn execute_program(program: &str) -> Result<(), String> {
-        let mut vm = VM::new();
-        let pipeline = CompilationPipeline::new(program, Some("benchmark.sl".to_string()), false);
-        match pipeline.execute_all_stages() {
-        CompilationResult::Success { chunk, .. } => {
-            match vm.interpret(&chunk) {
-                Ok(()) => Ok(()),
-                Err(err) => Err(format!("VM execution failed: {}", err)),
-            }
-        },
-        CompilationResult::Failed { diagnostics } => {
-            let error_msg = format!("Compilation failed with {} errors", diagnostics.error_count());
-            Err(error_msg)
-        }
-    }
+#[global_allocator]
+static ALLOC: AllocProfiler = AllocProfiler::system();
+
+#[divan::bench]
+fn vm_execution_performance_simple(bencher: Bencher) {
+    let program = &VM_SIMPLE_ARITHMETIC;
+    
+    bencher.bench_local(|| {
+        black_box(execute_program(&program.source).expect("VM execution should succeed"))
+    });
 }
 
-/// Benchmark virtual machine execution performance
-fn vm_execution_performance(c: &mut Criterion) {
-    let mut group = c.benchmark_group("VM Execution Performance");
-    group.sample_size(100);
-    group.measurement_time(Duration::from_secs(5));
+#[divan::bench]
+fn vm_execution_performance_complex(bencher: Bencher) {
+    let program = &VM_FUNCTION_CALLS;
     
-    for program in VM_PROGRAMS.iter() {
-        group.bench_with_input(BenchmarkId::new("vm_execute", program.name), &program.source, |b, program_source| {
-            b.iter(|| {
-                execute_program(program_source).expect("VM execution should succeed")
-            });
-        });
-    }
-    
-    group.finish();
+    bencher.bench_local(|| {
+        black_box(execute_program(&program.source).expect("VM execution should succeed"))
+    });
 }
 
-/// Benchmark VM scalability with increasing computational complexity
-fn vm_scalability(c: &mut Criterion) {
-    let mut group = c.benchmark_group("VM Scalability");
-    group.sample_size(50);
+#[divan::bench(args = [5, 10, 15, 20])]
+fn vm_scalability_fibonacci_depth(bencher: Bencher, depth: usize) {
+    let program = format!(
+        r#"
+        fn fibonacci(n: i32) -> i32 {{
+            if n <= 1 {{
+                return n;
+            }}
+            return fibonacci(n - 1) + fibonacci(n - 2);
+        }}
+        let result = fibonacci({});
+        print_value(result);
+    "#,
+        depth
+    );
     
-    // Test with increasing recursion depth (Fibonacci)
-    let fibonacci_depths = [5, 10, 15, 20];
-    for depth in fibonacci_depths.iter() {
-        group.throughput(Throughput::Elements(*depth as u64));
-        group.bench_with_input(BenchmarkId::new("fibonacci_depth", depth), depth, |b, &depth| {
-            let program = format!(r#"
-                fn fibonacci(n: i32) -> i32 {{
-                    if n <= 1 {{
-                        return n;
-                    }}
-                    return fibonacci(n - 1) + fibonacci(n - 2);
-                }}
-                let result = fibonacci({});
-                print_value(result);
-            "#, depth);
-            b.iter(|| {
-                execute_program(&program).expect("VM execution should succeed")
-            });
-        });
-    }
-    
-    // Test with increasing function call complexity
-    let function_counts = [5, 10, 25, 50];
-    for count in function_counts.iter() {
-        group.throughput(Throughput::Elements(*count as u64));
-        group.bench_with_input(BenchmarkId::new("function_calls", count), count, |b, &count| {
-            let program = ProgramTemplates::function_heavy(count);
-            b.iter(|| {
-                execute_program(&program.source).expect("VM execution should succeed")
-            });
-        });
-    }
-    
-    group.finish();
+    bencher.bench_local(|| {
+        black_box(execute_program(&program).expect("VM execution should succeed"))
+    });
 }
 
-/// Benchmark VM value operations (arithmetic, comparisons, etc.)
-fn vm_value_operations(c: &mut Criterion) {
-    let mut group = c.benchmark_group("VM Value Operations");
-    group.sample_size(100);
+#[divan::bench(args = [5, 10, 25, 50])]
+fn vm_scalability_function_calls(bencher: Bencher, count: usize) {
+    let program = ProgramTemplates::function_heavy(count);
     
-    for program in VM_VALUE_OPERATION_PROGRAMS.iter() {
-        group.bench_with_input(BenchmarkId::new("value_operations", program.name), &program.source, |b, program_source| {
-            b.iter(|| {
-                execute_program(program_source).expect("VM execution should succeed")
-            });
-        });
-    }
-    
-    group.finish();
+    bencher.bench_local(|| {
+         black_box(execute_program(&program.source).expect("VM execution should succeed"))
+    });
 }
 
-criterion_group!(benches, vm_execution_performance, vm_scalability, vm_value_operations);
-criterion_main!(benches);
+#[divan::bench]
+fn vm_value_operations_0(bencher: Bencher) {
+    let program = &VM_INTEGER_ARITHMETIC;
+    
+    bencher.bench_local(|| {
+        black_box(execute_program(&program.source).expect("VM execution should succeed"))
+    });
+}
+
+#[divan::bench]
+fn vm_value_operations_1(bencher: Bencher) {
+    let program = &VM_FLOATING_POINT;
+    
+    bencher.bench_local(|| {
+        black_box(execute_program(&program.source).expect("VM execution should succeed"))
+    });
+}
+
+fn main() {
+    divan::main();
+}

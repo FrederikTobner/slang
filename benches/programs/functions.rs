@@ -53,13 +53,8 @@ let result = factorial(5);
 );
 
 /// Array containing function programs for parser testing
-pub const FUNCTION_PARSER_PROGRAMS: &[&BenchmarkProgram] = &[
-    &FUNCTION_DEFINITION,
-    &COMPLEX_FUNCTION,
-];
+pub const FUNCTION_PARSER_PROGRAMS: &[&BenchmarkProgram] =
+    &[&FUNCTION_DEFINITION, &COMPLEX_FUNCTION];
 
 /// Array containing function programs for codegen testing
-pub const FUNCTION_CODEGEN_PROGRAMS: &[&BenchmarkProgram] = &[
-    &FUNCTION_CALLS,
-    &CONTROL_FLOW,
-];
+pub const FUNCTION_CODEGEN_PROGRAMS: &[&BenchmarkProgram] = &[&FUNCTION_CALLS, &CONTROL_FLOW];

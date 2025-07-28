@@ -1,5 +1,5 @@
-use crate::bytecode::{Chunk, NativeFunction, OpCode};
-use crate::value::{Value, ArithmeticOps, LogicalOps, ComparisonOps};
+use crate::bytecode::{Chunk, OpCode};
+use crate::value::{Value, ArithmeticOps, LogicalOps, ComparisonOps, NativeFunction};
 use crate::native;
 use std::collections::HashMap;
 
