@@ -5,8 +5,8 @@ use super::core::Parser;
 use super::error::ParseError;
 use crate::token::Tokentype;
 use slang_error::ErrorCode;
-use slang_ir::ast::{BlockExpr, ConditionalExpr, Expression, FunctionCallExpr, Statement};
-use slang_types::PrimitiveType;
+use slang_ir::ast::{BlockExpr, Expression};
+use slang_ir::{ExprFactory, StmtFactory}; // Import factory system
 
 /// Utilities parser module providing static methods for common parsing patterns
 pub struct UtilitiesParser;
@@ -18,14 +18,12 @@ impl UtilitiesParser {
     ///
     /// * `parser` - The parser instance
     /// * `name` - The name of the function being called
+    /// * `name_location` - The location of the function name token
     ///
     /// ### Returns
     ///
     /// The parsed function call expression or an error message
-    pub fn finish_call(parser: &mut Parser, name: String) -> Result<Expression, ParseError> {
-        let name_token = parser.previous();
-        let start_location = parser.source_location_from_token(name_token);
-
+    pub fn finish_call(parser: &mut Parser, name: String, name_location: slang_ir::location::Location) -> Result<Expression, ParseError> {
         let mut arguments = Vec::new();
 
         if !parser.check(&Tokentype::RightParen) {
@@ -49,16 +47,13 @@ impl UtilitiesParser {
             ));
         }
 
-        let closing_paren_token = parser.previous();
-        let end_location = parser.source_location_from_token(closing_paren_token);
-        let span_location = start_location.span_to(&end_location);
-
-        Ok(Expression::Call(FunctionCallExpr {
+        // Create function call using factory with original name location
+        // The factory will handle extending the location to include arguments
+        Ok(Expression::Call(slang_ir::ExprFactory::call_expr_with_location(
             name,
             arguments,
-            expr_type: PrimitiveType::Unknown.into(),
-            location: span_location,
-        }))
+            name_location,
+        )))
     }
 
     /// Parses a conditional expression (if/else expression)
@@ -71,9 +66,6 @@ impl UtilitiesParser {
     ///
     /// The parsed conditional expression or an error message
     pub fn conditional_expression(parser: &mut Parser) -> Result<Expression, ParseError> {
-        let if_token_pos = parser.previous().pos;
-        let (line, column) = parser.line_info.get_line_col(if_token_pos);
-
         let condition = parser.expression()?;
 
         if !parser.match_token(&Tokentype::LeftBrace) {
@@ -98,17 +90,12 @@ impl UtilitiesParser {
 
         let else_branch = Self::parse_block_expression(parser)?;
 
-        let end_pos = parser.previous().pos + parser.previous().lexeme.len();
-        let location =
-            slang_ir::location::Location::new(if_token_pos, line, column, end_pos - if_token_pos);
-
-        Ok(Expression::Conditional(ConditionalExpr {
-            condition: Box::new(condition),
-            then_branch: Box::new(Expression::Block(then_branch)),
-            else_branch: Box::new(Expression::Block(else_branch)),
-            expr_type: PrimitiveType::Unknown.into(),
-            location,
-        }))
+        // Use factory for automatic location calculation from operands
+        Ok(ExprFactory::conditional(
+            condition,
+            ExprFactory::block_from_expr(then_branch),
+            ExprFactory::block_from_expr(else_branch),
+        ))
     }
 
     /// Parses a block expression - a sequence of statements with an optional return expression
@@ -121,21 +108,18 @@ impl UtilitiesParser {
     ///
     /// The parsed block expression or an error message
     pub fn parse_block_expression(parser: &mut Parser) -> Result<BlockExpr, ParseError> {
-        let start_pos = parser.current;
-        let (line, column) = parser.line_info.get_line_col(parser.tokens[start_pos].pos);
-
         let mut statements = Vec::new();
-        let mut return_expr: Option<Box<Expression>> = None;
+        let mut return_expr: Option<Expression> = None;
 
         while !parser.check(&Tokentype::RightBrace) && !parser.is_at_end() {
             let checkpoint = parser.current;
 
             if let Ok(expr) = parser.expression() {
                 if parser.check(&Tokentype::RightBrace) {
-                    return_expr = Some(Box::new(expr));
+                    return_expr = Some(expr);
                     break;
                 } else if parser.match_token(&Tokentype::Semicolon) {
-                    statements.push(Statement::Expression(expr));
+                    statements.push(StmtFactory::expression(expr));
                 } else {
                     parser.current = checkpoint;
                     statements.push(parser.statement()?);
@@ -150,19 +134,13 @@ impl UtilitiesParser {
             return Err(parser.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after block"));
         }
 
-        let end_pos = parser.previous().pos + parser.previous().lexeme.len();
-        let location = slang_ir::location::Location::new(
-            parser.tokens[start_pos].pos,
-            line,
-            column,
-            end_pos - parser.tokens[start_pos].pos,
-        );
-
-        Ok(BlockExpr {
-            statements,
-            return_expr,
-            expr_type: PrimitiveType::Unknown.into(),
-            location,
-        })
+        // Use factory for automatic location calculation from statements and return expression
+        let block_expr = ExprFactory::block(statements, return_expr);
+        
+        // Extract the BlockExpr from the Expression::Block wrapper
+        match block_expr {
+            Expression::Block(block) => Ok(block),
+            _ => unreachable!("ExprFactory::block should always return Expression::Block"),
+        }
     }
 }

@@ -270,7 +270,7 @@ impl CompilationContext {
         type_kind: TypeKind,
     ) -> Result<TypeId, String> {
         if self.symbol_table.lookup(name).is_some() {
-            return Err(format!("Symbol '{}' is already defined.", name));
+            return Err(format!("Symbol '{name}' is already defined."));
         }
 
         let type_id = self.type_registry.register_type(name, type_kind);

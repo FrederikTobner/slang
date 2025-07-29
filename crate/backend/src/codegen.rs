@@ -30,6 +30,12 @@ pub fn generate_bytecode(statements: &[Statement]) -> CompileResult<Chunk> {
     compiler.compile(statements)
 }
 
+impl Default for CodeGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CodeGenerator {
     /// Creates a new compiler with an empty chunk
     pub fn new() -> Self {
@@ -72,9 +78,7 @@ impl CodeGenerator {
     /// A CompileResult containing the compiled bytecode chunk or errors
     fn compile(mut self, statements: &[Statement]) -> CompileResult<Chunk> {
         for stmt in statements {
-            stmt.accept(&mut self).unwrap_or_else(|_| {
-                // Error already added to self.errors
-            });
+            stmt.accept(&mut self).unwrap_or(());
         }
 
         self.emit_op(OpCode::Return);
@@ -97,9 +101,7 @@ impl CodeGenerator {
     /// CompileResult indicating success or containing errors
     pub fn compile_statements(&mut self, statements: &[Statement]) -> CompileResult<()> {
         for stmt in statements {
-            stmt.accept(self).unwrap_or_else(|_| {
-                // Error already added to self.errors
-            });
+            stmt.accept(self).unwrap_or(());
         }
         
         if self.errors.is_empty() {

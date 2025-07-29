@@ -79,20 +79,20 @@ impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CliError::Io { source, path, .. } => {
-                write!(f, "Error reading file '{}': {}", path, source)
+                write!(f, "Error reading file '{path}': {source}")
             }
             CliError::Zip {
                 source, context, ..
             } => {
-                write!(f, "{}: {}", context, source)
+                write!(f, "{context}: {source}")
             }
             CliError::Serialization {
                 source, context, ..
             } => {
-                write!(f, "{}: {}", context, source)
+                write!(f, "{context}: {source}",)
             }
             CliError::Generic { message, .. } => {
-                write!(f, "{}", message)
+                write!(f, "{message}")
             }
         }
     }

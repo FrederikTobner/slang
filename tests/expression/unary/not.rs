@@ -8,10 +8,9 @@ use rstest::rstest;
 fn with_boolean_variable(#[case] input: &str, #[case] expected: &str) {
     let program = format!(
         r#"
-        let a: bool = {};
+        let a: bool = {input};
         print_value(!a);
-    "#,
-        input
+    "#
     );
     execute_program_and_assert(&program, expected);
 }
@@ -20,7 +19,7 @@ fn with_boolean_variable(#[case] input: &str, #[case] expected: &str) {
 #[case("false", "true")]
 #[case("true", "false")]
 fn with_boolean_literal(#[case] input: &str, #[case] expected: &str) {
-    let program = format!("print_value(!{});", input);
+    let program = format!("print_value(!{input});");
     execute_program_and_assert(&program, expected);
 }
 
@@ -30,10 +29,9 @@ fn with_boolean_literal(#[case] input: &str, #[case] expected: &str) {
 fn double_not_with_boolean_variable(#[case] input: &str) {
     let program = format!(
         r#"
-        let a: bool = {};
+        let a: bool = {input};
         print_value(!(!a));
-    "#,
-        input
+    "#
     );
     execute_program_and_assert(&program, input);
 }
@@ -42,7 +40,7 @@ fn double_not_with_boolean_variable(#[case] input: &str) {
 #[case("false")]
 #[case("true")]
 fn double_not_with_boolean_literal(#[case] input: &str) {
-    let program = format!("print_value(!(!{}));", input);
+    let program = format!("print_value(!(!{input}));");
     execute_program_and_assert(&program, input);
 }
 
@@ -54,17 +52,15 @@ fn double_not_with_boolean_literal(#[case] input: &str) {
 fn with_integer(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 42;
+        let a: {type_name} = 42;
         print_value(!a);
-    "#,
-        type_name
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::InvalidUnaryOperation,
         &format!(
-            "Boolean not operator '!' can only be applied to boolean types, but got {}",
-            type_name
+            "Boolean not operator '!' can only be applied to boolean types, but got {type_name}"
         ),
     );
 }
@@ -75,17 +71,15 @@ fn with_integer(#[case] type_name: &str) {
 fn with_float(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 42.0;
+        let a: {type_name} = 42.0;
         print_value(!a);
-    "#,
-        type_name
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::InvalidUnaryOperation,
         &format!(
-            "Boolean not operator '!' can only be applied to boolean types, but got {}",
-            type_name
+            "Boolean not operator '!' can only be applied to boolean types, but got {type_name}"
         ),
     );
 }

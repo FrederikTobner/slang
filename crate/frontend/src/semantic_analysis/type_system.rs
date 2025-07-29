@@ -67,8 +67,8 @@ pub fn check_unspecified_int_for_type(
                         || context.get_type_name(target_type) == "u64"
                     {
                         return Err(SemanticAnalysisError::ValueOutOfRange {
-                            value: format!("-{}", n),
-                            target_type: target_type.clone(),
+                            value: format!("-{n}"),
+                            target_type: *target_type,
                             is_float: false,
                             location: expr.location(),
                         });
@@ -83,18 +83,18 @@ pub fn check_unspecified_int_for_type(
             let value_in_range = context.check_value_in_range(n, target_type);
 
             if value_in_range {
-                return Ok(target_type.clone());
+                return Ok(*target_type);
             } else {
                 return Err(SemanticAnalysisError::ValueOutOfRange {
                     value: n.to_string(),
-                    target_type: target_type.clone(),
+                    target_type: *target_type,
                     is_float: false,
                     location: expr.location(),
                 });
             }
         }
     }
-    Ok(target_type.clone())
+    Ok(*target_type)
 }
 
 /// Checks if an unspecified float literal is in the valid range for a target type.
@@ -119,18 +119,18 @@ pub fn check_unspecified_float_for_type(
             let value_in_range = context.check_float_value_in_range(f, target_type);
 
             if value_in_range {
-                return Ok(target_type.clone());
+                return Ok(*target_type);
             } else {
                 return Err(SemanticAnalysisError::ValueOutOfRange {
                     value: f.to_string(),
-                    target_type: target_type.clone(),
+                    target_type: *target_type,
                     is_float: true,
                     location: expr.location(),
                 });
             }
         }
     }
-    Ok(target_type.clone())
+    Ok(*target_type)
 }
 
 /// Converts unspecified literal types to concrete types.
@@ -178,17 +178,17 @@ pub fn determine_let_statement_type(
         if is_unsigned_type(context, &let_stmt.expr_type) {
             check_unspecified_int_for_type(context, &let_stmt.value, &let_stmt.expr_type)?;
         }
-        return Ok(let_stmt.expr_type.clone());
+        return Ok(let_stmt.expr_type);
     }
 
     if context.get_function_type(&let_stmt.expr_type).is_some()
         && context.get_function_type(&expr_type).is_some()
     {
         if let_stmt.expr_type == expr_type {
-            return Ok(let_stmt.expr_type.clone());
+            return Ok(let_stmt.expr_type);
         } else {
             return Err(SemanticAnalysisError::TypeMismatch {
-                expected: let_stmt.expr_type.clone(),
+                expected: let_stmt.expr_type,
                 actual: expr_type,
                 context: Some(let_stmt.name.clone()),
                 location: let_stmt.location,
@@ -205,7 +205,7 @@ pub fn determine_let_statement_type(
     }
 
     Err(SemanticAnalysisError::TypeMismatch {
-        expected: let_stmt.expr_type.clone(),
+        expected: let_stmt.expr_type,
         actual: expr_type,
         context: Some(let_stmt.name.clone()),
         location: let_stmt.location,
@@ -231,7 +231,7 @@ pub fn handle_unspecified_int_assignment(
         check_unspecified_int_for_type(context, &let_stmt.value, &let_stmt.expr_type)
     } else {
         Err(SemanticAnalysisError::TypeMismatch {
-            expected: let_stmt.expr_type.clone(),
+            expected: let_stmt.expr_type,
             actual: TypeId::unspecified_int(),
             context: Some(let_stmt.name.clone()),
             location: let_stmt.location,
@@ -258,7 +258,7 @@ pub fn handle_unspecified_float_assignment(
         check_unspecified_float_for_type(context, &let_stmt.value, &let_stmt.expr_type)
     } else {
         Err(SemanticAnalysisError::TypeMismatch {
-            expected: let_stmt.expr_type.clone(),
+            expected: let_stmt.expr_type,
             actual: TypeId::unspecified_float(),
             context: Some(let_stmt.name.clone()),
             location: let_stmt.location,
@@ -313,8 +313,8 @@ pub fn check_mixed_arithmetic_operation(
 
     Err(SemanticAnalysisError::OperationTypeMismatch {
         operator: bin_expr.operator.to_string(),
-        left_type: left_type.clone(),
-        right_type: right_type.clone(),
+        left_type: *left_type,
+        right_type: *right_type,
         location: bin_expr.location,
     })
 }

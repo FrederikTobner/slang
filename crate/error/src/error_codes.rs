@@ -186,13 +186,13 @@ impl ErrorCode {
     /// Check if this is a parse error (1000-1999 range)
     pub fn is_parse_error(&self) -> bool {
         let code = self.code();
-        code >= 1000 && code < 2000
+        (1000..2000).contains(&code)
     }
 
     /// Check if this is a semantic error (2000-2999 range)
     pub fn is_semantic_error(&self) -> bool {
         let code = self.code();
-        code >= 2000 && code < 3000
+        (2000..3000).contains(&code)
     }
 }
 

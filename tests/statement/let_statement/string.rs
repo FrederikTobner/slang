@@ -26,10 +26,9 @@ fn string_type_inference() {
 fn from_boolean_literal(#[case] value: &str) {
     let program = format!(
         r#"
-        let a: string = {};
+        let a: string = {value};
         print_value(a);
-    "#,
-        value
+    "#
     );
     execute_program_expect_error(
         &program,
@@ -47,17 +46,15 @@ fn from_boolean_literal(#[case] value: &str) {
 fn from_integer_literal(#[case] value: &str, #[case] _type: &str) {
     let program = format!(
         r#"
-        let a: string = {};
+        let a: string = {value};
         print_value(a);
-    "#,
-        value
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::TypeMismatch,
         &format!(
-            "Type mismatch: variable a is string but expression is {}",
-            _type
+            "Type mismatch: variable a is string but expression is {_type}"
         ),
     );
 }
@@ -69,17 +66,15 @@ fn from_integer_literal(#[case] value: &str, #[case] _type: &str) {
 fn from_float_literal(#[case] value: &str, #[case] _type: &str) {
     let program = format!(
         r#"
-        let a: string = {};
+        let a: string = {value};
         print_value(a);
-    "#,
-        value
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::TypeMismatch,
         &format!(
-            "Type mismatch: variable a is string but expression is {}",
-            _type
+            "Type mismatch: variable a is string but expression is {_type}"
         ),
     );
 }
@@ -90,7 +85,7 @@ fn using_string_type_as_name() {
         let string: bool = true;
     "#;
     execute_program_expect_error(
-        &program,
+        program,
         ErrorCode::SymbolRedefinition,
         "Symbol \'string\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.",
     );

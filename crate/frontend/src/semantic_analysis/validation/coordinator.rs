@@ -130,7 +130,7 @@ impl<'a> TypeCheckingCoordinator<'a> {
         } else if self.is_float_type(target_type) {
             check_unspecified_float_for_type(self.checker.context(), expr, target_type)
         } else {
-            Ok(target_type.clone())
+            Ok(*target_type)
         }
     }
 

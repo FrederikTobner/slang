@@ -6,12 +6,35 @@ use super::expressions::ExpressionParser;
 use super::literals::LiteralParser;
 use super::statements::StatementParser;
 use super::types::TypeParser;
-use super::utilities::UtilitiesParser;
 use crate::token::{Token, Tokentype};
 use slang_error::{CompileResult, CompilerError, ErrorCode, LineInfo};
-use slang_ir::ast::{BlockExpr, Expression, Statement};
+use slang_ir::ast::{BlockExpr, Expression, Statement, BinaryOperator};
+use slang_ir::factory::locations::ParserLocationUtils;
+
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
+
+/// Position information extracted from tokens
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TokenPosition {
+    /// Starting position in source
+    pub pos: usize,
+    /// Length of the token
+    pub len: usize,
+}
+
+impl TokenPosition {
+    /// Convert to a source location using line info
+    pub fn to_location(self, line_info: &LineInfo) -> slang_ir::location::Location {
+        let (line, column) = line_info.get_line_col(self.pos);
+        slang_ir::location::Location::new(self.pos, line, column, self.len)
+    }
+    
+    /// Calculate end position
+    pub fn end_pos(self) -> usize {
+        self.pos + self.len
+    }
+}
 
 /// Parser that converts tokens into an abstract syntax tree
 pub struct Parser<'a> {
@@ -153,25 +176,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Consumes the current token if it matches any of the expected types
-    ///
-    /// ### Arguments
-    ///
-    /// * `types` - The token types to match
-    ///
-    /// ### Returns
-    ///
-    /// true if a token was consumed, false otherwise
-    pub(super) fn match_any(&mut self, types: &[Tokentype]) -> bool {
-        for token_type in types.iter() {
-            if self.check(token_type) {
-                self.advance();
-                return true;
-            }
-        }
-        false
-    }
-
     /// Checks if the next token matches the given type (lookahead of 2)
     ///
     /// ### Arguments
@@ -249,8 +253,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // Utility methods
-
     /// Creates a SourceLocation from a token's position and line information
     /// 
     /// ### Arguments
@@ -265,11 +267,19 @@ impl<'a> Parser<'a> {
         slang_ir::location::Location::new(token.pos, line, column, token.lexeme.len())
     }
 
-    // TEMPORARY: Include all original parsing methods for Phase 1 compatibility
-    // These will be moved to their respective modules in later phases
-
-    // Include all original methods from parser_old.rs here temporarily
-    // This is a temporary measure to ensure the parser works in Phase 1
+    /// Creates a Location spanning from one position to another
+    /// 
+    /// ### Arguments
+    /// 
+    /// * `start_pos` - The starting position
+    /// * `end_pos` - The ending position (exclusive)
+    /// 
+    /// ### Returns
+    /// 
+    /// A Location struct covering the range from start_pos to end_pos
+    pub(super) fn location_from_range(&self, start_pos: usize, end_pos: usize) -> slang_ir::location::Location {
+        slang_ir::location::Location::from_range_with_line_info(start_pos, end_pos, |p| self.line_info.get_line_col(p))
+    }
 
     /// Parses a single statement
     ///
@@ -280,13 +290,11 @@ impl<'a> Parser<'a> {
         StatementParser::parse_statement(self)
     }
 
-    // Expression parsing methods now delegated to ExpressionParser
 
     pub(super) fn expression(&mut self) -> Result<Expression, ParseError> {
         ExpressionParser::parse_expression(self)
     }
 
-    // Type and literal parsing methods (temporary - will move to respective modules in Phase 4)
 
     pub(super) fn parse_type(&mut self) -> Result<TypeId, ParseError> {
         TypeParser::parse_type(self)
@@ -300,19 +308,178 @@ impl<'a> Parser<'a> {
         LiteralParser::parse_float(self)
     }
 
-    pub(super) fn finish_call(&mut self, name: String) -> Result<Expression, ParseError> {
-        UtilitiesParser::finish_call(self, name)
+    pub(super) fn finish_call(&mut self, name: String, name_location: slang_ir::location::Location) -> Result<Expression, ParseError> {
+        ExpressionParser::finish_call(self, name, name_location)
     }
 
     pub(super) fn conditional_expression(&mut self) -> Result<Expression, ParseError> {
-        UtilitiesParser::conditional_expression(self)
+        ExpressionParser::conditional_expression(self)
     }
 
     pub(super) fn parse_block_expression(&mut self) -> Result<BlockExpr, ParseError> {
-        UtilitiesParser::parse_block_expression(self)
+        ExpressionParser::parse_block_expression(self)
     }
 
     pub(super) fn parse_function_type_expression(&mut self) -> Result<Expression, ParseError> {
         TypeParser::parse_function_type_expression(self)
+    }
+
+    // Enhanced Token Matching API Methods
+    // ===================================
+    // These methods follow the design specification for zero-copy token access
+    // patterns, eliminating the need for frequent previous() calls.
+
+    /// Enhanced token matching that returns a reference to the matched token
+    /// 
+    /// ### Arguments
+    /// * `token_type` - The token type to match against
+    /// 
+    /// ### Returns
+    /// * `Some(&Token)` - Reference to the consumed token if match succeeded
+    /// * `None` - If the current token doesn't match the expected type
+    /// 
+    /// ### Benefits
+    /// - Zero-copy: Returns reference instead of requiring previous() call
+    /// - Atomic operation: Match and access in single call
+    /// - Clear semantics: Option<&Token> clearly indicates success/failure
+    #[inline]
+    pub(super) fn match_token_ref(&mut self, token_type: &Tokentype) -> Option<&Token> {
+        if self.check(token_type) {
+            Some(self.advance()) // advance() already returns &Token
+        } else {
+            None
+        }
+    }
+
+    /// Enhanced multi-token matching with captured token reference
+    /// 
+    /// ### Arguments
+    /// * `types` - Array of token types to match against
+    /// 
+    /// ### Returns
+    /// * `Some(&Token)` - Reference to the matched token
+    /// * `None` - If no token types matched
+    #[inline]
+    pub(super) fn match_any_ref(&mut self, types: &[Tokentype]) -> Option<&Token> {
+        for token_type in types.iter() {
+            if self.check(token_type) {
+                return Some(self.advance());
+            }
+        }
+        None
+    }
+
+    /// Match integer literal token and return the token for use with parse_integer
+    pub(super) fn match_integer_literal_token(&mut self) -> bool {
+        self.match_token(&Tokentype::IntegerLiteral)
+    }
+
+    /// Match identifier token and return its name with position
+    pub(super) fn match_identifier_token(&mut self) -> Option<(&str, TokenPosition)> {
+        if let Some(token) = self.match_token_ref(&Tokentype::Identifier) {
+            Some((
+                &token.lexeme,
+                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Match string literal token and return its value with position
+    pub(super) fn match_string_literal_token(&mut self) -> Option<(&str, TokenPosition)> {
+        if let Some(token) = self.match_token_ref(&Tokentype::StringLiteral) {
+            Some((
+                &token.lexeme,
+                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Match boolean literal token and return its value with position
+    pub(super) fn match_boolean_literal_token(&mut self) -> Option<(&str, TokenPosition)> {
+        if let Some(token) = self.match_token_ref(&Tokentype::BooleanLiteral) {
+            Some((
+                &token.lexeme,
+                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Match equality operators (==, !=) specifically
+    pub(super) fn match_equality_operator(&mut self) -> Option<(BinaryOperator, TokenPosition)> {
+        if let Some(token) = self.match_any_ref(&[Tokentype::EqualEqual, Tokentype::NotEqual]) {
+            let operator = match token.token_type {
+                Tokentype::EqualEqual => BinaryOperator::Equal,
+                Tokentype::NotEqual => BinaryOperator::NotEqual,
+                _ => unreachable!(),
+            };
+            Some((
+                operator,
+                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Match comparison operators (>, <, >=, <=) specifically
+    pub(super) fn match_comparison_operator(&mut self) -> Option<(BinaryOperator, TokenPosition)> {
+        if let Some(token) = self.match_any_ref(&[
+            Tokentype::Greater, Tokentype::GreaterEqual,
+            Tokentype::Less, Tokentype::LessEqual,
+        ]) {
+            let operator = match token.token_type {
+                Tokentype::Greater => BinaryOperator::GreaterThan,
+                Tokentype::GreaterEqual => BinaryOperator::GreaterThanOrEqual,
+                Tokentype::Less => BinaryOperator::LessThan,
+                Tokentype::LessEqual => BinaryOperator::LessThanOrEqual,
+                _ => unreachable!(),
+            };
+            Some((
+                operator,
+                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Match term operators (+, -) specifically
+    pub(super) fn match_term_operator(&mut self) -> Option<(BinaryOperator, TokenPosition)> {
+        if let Some(token) = self.match_any_ref(&[Tokentype::Plus, Tokentype::Minus]) {
+            let operator = match token.token_type {
+                Tokentype::Plus => BinaryOperator::Add,
+                Tokentype::Minus => BinaryOperator::Subtract,
+                _ => unreachable!(),
+            };
+            Some((
+                operator,
+                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Match factor operators (*, /) specifically
+    pub(super) fn match_factor_operator(&mut self) -> Option<(BinaryOperator, TokenPosition)> {
+        if let Some(token) = self.match_any_ref(&[Tokentype::Multiply, Tokentype::Divide]) {
+            let operator = match token.token_type {
+                Tokentype::Multiply => BinaryOperator::Multiply,
+                Tokentype::Divide => BinaryOperator::Divide,
+                _ => unreachable!(),
+            };
+            Some((
+                operator,
+                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+            ))
+        } else {
+            None
+        }
     }
 }

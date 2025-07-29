@@ -41,11 +41,11 @@ impl<'a> TypeValidation<'a> {
     pub fn validate_function_declaration(&self, func_decl: &FunctionDeclarationStmt) -> SemanticResult {
         // Validate parameter types exist
         for param in &func_decl.parameters {
-            self.validate_type_exists(param.param_type.clone())?;
+            self.validate_type_exists(param.param_type)?;
         }
 
         // Validate return type exists
-        self.validate_type_exists(func_decl.return_type.clone())?;
+        self.validate_type_exists(func_decl.return_type)?;
 
         // Return a unit type for successful validation
         Ok(slang_types::TypeId::unit())
@@ -77,7 +77,7 @@ impl<'a> TypeValidation<'a> {
                 self.validate_function_declaration(func_decl)
             }
             Statement::Let(let_stmt) => {
-                self.validate_type_exists(let_stmt.expr_type.clone())?;
+                self.validate_type_exists(let_stmt.expr_type)?;
                 Ok(slang_types::TypeId::unit())
             }
             Statement::TypeDefinition(_type_def) => {

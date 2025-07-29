@@ -1,5 +1,6 @@
 pub mod registry;
 pub mod types;
+pub mod inference;
 
 pub use registry::TypeRegistry;
 pub use types::{FunctionType, PrimitiveType, StructType, TypeId, TypeInfo, TypeKind};
@@ -8,3 +9,4 @@ pub use types::{
     TYPE_NAME_INT, TYPE_NAME_STRING, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNIT,
     TYPE_NAME_UNKNOWN,
 };
+pub use inference::{TypePromotion, TypeQueries, TypeOperations};

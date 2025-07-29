@@ -73,7 +73,7 @@ impl CompilerError {
             .get_line_text(line)
             .unwrap_or("<line not available>");
 
-        let line_num_str = format!("{}", line);
+        let line_num_str = format!("{line}");
 
         let token_display_length = self.token_length.unwrap_or(1).max(1);
         let error_marker = " ".repeat(col.saturating_sub(1))
@@ -96,7 +96,7 @@ impl CompilerError {
             col
         );
 
-        result += &format!("{indent}{}\n", pipe);
+        result += &format!("{indent}{pipe}\n");
         result += &format!("{} {} {}\n", line_num_str.yellow(), pipe, current_line_text);
         result += &format!(
             "{indent}{} {} {}\n",

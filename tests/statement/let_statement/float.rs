@@ -9,10 +9,9 @@ use rstest::rstest;
 fn from_literal(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a{} = 42.0;
+        let a{type_name} = 42.0;
         print_value(a);
-    "#,
-        type_name
+    "#
     );
     execute_program_and_assert(&program, "42");
 }
@@ -23,10 +22,9 @@ fn from_literal(#[case] type_name: &str) {
 fn from_literal_with_type_suffix(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a = 42.0{};
+        let a = 42.0{type_name};
         print_value(a);
-    "#,
-        type_name
+    "#
     );
     execute_program_and_assert(&program, "42");
 }
@@ -38,10 +36,9 @@ fn from_literal_with_type_suffix(#[case] type_name: &str) {
 fn from_binary_expression(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a = 20.0{} + 22.0{};
+        let a = 20.0{type_name} + 22.0{type_name};
         print_value(a);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "42");
 }
@@ -52,16 +49,14 @@ fn from_binary_expression(#[case] type_name: &str) {
 fn from_true_literal(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = true;
-    "#,
-        type_name
+        let a: {type_name} = true;
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::TypeMismatch,
         &format!(
-            "Type mismatch: variable a is {} but expression is bool",
-            type_name
+            "Type mismatch: variable a is {type_name} but expression is bool"
         ),
     );
 }
@@ -72,16 +67,14 @@ fn from_true_literal(#[case] type_name: &str) {
 fn from_false_literal(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = false;
-    "#,
-        type_name
+        let a: {type_name} = false;
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::TypeMismatch,
         &format!(
-            "Type mismatch: variable a is {} but expression is bool",
-            type_name
+            "Type mismatch: variable a is {type_name} but expression is bool"
         ),
     );
 }
@@ -92,16 +85,14 @@ fn from_false_literal(#[case] type_name: &str) {
 fn from_string_literal(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = "hello";
-    "#,
-        type_name
+        let a: {type_name} = "hello";
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::TypeMismatch,
         &format!(
-            "Type mismatch: variable a is {} but expression is string",
-            type_name
+            "Type mismatch: variable a is {type_name} but expression is string"
         ),
     );
 }
@@ -112,16 +103,14 @@ fn from_string_literal(#[case] type_name: &str) {
 fn from_integer_literal(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 42;
-    "#,
-        type_name
+        let a: {type_name} = 42;
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::TypeMismatch,
         &format!(
-            "Type mismatch: variable a is {} but expression is int",
-            type_name
+            "Type mismatch: variable a is {type_name} but expression is int"
         ),
     );
 }
@@ -132,16 +121,14 @@ fn from_integer_literal(#[case] type_name: &str) {
 fn from_integer_literal_with_i32_suffix(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 42i32;
-    "#,
-        type_name
+        let a: {type_name} = 42i32;
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::TypeMismatch,
         &format!(
-            "Type mismatch: variable a is {} but expression is i32",
-            type_name
+            "Type mismatch: variable a is {type_name} but expression is i32"
         ),
     );
 }
@@ -152,16 +139,14 @@ fn from_integer_literal_with_i32_suffix(#[case] type_name: &str) {
 fn from_integer_literal_with_i64_suffix(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 42i64;
-    "#,
-        type_name
+        let a: {type_name} = 42i64;
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::TypeMismatch,
         &format!(
-            "Type mismatch: variable a is {} but expression is i64",
-            type_name
+            "Type mismatch: variable a is {type_name} but expression is i64"
         ),
     );
 }
@@ -172,16 +157,14 @@ fn from_integer_literal_with_i64_suffix(#[case] type_name: &str) {
 fn from_integer_literal_with_u32_suffix(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 42u32;
-    "#,
-        type_name
+        let a: {type_name} = 42u32;
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::TypeMismatch,
         &format!(
-            "Type mismatch: variable a is {} but expression is u32",
-            type_name
+            "Type mismatch: variable a is {type_name} but expression is u32"
         ),
     );
 }
@@ -192,16 +175,14 @@ fn from_integer_literal_with_u32_suffix(#[case] type_name: &str) {
 fn from_float_literal_with_u64_suffix(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 42u64;
-    "#,
-        type_name
+        let a: {type_name} = 42u64;
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::TypeMismatch,
         &format!(
-            "Type mismatch: variable a is {} but expression is u64",
-            type_name
+            "Type mismatch: variable a is {type_name} but expression is u64"
         ),
     );
 }
@@ -224,16 +205,14 @@ fn float_type() {
 fn using_type_as_variable_name(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let {} = 42.0;
-    "#,
-        type_name
+        let {type_name} = 42.0;
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::SymbolRedefinition,
         &format!(
-            "Symbol \'{}\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.",
-            type_name
+            "Symbol \'{type_name}\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol."
         ),
     );
 }

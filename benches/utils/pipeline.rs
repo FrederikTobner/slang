@@ -52,7 +52,7 @@ pub fn execute_program(program: &str) -> Result<(), String> {
     match pipeline.execute_all_stages() {
         CompilationResult::Success { chunk, .. } => match vm.interpret(&chunk) {
             Ok(()) => Ok(()),
-            Err(err) => Err(format!("VM execution failed: {}", err)),
+            Err(err) => Err(format!("VM execution failed: {err}")),
         },
         CompilationResult::Failed { diagnostics } => {
             let error_msg = format!(

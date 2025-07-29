@@ -14,7 +14,8 @@ fn vm_execution_performance_simple(bencher: Bencher) {
     let program = &VM_SIMPLE_ARITHMETIC;
     
     bencher.bench_local(|| {
-        black_box(execute_program(&program.source).expect("VM execution should succeed"))
+        execute_program(program.source).expect("VM execution should succeed");
+        black_box(())
     });
 }
 
@@ -23,7 +24,8 @@ fn vm_execution_performance_complex(bencher: Bencher) {
     let program = &VM_FUNCTION_CALLS;
     
     bencher.bench_local(|| {
-        black_box(execute_program(&program.source).expect("VM execution should succeed"))
+        execute_program(program.source).expect("VM execution should succeed");
+        black_box(())
     });
 }
 
@@ -37,14 +39,14 @@ fn vm_scalability_fibonacci_depth(bencher: Bencher, depth: usize) {
             }}
             return fibonacci(n - 1) + fibonacci(n - 2);
         }}
-        let result = fibonacci({});
+        let result = fibonacci({depth});
         print_value(result);
-    "#,
-        depth
+    "#
     );
     
     bencher.bench_local(|| {
-        black_box(execute_program(&program).expect("VM execution should succeed"))
+        execute_program(&program).expect("VM execution should succeed");
+        black_box(())
     });
 }
 
@@ -53,7 +55,8 @@ fn vm_scalability_function_calls(bencher: Bencher, count: usize) {
     let program = ProgramTemplates::function_heavy(count);
     
     bencher.bench_local(|| {
-         black_box(execute_program(&program.source).expect("VM execution should succeed"))
+         execute_program(&program.source).expect("VM execution should succeed");
+         black_box(())
     });
 }
 
@@ -62,7 +65,8 @@ fn vm_value_operations_0(bencher: Bencher) {
     let program = &VM_INTEGER_ARITHMETIC;
     
     bencher.bench_local(|| {
-        black_box(execute_program(&program.source).expect("VM execution should succeed"))
+        execute_program(program.source).expect("VM execution should succeed");
+        black_box(())
     });
 }
 
@@ -71,7 +75,8 @@ fn vm_value_operations_1(bencher: Bencher) {
     let program = &VM_FLOATING_POINT;
     
     bencher.bench_local(|| {
-        black_box(execute_program(&program.source).expect("VM execution should succeed"))
+        execute_program(program.source).expect("VM execution should succeed");
+        black_box(())
     });
 }
 

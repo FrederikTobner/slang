@@ -5,11 +5,10 @@ use super::core::Parser;
 use super::error::ParseError;
 use crate::token::Tokentype;
 use slang_error::ErrorCode;
-use slang_ir::Location;
 use slang_ir::ast::{
-    AssignmentStatement, Expression, FunctionDeclarationStmt, IfStatement, LetStatement, Parameter,
-    ReturnStatement, Statement, TypeDefinitionStmt,
+    Expression, Parameter, Statement,
 };
+use slang_ir::StmtFactory; // Import factory system
 use slang_types::PrimitiveType;
 
 /// Statement parser that handles all statement types
@@ -55,19 +54,16 @@ impl StatementParser {
     fn parse_let_statement(parser: &mut Parser) -> Result<Statement, ParseError> {
         let is_mutable = parser.match_token(&Tokentype::Mut);
 
-        if !parser.check(&Tokentype::Identifier) {
+        let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
+            (name.to_string(), position)
+        } else {
             return Err(parser.error(
                 ErrorCode::ExpectedIdentifier,
                 "Expected identifier after 'let'",
             ));
-        }
+        };
 
-        let token_pos = parser.peek().pos;
-        let (line, column) = parser.line_info.get_line_col(token_pos);
-
-        let token = parser.advance();
-        let name = token.lexeme.clone();
-        let location = Location::new(token_pos, line, column, name.len());
+        let location = parser.location_from_range(position.pos, position.end_pos());
         let mut var_type = PrimitiveType::Unknown.into();
 
         if parser.match_token(&Tokentype::Colon) {
@@ -90,13 +86,24 @@ impl StatementParser {
             ));
         }
 
-        Ok(Statement::Let(LetStatement {
-            name,
-            is_mutable,
-            value: expr,
-            expr_type: var_type,
-            location,
-        }))
+        // Use factory based on whether we have explicit type annotation
+        let stmt = if var_type != PrimitiveType::Unknown.into() {
+            // Explicit type annotation - use typed declaration  
+            if is_mutable {
+                Statement::Let(StmtFactory::let_mut_typed_stmt_with_location(name, var_type, expr, location))
+            } else {
+                Statement::Let(StmtFactory::let_typed_stmt_with_location(name, var_type, expr, location))
+            }
+        } else {
+            // No explicit type - use type inference with proper location
+            if is_mutable {
+                Statement::Let(StmtFactory::let_mut_stmt_with_location(name, expr, location))
+            } else {
+                Statement::Let(StmtFactory::let_var_stmt_with_location(name, expr, location))
+            }
+        };
+
+        Ok(stmt)
     }
 
     /// Parses a function declaration statement
@@ -109,17 +116,16 @@ impl StatementParser {
     ///
     /// The parsed function declaration or an error message
     fn parse_function_declaration(parser: &mut Parser) -> Result<Statement, ParseError> {
-        if !parser.check(&Tokentype::Identifier) {
+        let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
+            (name.to_string(), position)
+        } else {
             return Err(parser.error(
                 ErrorCode::ExpectedIdentifier,
                 &format!("Expected function name found {}", parser.peek().token_type),
             ));
-        }
+        };
 
-        let token = parser.advance();
-        let name = token.lexeme.clone();
-        let token_pos = token.pos;
-        let (line, column) = parser.line_info.get_line_col(token_pos);
+        let name_location = parser.location_from_range(position.pos, position.end_pos());
 
         if !parser.match_token(&Tokentype::LeftParen) {
             return Err(parser.error(
@@ -171,16 +177,7 @@ impl StatementParser {
 
         let body = parser.parse_block_expression()?;
 
-        let end_pos = parser.previous().pos + parser.previous().lexeme.len();
-        let location = Location::new(token_pos, line, column, end_pos - token_pos);
-
-        Ok(Statement::FunctionDeclaration(FunctionDeclarationStmt {
-            name,
-            parameters,
-            return_type,
-            body,
-            location,
-        }))
+        Ok(Statement::FunctionDeclaration(StmtFactory::function_stmt_with_location(name, parameters, return_type, body, name_location)))
     }
 
     /// Parses a return statement
@@ -193,9 +190,7 @@ impl StatementParser {
     ///
     /// The parsed return statement or an error message
     fn parse_return_statement(parser: &mut Parser) -> Result<Statement, ParseError> {
-        let return_token = parser.previous();
-        let token_pos = return_token.pos;
-        let (line, column) = parser.line_info.get_line_col(token_pos);
+        let return_token_pos = parser.previous().pos;
 
         let value = if !parser.check(&Tokentype::Semicolon) {
             Some(parser.expression()?)
@@ -210,10 +205,18 @@ impl StatementParser {
             ));
         }
 
-        let end_pos = parser.previous().pos + parser.previous().lexeme.len();
-        let location = Location::new(token_pos, line, column, end_pos - token_pos);
+        // Use utility function for cleaner location calculation
+        let semicolon_end = parser.previous().pos + parser.previous().lexeme.len();
+        let location = parser.location_from_range(return_token_pos, semicolon_end);
 
-        Ok(Statement::Return(ReturnStatement { value, location }))
+        // Use factory based on whether we have a return value
+        let stmt = if let Some(expr) = value {
+            Statement::Return(StmtFactory::return_value_stmt_with_location(expr, location))
+        } else {
+            Statement::Return(StmtFactory::return_void_stmt_with_location(location))
+        };
+
+        Ok(stmt)
     }
 
     /// Parses a type definition statement (struct)
@@ -226,16 +229,16 @@ impl StatementParser {
     ///
     /// The parsed type definition or an error message
     fn parse_type_definition(parser: &mut Parser) -> Result<Statement, ParseError> {
-        if !parser.check(&Tokentype::Identifier) {
+        let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
+            (name.to_string(), position)
+        } else {
             return Err(parser.error(
                 ErrorCode::ExpectedIdentifier,
                 "Expected struct name after 'struct' keyword",
             ));
-        }
+        };
 
-        let token = parser.peek();
-        let location = parser.source_location_from_token(token);
-        let name = parser.advance().lexeme.clone();
+        let location = parser.location_from_range(position.pos, position.end_pos());
 
         if !parser.match_token(&Tokentype::LeftBrace) {
             return Err(parser.error(
@@ -247,11 +250,11 @@ impl StatementParser {
         let mut fields = Vec::new();
 
         while !parser.check(&Tokentype::RightBrace) && !parser.is_at_end() {
-            if !parser.check(&Tokentype::Identifier) {
+            let field_name = if let Some((name, _position)) = parser.match_identifier_token() {
+                name.to_string()
+            } else {
                 return Err(parser.error(ErrorCode::ExpectedIdentifier, "Expected field name"));
-            }
-
-            let field_name = parser.advance().lexeme.clone();
+            };
 
             if !parser.match_token(&Tokentype::Colon) {
                 return Err(parser.error(ErrorCode::ExpectedColon, "Expected ':' after field name"));
@@ -281,11 +284,7 @@ impl StatementParser {
             ));
         }
 
-        Ok(Statement::TypeDefinition(TypeDefinitionStmt {
-            name,
-            fields,
-            location,
-        }))
+        Ok(Statement::TypeDefinition(StmtFactory::type_definition_stmt_with_location(name, fields, location)))
     }
 
     /// Parses an assignment statement
@@ -298,17 +297,16 @@ impl StatementParser {
     ///
     /// The parsed assignment statement or an error message
     fn parse_assignment_statement(parser: &mut Parser) -> Result<Statement, ParseError> {
-        if !parser.check(&Tokentype::Identifier) {
+        let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
+            (name.to_string(), position)
+        } else {
             return Err(parser.error(
                 ErrorCode::ExpectedIdentifier,
                 "Expected identifier for assignment",
             ));
-        }
+        };
 
-        let token_pos = parser.peek().pos;
-        let (line, column) = parser.line_info.get_line_col(token_pos);
-        let token = parser.advance();
-        let name = token.lexeme.clone();
+        let token_pos = position.pos;
 
         if !parser.match_token(&Tokentype::Equal) {
             return Err(parser.error(ErrorCode::ExpectedEquals, "Expected '=' for assignment"));
@@ -323,14 +321,11 @@ impl StatementParser {
             ));
         }
 
+        // Calculate proper location span using utility
         let end_pos = parser.previous().pos + parser.previous().lexeme.len();
-        let location = Location::new(token_pos, line, column, end_pos - token_pos);
+        let location = parser.location_from_range(token_pos, end_pos);
 
-        Ok(Statement::Assignment(AssignmentStatement {
-            name,
-            value,
-            location,
-        }))
+        Ok(Statement::Assignment(StmtFactory::assign_stmt_with_location(name, value, location)))
     }
 
     /// Parses an if statement
@@ -344,7 +339,6 @@ impl StatementParser {
     /// The parsed if statement or an error message
     fn parse_if_statement(parser: &mut Parser) -> Result<Statement, ParseError> {
         let if_token_pos = parser.previous().pos;
-        let (line, column) = parser.line_info.get_line_col(if_token_pos);
 
         let condition = parser.expression()?;
 
@@ -357,7 +351,7 @@ impl StatementParser {
 
         let then_branch = parser.parse_block_expression()?;
 
-        let else_branch = if parser.match_token(&Tokentype::Else) {
+        let else_expr = if parser.match_token(&Tokentype::Else) {
             if !parser.match_token(&Tokentype::LeftBrace) {
                 return Err(
                     parser.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after else")
@@ -369,14 +363,9 @@ impl StatementParser {
         };
 
         let end_pos = parser.previous().pos + parser.previous().lexeme.len();
-        let location = Location::new(if_token_pos, line, column, end_pos - if_token_pos);
+        let location = parser.location_from_range(if_token_pos, end_pos);
 
-        Ok(Statement::If(IfStatement {
-            condition,
-            then_branch,
-            else_branch,
-            location,
-        }))
+        Ok(Statement::If(StmtFactory::if_stmt_with_location(condition, then_branch, else_expr, location)))
     }
 
     /// Parses an expression statement
@@ -419,14 +408,11 @@ impl StatementParser {
     ///
     /// The parsed parameter or an error message
     fn parse_parameter(parser: &mut Parser) -> Result<Parameter, ParseError> {
-        if !parser.check(&Tokentype::Identifier) {
+        let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
+            (name.to_string(), position)
+        } else {
             return Err(parser.error(ErrorCode::ExpectedIdentifier, "Expected parameter name"));
-        }
-
-        let token_pos = parser.peek().pos;
-        let token = parser.advance();
-        let name = token.lexeme.clone();
-        let (line, column) = parser.line_info.get_line_col(token_pos);
+        };
 
         if !parser.match_token(&Tokentype::Colon) {
             return Err(parser.error(
@@ -436,7 +422,7 @@ impl StatementParser {
         }
 
         let param_type = parser.parse_type()?;
-        let location = Location::new(token_pos, line, column, name.len());
+        let location = parser.location_from_range(position.pos, position.end_pos());
 
         Ok(Parameter {
             name,

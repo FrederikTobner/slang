@@ -84,14 +84,14 @@ impl<'a> TypeChecker<'a> {
                     return Err(SemanticAnalysisError::ArgumentTypeMismatch {
                         function_name: "unknown".to_string(), // TODO: Pass function name from caller
                         argument_position: i + 1,
-                        expected: expected.clone(),
-                        actual: actual.clone(),
+                        expected: *expected,
+                        actual: *actual,
                         location: slang_ir::location::Location::default(),
                     });
                 }
             }
 
-            Ok(func_type.return_type.clone())
+            Ok(func_type.return_type)
         } else {
             Err(SemanticAnalysisError::UndefinedFunction {
                 name: "unknown".to_string(), // TODO: Pass function name from caller

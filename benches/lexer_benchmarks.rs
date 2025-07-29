@@ -16,9 +16,9 @@ fn lexer_performance(bencher: Bencher, size: usize) {
         bencher.bench_local(|| {
         
         let lexer = slang_frontend::Lexer::new(&program.source);
-        let result = black_box(lexer.tokenize());
         
-        result
+        
+        black_box(lexer.tokenize())
     });
 }
 
@@ -28,10 +28,10 @@ fn lexer_error_handling_0(bencher: Bencher) {
     
     bencher.bench_local(|| {
         
-        let lexer = slang_frontend::Lexer::new(&program.source);
-        let result = black_box(lexer.tokenize());
+        let lexer = slang_frontend::Lexer::new(program.source);
         
-        result
+        
+        black_box(lexer.tokenize())
     });
 }
 
@@ -40,10 +40,10 @@ fn lexer_error_handling_1(bencher: Bencher) {
     let program = &ERROR_UNTERMINATED_STRING;
     
     bencher.bench_local(|| {
-        let lexer = slang_frontend::Lexer::new(&program.source);
-        let result = black_box(lexer.tokenize());
+        let lexer = slang_frontend::Lexer::new(program.source);
         
-        result
+        
+        black_box(lexer.tokenize())
     });
 }
 
@@ -52,10 +52,8 @@ fn lexer_error_handling_2(bencher: Bencher) {
     let program = &ERROR_INVALID_NUMBER;
     
     bencher.bench_local(|| {
-        let lexer = slang_frontend::Lexer::new(&program.source);
-        let result = black_box(lexer.tokenize());
-        
-        result
+        let lexer = slang_frontend::Lexer::new(program.source);
+        black_box(lexer.tokenize())
     });
 }
 

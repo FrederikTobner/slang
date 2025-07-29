@@ -3,11 +3,11 @@
 
 use super::core::Parser;
 use super::error::ParseError;
-use crate::token::Tokentype;
 use slang_error::ErrorCode;
-use slang_ir::ast::{Expression, LiteralExpr, LiteralValue};
+use slang_ir::ast::{Expression, LiteralValue};
+use slang_ir::ExprFactory; // Import factory system
 use slang_types::{
-    PrimitiveType, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32,
+    TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32,
     TYPE_NAME_U64,
 };
 
@@ -26,90 +26,76 @@ impl LiteralParser {
         let base_value = value_str.parse::<i64>().map_err(|_| {
             parser.error_previous(
                 ErrorCode::InvalidNumberLiteral,
-                &format!("Invalid integer: {}", value_str),
+                &format!("Invalid integer: {value_str}"),
             )
         })?;
         let location = parser.source_location_from_token(token);
 
-        if parser.check(&Tokentype::Identifier) {
-            let type_name = parser.peek().lexeme.clone();
-
-            match type_name.as_str() {
+        if let Some((type_name, _position)) = parser.match_identifier_token() {
+            match type_name {
                 TYPE_NAME_I32 => {
-                    parser.advance();
                     if base_value > i32::MAX as i64 || base_value < i32::MIN as i64 {
                         return Err(parser.error_previous(
                             ErrorCode::ValueOutOfRange,
-                            &format!("Value {} is out of range for {}", base_value, TYPE_NAME_I32),
+                            &format!("Value {base_value} is out of range for {TYPE_NAME_I32}"),
                         ));
                     }
-                    return Ok(Expression::Literal(LiteralExpr {
-                        value: LiteralValue::I32(base_value as i32),
-                        expr_type: PrimitiveType::I32.into(),
-                        location,
-                    }));
+                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
+                        base_value as i32,
+                        location
+                    )));
                 }
                 TYPE_NAME_I64 => {
-                    parser.advance();
-                    return Ok(Expression::Literal(LiteralExpr {
-                        value: LiteralValue::I64(base_value),
-                        expr_type: PrimitiveType::I64.into(),
-                        location,
-                    }));
+                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
+                        base_value,
+                        location
+                    )));
                 }
                 TYPE_NAME_U32 => {
-                    parser.advance();
                     if base_value < 0 || base_value > u32::MAX as i64 {
                         return Err(parser.error_previous(
                             ErrorCode::ValueOutOfRange,
-                            &format!("Value {} is out of range for {}", base_value, TYPE_NAME_U32),
+                            &format!("Value {base_value} is out of range for {TYPE_NAME_U32}"),
                         ));
                     }
-                    return Ok(Expression::Literal(LiteralExpr {
-                        value: LiteralValue::U32(base_value as u32),
-                        expr_type: PrimitiveType::U32.into(),
-                        location,
-                    }));
+                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
+                        base_value as u32,
+                        location
+                    )));
                 }
                 TYPE_NAME_U64 => {
-                    parser.advance();
                     if base_value < 0 {
                         return Err(parser.error_previous(
                             ErrorCode::ValueOutOfRange,
-                            &format!("Value {} is out of range for {}", base_value, TYPE_NAME_U64),
+                            &format!("Value {base_value} is out of range for {TYPE_NAME_U64}"),
                         ));
                     }
-                    return Ok(Expression::Literal(LiteralExpr {
-                        value: LiteralValue::U64(base_value as u64),
-                        expr_type: PrimitiveType::U64.into(),
-                        location,
-                    }));
+                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
+                        base_value as u64,
+                        location
+                    )));
                 }
                 TYPE_NAME_F32 => {
-                    parser.advance();
-                    return Ok(Expression::Literal(LiteralExpr {
-                        value: LiteralValue::F32(base_value as f32),
-                        expr_type: PrimitiveType::F32.into(),
-                        location,
-                    }));
+                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
+                        base_value as f32,
+                        location
+                    )));
                 }
                 TYPE_NAME_F64 => {
-                    parser.advance();
-                    return Ok(Expression::Literal(LiteralExpr {
-                        value: LiteralValue::F64(base_value as f64),
-                        expr_type: PrimitiveType::F64.into(),
-                        location,
-                    }));
+                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
+                        base_value as f64,
+                        location
+                    )));
                 }
                 _ => {}
             }
         }
 
-        Ok(Expression::Literal(LiteralExpr {
-            value: LiteralValue::UnspecifiedInteger(base_value),
-            expr_type: PrimitiveType::UnspecifiedInt.into(),
-            location,
-        }))
+        // Default unspecified integer
+        Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
+            LiteralValue::UnspecifiedInteger(base_value),
+            location
+        )))
     }
 
     /// Parses a float literal with optional type suffix
@@ -124,38 +110,32 @@ impl LiteralParser {
         let value = value_str.parse::<f64>().map_err(|_| {
             parser.error_previous(
                 ErrorCode::InvalidNumberLiteral,
-                &format!("Invalid float: {}", value_str),
+                &format!("Invalid float: {value_str}"),
             )
         })?;
 
-        if parser.check(&Tokentype::Identifier) {
-            let type_name = parser.peek().lexeme.clone();
-
-            match type_name.as_str() {
+        if let Some((type_name, _position)) = parser.match_identifier_token() {
+            match type_name {
                 TYPE_NAME_F32 => {
-                    parser.advance();
-                    return Ok(Expression::Literal(LiteralExpr {
-                        value: LiteralValue::F32(value as f32),
-                        expr_type: PrimitiveType::F32.into(),
-                        location,
-                    }));
+                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
+                        value as f32,
+                        location
+                    )));
                 }
                 TYPE_NAME_F64 => {
-                    parser.advance();
-                    return Ok(Expression::Literal(LiteralExpr {
-                        value: LiteralValue::F64(value),
-                        expr_type: PrimitiveType::F64.into(),
-                        location,
-                    }));
+                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
+                        value,
+                        location
+                    )));
                 }
                 _ => {}
             }
         }
 
-        Ok(Expression::Literal(LiteralExpr {
-            value: LiteralValue::UnspecifiedFloat(value),
-            expr_type: PrimitiveType::UnspecifiedFloat.into(),
-            location,
-        }))
+        // Default unspecified float
+        Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
+            LiteralValue::UnspecifiedFloat(value),
+            location
+        )))
     }
 }

@@ -197,36 +197,31 @@ impl SemanticAnalysisError {
     pub fn format_message(&self, context: &CompilationContext) -> String {
         match self {
             SemanticAnalysisError::UndefinedVariable { name, .. } => {
-                format!("Undefined variable: {}", name)
+                format!("Undefined variable: {name}")
             }
 
             SemanticAnalysisError::VariableRedefinition { name, .. } => {
-                format!("Variable '{}' already defined", name)
+                format!("Variable '{name}' already defined")
             }
 
             SemanticAnalysisError::SymbolRedefinition { name, kind, .. } => match kind.as_str() {
                 "function" => format!(
-                    "Function '{}' is already defined in the current scope.",
-                    name
+                    "Function '{name}' is already defined in the current scope."
                 ),
                 "variable" => format!(
-                    "Variable '{}' is already defined in the current scope.",
-                    name
+                    "Variable '{name}' is already defined in the current scope."
                 ),
-                "type" => format!("Type '{}' is already defined in the current scope.", name),
+                "type" => format!("Type '{name}' is already defined in the current scope."),
                 "parameter" => format!(
-                    "Parameter '{}' is already defined in the current scope.",
-                    name
+                    "Parameter '{name}' is already defined in the current scope."
                 ),
                 "variable (conflicts with type)" => format!(
-                    "Symbol '{}' of kind 'variable (conflicts with type)' is already defined or conflicts with an existing symbol.",
-                    name
+                    "Symbol '{name}' of kind 'variable (conflicts with type)' is already defined or conflicts with an existing symbol."
                 ),
                 "variable (conflicts with function)" => format!(
-                    "Symbol '{}' of kind 'variable (conflicts with function)' is already defined or conflicts with an existing symbol.",
-                    name
+                    "Symbol '{name}' of kind 'variable (conflicts with function)' is already defined or conflicts with an existing symbol."
                 ),
-                _ => format!("Symbol '{}' is already defined in the current scope.", name),
+                _ => format!("Symbol '{name}' is already defined in the current scope."),
             },
 
             SemanticAnalysisError::InvalidFieldType {
@@ -321,8 +316,7 @@ impl SemanticAnalysisError {
                 ..
             } => {
                 format!(
-                    "Function '{}' expects {} arguments, but got {}",
-                    function_name, expected, actual
+                    "Function '{function_name}' expects {expected} arguments, but got {actual}"
                 )
             }
 
@@ -364,7 +358,7 @@ impl SemanticAnalysisError {
             }
 
             SemanticAnalysisError::UndefinedFunction { name, .. } => {
-                format!("Undefined function: {}", name)
+                format!("Undefined function: {name}")
             }
 
             SemanticAnalysisError::InvalidUnaryOperation {
@@ -398,7 +392,7 @@ impl SemanticAnalysisError {
             }
 
             SemanticAnalysisError::AssignmentToImmutableVariable { name, .. } => {
-                format!("Cannot assign to immutable variable '{}'", name)
+                format!("Cannot assign to immutable variable '{name}'")
             }
 
             SemanticAnalysisError::InvalidExpression { message, .. } => message.clone(),
@@ -445,7 +439,7 @@ impl SemanticAnalysisError {
     /// Falls back to heuristics only for cases where location information may not be available.
     fn get_token_length(&self) -> Option<usize> {
         let location = self.get_location();
-        return Some(location.length);
+        Some(location.length)
     }
 
     /// Convert a SemanticAnalysisError to a CompilerError that can be used by the rest of the compiler.

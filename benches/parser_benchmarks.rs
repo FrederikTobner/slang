@@ -14,9 +14,9 @@ fn parser_performance_simple(bencher: Bencher) {
     let program = &SIMPLE_EXPRESSION;
     
     bencher.bench_local(|| {
-        let result = black_box(parse_only(&program.source).expect("Parse should succeed"));
         
-        result
+        
+        black_box(parse_only(program.source).expect("Parse should succeed"))
     });
 }
 
@@ -25,9 +25,9 @@ fn parser_performance_complex(bencher: Bencher) {
     let program = &NESTED_EXPRESSIONS;
     
     bencher.bench_local(|| {
-        let result = black_box(parse_only(&program.source).expect("Parse should succeed"));
         
-        result
+        
+        black_box(parse_only(program.source).expect("Parse should succeed"))
     });
 }
 
@@ -36,18 +36,18 @@ fn parser_scalability_nested_expressions(bencher: Bencher, depth: usize) {
     let program = generate_nested_expressions(depth);
     
     bencher.bench_local(|| {
-        let result = black_box(parse_only(&program).expect("Parse should succeed"));
         
-        result
+        
+        black_box(parse_only(&program).expect("Parse should succeed"))
     });
 }
 
 fn generate_nested_expressions(depth: usize) -> String {
     let mut expr = "x".to_string();
     for i in 0..depth {
-        expr = format!("({} + {})", expr, i);
+        expr = format!("({expr} + {i})");
     }
-    format!("let result = {};", expr)
+    format!("let result = {expr};")
 }
 
 #[divan::bench]
@@ -57,9 +57,9 @@ fn parser_error_recovery_0(bencher: Bencher) {
     bencher.bench_local(|| {
         
         // Expect parsing to fail
-        let result = black_box(parse_only(&program.source));
         
-        result
+        
+        black_box(parse_only(program.source))
     });
 }
 
@@ -69,9 +69,9 @@ fn parser_error_recovery_1(bencher: Bencher) {
     
     bencher.bench_local(|| {
         // Expect parsing to fail
-        let result = black_box(parse_only(&program.source));
         
-        result
+        
+        black_box(parse_only(program.source))
     });
 }
 

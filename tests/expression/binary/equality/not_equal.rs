@@ -10,12 +10,11 @@ use rstest::rstest;
 fn equal_integer(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 5;
-        let b: {} = 5;
+        let a: {type_name} = 5;
+        let b: {type_name} = 5;
         
         print_value(a != b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "false");
 }
@@ -28,12 +27,11 @@ fn equal_integer(#[case] type_name: &str) {
 fn not_equal_integer(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 5;
-        let b: {} = 10;
+        let a: {type_name} = 5;
+        let b: {type_name} = 10;
         
         print_value(a != b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "true");
 }
@@ -44,12 +42,11 @@ fn not_equal_integer(#[case] type_name: &str) {
 fn equal_float(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 5.5;
-        let b: {} = 5.5;
+        let a: {type_name} = 5.5;
+        let b: {type_name} = 5.5;
         
         print_value(a != b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "false");
 }
@@ -60,12 +57,11 @@ fn equal_float(#[case] type_name: &str) {
 fn not_equal_float(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 5.5;
-        let b: {} = 10.5;
+        let a: {type_name} = 5.5;
+        let b: {type_name} = 10.5;
         
         print_value(a != b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "true");
 }

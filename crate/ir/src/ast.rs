@@ -47,7 +47,7 @@ impl Display for BinaryOperator {
             BinaryOperator::And => "&&",
             BinaryOperator::Or => "||",
         };
-        write!(f, "{}", op_str)
+        write!(f, "{op_str}")
     }
 }
 
@@ -65,7 +65,7 @@ impl Display for UnaryOperator {
             UnaryOperator::Negate => "-",
             UnaryOperator::Not => "!",
         };
-        write!(f, "{}", op_str)
+        write!(f, "{op_str}")
     }
 }
 
@@ -101,6 +101,19 @@ impl Expression {
             Expression::Conditional(e) => e.location,
             Expression::Block(e) => e.location,
             Expression::FunctionType(e) => e.location,
+        }
+    }
+
+    pub fn expr_type(&self) -> TypeId {
+        match self {
+            Expression::Literal(e) => e.expr_type,
+            Expression::Binary(e) => e.expr_type,
+            Expression::Variable(_e) => TypeId::unknown(), // Variables need lookup in semantic analysis
+            Expression::Unary(e) => e.expr_type,
+            Expression::Call(e) => e.expr_type,
+            Expression::Conditional(e) => e.expr_type,
+            Expression::Block(e) => e.expr_type,
+            Expression::FunctionType(e) => e.expr_type,
         }
     }
 }

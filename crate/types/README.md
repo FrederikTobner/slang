@@ -15,19 +15,31 @@ The types crate defines the complete type system of Slang. It provides:
 
 The types crate consists of these key components:
 
-- **Type Definitions (`types.rs`)**: Core type definitions including primitives and composite types
-- **Type Registry(`registry.rs`)** Centralized system for registering and looking up types
-- **Type Checking Logic**: Utilities for type compatibility and conversions
+- **Type Definitions (`types.rs`)**: Core type definitions including primitives, functions, and composite types
+- **Type Registry (`registry.rs`)**: Centralized system for registering and looking up types by name or ID
+- **Type Inference (`inference.rs`)**: Type promotion, operations, and compatibility checking utilities
 - **Core Library (`lib.rs`)**: Exports the public API and initializes the type system
 
 ## Features
 
 - Rich type system with precise integer and floating-point types
 - Support for various numeric types (i32, i64, u32, u64, f32, f64)
-- Boolean and string type support
-- User-defined struct types
-- Type compatibility checking
-- Value range validation for numeric types
+- Boolean, string, and unit type support
+- Function types with parameter and return type information
+- User-defined struct types with field definitions
+- Type registry for efficient type lookup and management
+- Type inference and promotion system for compatibility checking
+- Comprehensive type operation utilities
+
+## Public API
+
+The crate exports the following main types:
+
+```rust
+pub use registry::TypeRegistry;
+pub use types::{FunctionType, PrimitiveType, StructType, TypeId, TypeInfo, TypeKind};
+pub use inference::{TypePromotion, TypeQueries, TypeOperations};
+```
 
 ## Usage
 

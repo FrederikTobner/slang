@@ -26,8 +26,7 @@ impl ProgramTemplates {
         // Add additional simple functions
         for i in 2..function_count {
             source.push_str(&format!(
-                "fn func_{}(x: i32) -> i32 {{ return x + {}; }}\n",
-                i, i
+                "fn func_{i}(x: i32) -> i32 {{ return x + {i}; }}\n"
             ));
         }
 
@@ -45,7 +44,7 @@ impl ProgramTemplates {
         let mut source = String::new();
 
         for i in 0..var_count {
-            source.push_str(&format!("let var_{}: i32 = {};\n", i, i));
+            source.push_str(&format!("let var_{i}: i32 = {i};\n"));
         }
 
         // Add a simple computation
@@ -71,7 +70,7 @@ impl ProgramTemplates {
         // Add a computation using the nested variables
         source.push_str("    let result = x_0");
         for i in 1..depth {
-            source.push_str(&format!(" + x_{}", i));
+            source.push_str(&format!(" + x_{i}"));
         }
         source.push_str(";\n");
         source.push_str("    print_value(result);\n");

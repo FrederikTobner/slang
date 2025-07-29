@@ -132,8 +132,8 @@ impl<'a> ExpressionVisitor<'a> {
 
         Err(SemanticAnalysisError::OperationTypeMismatch {
             operator: bin_expr.operator.to_string(),
-            left_type: left_type.clone(),
-            right_type: right_type.clone(),
+            left_type,
+            right_type,
             location: bin_expr.location,
         })
     }
@@ -165,7 +165,7 @@ impl<'a> ExpressionVisitor<'a> {
                     } else {
                         return Err(SemanticAnalysisError::VariableNotCallable {
                             variable_name: call_expr.name.clone(),
-                            variable_type: symbol.type_id.clone(),
+                            variable_type: symbol.type_id,
                             location: call_expr.location,
                         });
                     }
@@ -197,7 +197,7 @@ impl<'a> ExpressionVisitor<'a> {
 
             // Check argument types
             for (i, arg) in call_expr.arguments.iter().enumerate() {
-                let param_type = func_type.param_types[i].clone();
+                let param_type = func_type.param_types[i];
                 let arg_type = self.visit_expression(arg)?;
 
                 if param_type == TypeId::unknown() {
@@ -218,7 +218,7 @@ impl<'a> ExpressionVisitor<'a> {
                             return Err(SemanticAnalysisError::ArgumentTypeMismatch {
                                 function_name: call_expr.name.clone(),
                                 argument_position: i + 1,
-                                expected: param_type.clone(),
+                                expected: param_type,
                                 actual: arg_type,
                                 location: arg.location(),
                             });
@@ -228,7 +228,7 @@ impl<'a> ExpressionVisitor<'a> {
                         return Err(SemanticAnalysisError::ArgumentTypeMismatch {
                             function_name: call_expr.name.clone(),
                             argument_position: i + 1,
-                            expected: param_type.clone(),
+                            expected: param_type,
                             actual: arg_type,
                             location: arg.location(),
                         });
@@ -236,7 +236,7 @@ impl<'a> ExpressionVisitor<'a> {
                 }
             }
 
-            Ok(func_type.return_type.clone())
+            Ok(func_type.return_type)
         } else {
             Err(SemanticAnalysisError::UndefinedFunction {
                 name: call_expr.name.clone(),
@@ -248,7 +248,7 @@ impl<'a> ExpressionVisitor<'a> {
     /// Visit a variable expression
     pub fn visit_variable_expression(&mut self, var_expr: &VariableExpr) -> SemanticResult {
         if let Some(var_info) = self.resolve_value(&var_expr.name) {
-            Ok(var_info.type_id.clone())
+            Ok(var_info.type_id)
         } else {
             Err(SemanticAnalysisError::UndefinedVariable {
                 name: var_expr.name.clone(),
@@ -259,7 +259,7 @@ impl<'a> ExpressionVisitor<'a> {
 
     /// Visit a literal expression
     pub fn visit_literal_expression(&mut self, literal_expr: &LiteralExpr) -> SemanticResult {
-        Ok(literal_expr.expr_type.clone())
+        Ok(literal_expr.expr_type)
     }
 
     /// Visit a conditional expression
@@ -302,7 +302,7 @@ impl<'a> ExpressionVisitor<'a> {
             // Create a statement visitor with the current return type context
             let mut stmt_visitor = super::statement_visitor::StatementVisitor::with_return_type(
                 self.context,
-                self.current_return_type.clone(),
+                self.current_return_type,
             );
             match stmt {
                 Statement::Let(let_stmt) => {
@@ -351,7 +351,7 @@ impl<'a> ExpressionVisitor<'a> {
                 return Err(SemanticAnalysisError::InvalidFieldType {
                     struct_name: "function type".to_string(),
                     field_name: "parameter".to_string(),
-                    type_id: param_type.clone(),
+                    type_id: *param_type,
                     location: func_type_expr.location,
                 });
             }
@@ -366,12 +366,12 @@ impl<'a> ExpressionVisitor<'a> {
             return Err(SemanticAnalysisError::InvalidFieldType {
                 struct_name: "function type".to_string(),
                 field_name: "return type".to_string(),
-                type_id: func_type_expr.return_type.clone(),
+                type_id: func_type_expr.return_type,
                 location: func_type_expr.location,
             });
         }
 
-        Ok(func_type_expr.expr_type.clone())
+        Ok(func_type_expr.expr_type)
     }
 
     // Helper methods

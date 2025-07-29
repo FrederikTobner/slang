@@ -1,15 +1,12 @@
 // Expression parsing module
-// Contains logic for parsing expressions with proper operator precedence
+// Contains logic for parsing expressions with operator precedence
 
 use super::core::Parser;
 use super::error::ParseError;
 use crate::token::Tokentype;
 use slang_error::ErrorCode;
-use slang_ir::ast::{
-    BinaryExpr, BinaryOperator, Expression, LiteralExpr, LiteralValue, UnaryExpr, UnaryOperator,
-    VariableExpr,
-};
-use slang_types::PrimitiveType;
+use slang_ir::ast::{BinaryOperator, Expression, UnaryOperator, BlockExpr};
+use slang_ir::ExprFactory; // Import factory system
 
 /// Expression parser that handles operator precedence parsing
 ///
@@ -46,18 +43,8 @@ impl ExpressionParser {
         let mut expr = Self::logical_and(parser)?;
 
         while parser.match_token(&Tokentype::Or) {
-            let left_location = expr.location();
             let right = Self::logical_and(parser)?;
-            let right_location = right.location();
-            let span_location = left_location.span_to(&right_location);
-
-            expr = Expression::Binary(BinaryExpr {
-                left: Box::new(expr),
-                operator: BinaryOperator::Or,
-                right: Box::new(right),
-                expr_type: PrimitiveType::Bool.into(),
-                location: span_location,
-            });
+            expr = ExprFactory::binary(expr, BinaryOperator::Or, right);
         }
 
         Ok(expr)
@@ -71,18 +58,8 @@ impl ExpressionParser {
         let mut expr = Self::equality(parser)?;
 
         while parser.match_token(&Tokentype::And) {
-            let left_location = expr.location();
             let right = Self::equality(parser)?;
-            let right_location = right.location();
-            let span_location = left_location.span_to(&right_location);
-
-            expr = Expression::Binary(BinaryExpr {
-                left: Box::new(expr),
-                operator: BinaryOperator::And,
-                right: Box::new(right),
-                expr_type: PrimitiveType::Bool.into(),
-                location: span_location,
-            });
+            expr = ExprFactory::binary(expr, BinaryOperator::And, right);
         }
 
         Ok(expr)
@@ -95,25 +72,9 @@ impl ExpressionParser {
     fn equality(parser: &mut Parser) -> Result<Expression, ParseError> {
         let mut expr = Self::comparison(parser)?;
 
-        while parser.match_any(&[Tokentype::EqualEqual, Tokentype::NotEqual]) {
-            let left_location = expr.location();
-            let token = parser.previous();
-            let operator = match token.token_type {
-                Tokentype::EqualEqual => BinaryOperator::Equal,
-                Tokentype::NotEqual => BinaryOperator::NotEqual,
-                _ => unreachable!(),
-            };
+        while let Some((operator, _position)) = parser.match_equality_operator() {
             let right = Self::comparison(parser)?;
-            let right_location = right.location();
-            let span_location = left_location.span_to(&right_location);
-
-            expr = Expression::Binary(BinaryExpr {
-                left: Box::new(expr),
-                operator,
-                right: Box::new(right),
-                expr_type: PrimitiveType::Bool.into(),
-                location: span_location,
-            });
+            expr = ExprFactory::binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -126,32 +87,9 @@ impl ExpressionParser {
     fn comparison(parser: &mut Parser) -> Result<Expression, ParseError> {
         let mut expr = Self::term(parser)?;
 
-        while parser.match_any(&[
-            Tokentype::Greater,
-            Tokentype::GreaterEqual,
-            Tokentype::Less,
-            Tokentype::LessEqual,
-        ]) {
-            let left_location = expr.location();
-            let token = parser.previous();
-            let operator = match token.token_type {
-                Tokentype::Greater => BinaryOperator::GreaterThan,
-                Tokentype::GreaterEqual => BinaryOperator::GreaterThanOrEqual,
-                Tokentype::Less => BinaryOperator::LessThan,
-                Tokentype::LessEqual => BinaryOperator::LessThanOrEqual,
-                _ => unreachable!(),
-            };
+        while let Some((operator, _position)) = parser.match_comparison_operator() {
             let right = Self::term(parser)?;
-            let right_location = right.location();
-            let span_location = left_location.span_to(&right_location);
-
-            expr = Expression::Binary(BinaryExpr {
-                left: Box::new(expr),
-                operator,
-                right: Box::new(right),
-                expr_type: PrimitiveType::Bool.into(),
-                location: span_location,
-            });
+            expr = ExprFactory::binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -164,25 +102,9 @@ impl ExpressionParser {
     fn term(parser: &mut Parser) -> Result<Expression, ParseError> {
         let mut expr = Self::factor(parser)?;
 
-        while parser.match_any(&[Tokentype::Plus, Tokentype::Minus]) {
-            let left_location = expr.location();
-            let token = parser.previous();
-            let operator = match token.token_type {
-                Tokentype::Plus => BinaryOperator::Add,
-                Tokentype::Minus => BinaryOperator::Subtract,
-                _ => unreachable!(),
-            };
+        while let Some((operator, _position)) = parser.match_term_operator() {
             let right = Self::factor(parser)?;
-            let right_location = right.location();
-            let span_location = left_location.span_to(&right_location);
-
-            expr = Expression::Binary(BinaryExpr {
-                left: Box::new(expr),
-                operator,
-                right: Box::new(right),
-                expr_type: PrimitiveType::Unknown.into(),
-                location: span_location,
-            });
+            expr = ExprFactory::binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -195,25 +117,9 @@ impl ExpressionParser {
     fn factor(parser: &mut Parser) -> Result<Expression, ParseError> {
         let mut expr = Self::unary(parser)?;
 
-        while parser.match_any(&[Tokentype::Multiply, Tokentype::Divide]) {
-            let left_location = expr.location();
-            let token = parser.previous();
-            let operator = match token.token_type {
-                Tokentype::Multiply => BinaryOperator::Multiply,
-                Tokentype::Divide => BinaryOperator::Divide,
-                _ => unreachable!(),
-            };
+        while let Some((operator, _position)) = parser.match_factor_operator() {
             let right = Self::unary(parser)?;
-            let right_location = right.location();
-            let span_location = left_location.span_to(&right_location);
-
-            expr = Expression::Binary(BinaryExpr {
-                left: Box::new(expr),
-                operator,
-                right: Box::new(right),
-                expr_type: PrimitiveType::Unknown.into(),
-                location: span_location,
-            });
+            expr = ExprFactory::binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -225,33 +131,13 @@ impl ExpressionParser {
     /// The parsed unary expression or an error message
     fn unary(parser: &mut Parser) -> Result<Expression, ParseError> {
         if parser.match_token(&Tokentype::Minus) {
-            let token = parser.previous();
-            let operator_location = parser.source_location_from_token(token);
             let right = Self::primary(parser)?;
-            let right_location = right.location();
-            let span_location = operator_location.span_to(&right_location);
-
-            return Ok(Expression::Unary(UnaryExpr {
-                operator: UnaryOperator::Negate,
-                right: Box::new(right),
-                expr_type: PrimitiveType::Unknown.into(),
-                location: span_location,
-            }));
+            return Ok(ExprFactory::unary(UnaryOperator::Negate, right));
         }
 
         if parser.match_token(&Tokentype::Not) {
-            let token = parser.previous();
-            let operator_location = parser.source_location_from_token(token);
             let right = Self::primary(parser)?;
-            let right_location = right.location();
-            let span_location = operator_location.span_to(&right_location);
-
-            return Ok(Expression::Unary(UnaryExpr {
-                operator: UnaryOperator::Not,
-                right: Box::new(right),
-                expr_type: PrimitiveType::Bool.into(),
-                location: span_location,
-            }));
+            return Ok(ExprFactory::unary(UnaryOperator::Not, right));
         }
 
         Self::primary(parser)
@@ -263,7 +149,7 @@ impl ExpressionParser {
     /// ### Returns
     /// The parsed primary expression or an error message
     fn primary(parser: &mut Parser) -> Result<Expression, ParseError> {
-        if parser.match_token(&Tokentype::IntegerLiteral) {
+        if parser.match_integer_literal_token() {
             return parser.parse_integer();
         }
 
@@ -271,25 +157,27 @@ impl ExpressionParser {
             return parser.parse_float();
         }
 
-        if parser.match_token(&Tokentype::StringLiteral) {
-            let token = parser.previous();
-            let value = token.lexeme.clone();
-            return Ok(Expression::Literal(LiteralExpr {
-                value: LiteralValue::String(value),
-                expr_type: PrimitiveType::String.into(),
-                location: parser.source_location_from_token(token),
-            }));
+        if let Some((value, position)) = parser.match_string_literal_token() {
+            let value_string = value.to_string();
+            let start_pos = position.pos;
+            let end_pos = position.end_pos();
+            let location = parser.location_from_range(start_pos, end_pos);
+            return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
+                value_string,
+                location
+            )));
         }
 
-        if parser.match_token(&Tokentype::BooleanLiteral) {
-            let token = parser.previous();
-            let lexeme = token.lexeme.clone();
-            let bool_value = lexeme == "true";
-            return Ok(Expression::Literal(LiteralExpr {
-                value: LiteralValue::Boolean(bool_value),
-                expr_type: PrimitiveType::Bool.into(),
-                location: parser.source_location_from_token(token),
-            }));
+        if let Some((lexeme, position)) = parser.match_boolean_literal_token() {
+            let lexeme_string = lexeme.to_string();
+            let bool_value = lexeme_string == "true";
+            let start_pos = position.pos;
+            let end_pos = position.end_pos();
+            let location = parser.location_from_range(start_pos, end_pos);
+            return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
+                bool_value,
+                location
+            )));
         }
 
         if parser.match_token(&Tokentype::If) {
@@ -304,16 +192,10 @@ impl ExpressionParser {
             // Check for unit literal ()
             if parser.check(&Tokentype::RightParen) {
                 let start_pos = parser.previous().pos;
-                parser.advance(); // consume the right paren
-                let end_pos = parser.previous().pos + parser.previous().lexeme.len();
-                let (line, column) = parser.line_info.get_line_col(start_pos);
-                let location =
-                    slang_ir::location::Location::new(start_pos, line, column, end_pos - start_pos);
-                return Ok(Expression::Literal(LiteralExpr {
-                    value: LiteralValue::Unit,
-                    expr_type: PrimitiveType::Unit.into(),
-                    location,
-                }));
+                let right_paren = parser.advance(); // consume the right paren
+                let end_pos = right_paren.pos + right_paren.lexeme.len();
+                let location = parser.location_from_range(start_pos, end_pos);
+                return Ok(Expression::Literal(ExprFactory::literal_expr_with_location((), location)));
             }
 
             let expr = parser.expression()?;
@@ -331,21 +213,154 @@ impl ExpressionParser {
             return Ok(Expression::Block(blockexpr));
         }
 
-        if parser.match_token(&Tokentype::Identifier) {
-            let name = parser.previous().lexeme.clone();
+        if let Some((name, position)) = parser.match_identifier_token() {
+            let name_string = name.to_string();
+            let start_pos = position.pos;
+            let end_pos = position.end_pos();
+            let name_location = parser.location_from_range(start_pos, end_pos);
 
             if parser.match_token(&Tokentype::LeftParen) {
-                return parser.finish_call(name);
+                return parser.finish_call(name_string, name_location);
             }
 
-            let token = parser.previous();
-            let location = parser.source_location_from_token(token);
-            return Ok(Expression::Variable(VariableExpr { name, location }));
+            return Ok(Expression::Variable(ExprFactory::variable_expr_with_location(name_string, name_location)));
         }
 
         Err(parser.error(
             ErrorCode::ExpectedExpression,
             &format!("Expected expression, found {}", parser.peek()),
         ))
+    }
+
+    /// Finishes parsing a function call after the name and '('
+    ///
+    /// ### Arguments
+    ///
+    /// * `parser` - The parser instance
+    /// * `name` - The name of the function being called
+    /// * `name_location` - The location of the function name token
+    ///
+    /// ### Returns
+    ///
+    /// The parsed function call expression or an error message
+    pub fn finish_call(parser: &mut Parser, name: String, name_location: slang_ir::location::Location) -> Result<Expression, ParseError> {
+        let mut arguments = Vec::new();
+
+        if !parser.check(&Tokentype::RightParen) {
+            arguments.push(parser.expression()?);
+
+            while parser.match_token(&Tokentype::Comma) {
+                if arguments.len() >= 255 {
+                    return Err(parser.error(
+                        ErrorCode::InvalidSyntax,
+                        "Cannot have more than 255 arguments",
+                    ));
+                }
+                arguments.push(parser.expression()?);
+            }
+        }
+
+        if !parser.match_token(&Tokentype::RightParen) {
+            return Err(parser.error(
+                ErrorCode::ExpectedClosingParen,
+                "Expected ')' after function arguments",
+            ));
+        }
+
+        // Create function call using factory with original name location
+        // The factory will handle extending the location to include arguments
+        Ok(Expression::Call(slang_ir::ExprFactory::call_expr_with_location(
+            name,
+            arguments,
+            name_location,
+        )))
+    }
+
+    /// Parses a conditional expression (if/else expression)
+    ///
+    /// ### Arguments
+    ///
+    /// * `parser` - The parser instance
+    ///
+    /// ### Returns
+    ///
+    /// The parsed conditional expression or an error message
+    pub fn conditional_expression(parser: &mut Parser) -> Result<Expression, ParseError> {
+        let condition = parser.expression()?;
+
+        if !parser.match_token(&Tokentype::LeftBrace) {
+            return Err(parser.error(
+                ErrorCode::ExpectedOpeningBrace,
+                "Expected '{' after if condition",
+            ));
+        }
+
+        let then_branch = Self::parse_block_expression(parser)?;
+
+        if !parser.match_token(&Tokentype::Else) {
+            return Err(parser.error(
+                ErrorCode::ExpectedElse,
+                "Expected 'else' after if expression",
+            ));
+        }
+
+        if !parser.match_token(&Tokentype::LeftBrace) {
+            return Err(parser.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after else"));
+        }
+
+        let else_branch = Self::parse_block_expression(parser)?;
+
+        // Use factory for automatic location calculation from operands
+        Ok(Expression::Conditional(ExprFactory::conditional_expr(
+            condition,
+            Expression::Block(then_branch),
+            Expression::Block(else_branch),
+        )))
+    }
+
+    /// Parses a block expression - a sequence of statements with an optional return expression
+    ///
+    /// ### Arguments
+    ///
+    /// * `parser` - The parser instance
+    ///
+    /// ### Returns
+    ///
+    /// The parsed block expression or an error message
+    pub fn parse_block_expression(parser: &mut Parser) -> Result<BlockExpr, ParseError> {
+        let mut statements = Vec::new();
+        let mut return_expr: Option<Expression> = None;
+
+        while !parser.check(&Tokentype::RightBrace) && !parser.is_at_end() {
+            let checkpoint = parser.current;
+
+            if let Ok(expr) = parser.expression() {
+                if parser.check(&Tokentype::RightBrace) {
+                    return_expr = Some(expr);
+                    break;
+                } else if parser.match_token(&Tokentype::Semicolon) {
+                    statements.push(slang_ir::ast::Statement::Expression(expr));
+                } else {
+                    parser.current = checkpoint;
+                    statements.push(parser.statement()?);
+                }
+            } else {
+                parser.current = checkpoint;
+                statements.push(parser.statement()?);
+            }
+        }
+
+        if !parser.match_token(&Tokentype::RightBrace) {
+            return Err(parser.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after block"));
+        }
+
+        // Use factory for automatic location calculation from statements and return expression
+        let block_expr = ExprFactory::block(statements, return_expr);
+        
+        // Extract the BlockExpr from the Expression::Block wrapper
+        match block_expr {
+            Expression::Block(block) => Ok(block),
+            _ => unreachable!("ExprFactory::block should always return Expression::Block"),
+        }
     }
 }

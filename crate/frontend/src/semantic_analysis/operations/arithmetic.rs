@@ -46,7 +46,7 @@ pub fn check_same_type_arithmetic(
         ));
     }
 
-    Ok(type_id.clone())
+    Ok(*type_id)
 }
 
 /// Checks if mixed-type arithmetic operations are allowed, particularly handling
@@ -93,7 +93,7 @@ pub fn check_mixed_arithmetic_operation(
         && helpers::is_string_type(left_type)
         && helpers::is_string_type(right_type)
     {
-        return Ok(left_type.clone());
+        return Ok(*left_type);
     }
 
     Err(helpers::operation_type_mismatch_error(

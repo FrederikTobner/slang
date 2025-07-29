@@ -138,7 +138,7 @@ impl VM {
     fn execute_instruction(&mut self, chunk: &Chunk) -> Result<(), String> {
         let instruction = self.read_byte(chunk);
         let op = OpCode::from_int(instruction)
-            .ok_or_else(|| format!("Unknown opcode: {}", instruction))?;
+            .ok_or_else(|| format!("Unknown opcode: {instruction}"))?;
 
         match op {
             OpCode::Constant => {
@@ -197,7 +197,7 @@ impl VM {
             }
             OpCode::Print => {
                 let value = self.pop()?;
-                println!("{}", value);
+                println!("{value}");
             }
             OpCode::GetVariable => {
                 let var_index = self.read_byte(chunk) as usize;
@@ -212,12 +212,12 @@ impl VM {
                     } else if let Some(value) = self.get_variable(var_name) {
                         value.clone()
                     } else {
-                        return Err(format!("Undefined variable '{}'", var_name));
+                        return Err(format!("Undefined variable '{var_name}'"));
                     }
                 } else if let Some(value) = self.get_variable(var_name) {
                     value.clone()
                 } else {
-                    return Err(format!("Undefined variable '{}'", var_name));
+                    return Err(format!("Undefined variable '{var_name}'"));
                 };
 
                 self.stack.push(value);

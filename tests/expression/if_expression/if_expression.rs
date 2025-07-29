@@ -10,11 +10,10 @@ use rstest::rstest;
 fn with_integer_types(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 50;
-        let b: {} = 8;
+        let a: {type_name} = 50;
+        let b: {type_name} = 8;
         print_value(if a > b {{ a - b }} else {{ b - a }});
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "42");
 }
@@ -25,11 +24,10 @@ fn with_integer_types(#[case] type_name: &str) {
 fn with_float_types(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 50.0;
-        let b: {} = 8.0;
+        let a: {type_name} = 50.0;
+        let b: {type_name} = 8.0;
         print_value(if a > b {{ a - b }} else {{ b - a }});
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "42");
 }

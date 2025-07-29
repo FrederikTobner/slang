@@ -43,11 +43,11 @@ impl TypeRegistry {
     pub fn register_type(&mut self, name: &str, kind: TypeKind) -> TypeId {
         let id = TypeId::new();
         let type_info = TypeInfo {
-            id: id.clone(),
+            id,
             name: name.to_string(),
             kind,
         };
-        self.types.insert(id.clone(), type_info);
+        self.types.insert(id, type_info);
         id
     }
 
@@ -60,7 +60,7 @@ impl TypeRegistry {
     /// * `id` - The TypeId for the primitive type
     fn register_primitive_type(&mut self, name: &str, kind: TypeKind, id: TypeId) {
         let type_info = TypeInfo {
-            id: id.clone(),
+            id,
             name: name.to_string(),
             kind,
         };
@@ -170,7 +170,7 @@ impl TypeRegistry {
         return_type: TypeId,
     ) -> TypeId {
         // Create a function type signature for lookup
-        let function_signature = FunctionType::new(param_types.clone(), return_type.clone());
+        let function_signature = FunctionType::new(param_types.clone(), return_type);
 
         if let Some(&existing_type_id) = self.function_type_cache.get(&function_signature) {
             return existing_type_id;

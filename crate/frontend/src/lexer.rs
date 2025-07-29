@@ -297,7 +297,7 @@ fn handle_string(state: &mut Lexer) {
 
     if !closed {
         let error_message = "Expected closing quote for string literal".to_string();
-        let invalid_lexeme = format!("\"{}", string);
+        let invalid_lexeme = format!("\"{string}");
         state.add_error(
             ErrorCode::ExpectedClosingQuote,
             error_message,

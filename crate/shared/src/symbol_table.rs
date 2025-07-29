@@ -185,15 +185,13 @@ impl SymbolTable {
             if let Some(existing_symbol) = current_scope.symbols.get(&name) {
                 let error_message = match (&existing_symbol.data, &data) {
                     (SymbolData::Type, _) => {
-                        format!("Type '{}' is already defined in the current scope.", name)
+                        format!("Type '{name}' is already defined in the current scope.")
                     }
                     (SymbolData::Function, _) => format!(
-                        "Function '{}' is already defined in the current scope.",
-                        name
+                        "Function '{name}' is already defined in the current scope."
                     ),
                     (SymbolData::Variable { .. }, _) => format!(
-                        "Variable '{}' is already defined in the current scope.",
-                        name
+                        "Variable '{name}' is already defined in the current scope."
                     ),
                 };
                 return Err(error_message);

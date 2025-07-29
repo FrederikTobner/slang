@@ -22,11 +22,10 @@ fn unit_assignment() {
 fn integer_assignment(#[case] value: &str, #[case] _type: &str) {
     let program = format!(
         r#"
-        let mut x: {} = {};
+        let mut x: {_type} = {value};
         x = 12;
         print_value(x);
-    "#,
-        _type, value
+    "#
     );
     execute_program_and_assert(&program, "12");
 }
@@ -39,11 +38,10 @@ fn integer_assignment(#[case] value: &str, #[case] _type: &str) {
 fn float_assignment(#[case] value: &str, #[case] _type: &str) {
     let program = format!(
         r#"
-        let mut x: {} = {};
+        let mut x: {_type} = {value};
         x = 2.71;
         print_value(x);
-    "#,
-        _type, value
+    "#
     );
     execute_program_and_assert(&program, "2.71");
 }

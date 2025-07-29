@@ -5,7 +5,6 @@ use slang_types::TypeId;
 
 /// Helper functions for common type checking operations.
 /// This module provides utility functions that are shared across different operation types.
-
 /// Creates a boolean type ID.
 /// This is a convenience function used by relational and logical operations.
 ///
@@ -34,8 +33,8 @@ pub fn operation_type_mismatch_error(
 ) -> SemanticAnalysisError {
     SemanticAnalysisError::OperationTypeMismatch {
         operator: operator.to_string(),
-        left_type: left_type.clone(),
-        right_type: right_type.clone(),
+        left_type: *left_type,
+        right_type: *right_type,
         location: *location,
     }
 }
@@ -59,8 +58,8 @@ pub fn logical_operator_type_mismatch_error(
 ) -> SemanticAnalysisError {
     SemanticAnalysisError::LogicalOperatorTypeMismatch {
         operator: operator.to_string(),
-        left_type: left_type.clone(),
-        right_type: right_type.clone(),
+        left_type: *left_type,
+        right_type: *right_type,
         location: *location,
     }
 }

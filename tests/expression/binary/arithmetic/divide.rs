@@ -10,11 +10,10 @@ use rstest::rstest;
 fn with_integer_variables(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 126;
-        let b: {} = 3;
+        let a: {type_name} = 126;
+        let b: {type_name} = 3;
         print_value(a / b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "42");
 }
@@ -25,11 +24,10 @@ fn with_integer_variables(#[case] type_name: &str) {
 fn with_float_variables(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 126.0;
-        let b: {} = 3.0;
+        let a: {type_name} = 126.0;
+        let b: {type_name} = 3.0;
         print_value(a / b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "42");
 }
@@ -43,9 +41,8 @@ fn with_float_variables(#[case] type_name: &str) {
 fn with_integer_literals(#[case] type_name: &str) {
     let program = format!(
         r#"
-        print_value(126{} / 3{});
-    "#,
-        type_name, type_name
+        print_value(126{type_name} / 3{type_name});
+    "#
     );
     execute_program_and_assert(&program, "42");
 }
@@ -57,9 +54,8 @@ fn with_integer_literals(#[case] type_name: &str) {
 fn with_float_literals(#[case] type_name: &str) {
     let program = format!(
         r#"
-        print_value(126.0{} / 3.0{});
-    "#,
-        type_name, type_name
+        print_value(126.0{type_name} / 3.0{type_name});
+    "#
     );
     execute_program_and_assert(&program, "42");
 }
@@ -73,9 +69,8 @@ fn with_float_literals(#[case] type_name: &str) {
 fn integer_division_ignores_remainder(#[case] type_name: &str) {
     let program = format!(
         r#"
-    print_value(3{} / 2{});
-    "#,
-        type_name, type_name
+    print_value(3{type_name} / 2{type_name});
+    "#
     );
     execute_program_and_assert(&program, "1");
 }
@@ -87,9 +82,8 @@ fn integer_division_ignores_remainder(#[case] type_name: &str) {
 fn integer_division_uses_remainder(#[case] type_name: &str) {
     let program = format!(
         r#"
-    print_value(3.0{} / 2.0{});
-    "#,
-        type_name, type_name
+    print_value(3.0{type_name} / 2.0{type_name});
+    "#
     );
     execute_program_and_assert(&program, "1.5");
 }
@@ -132,16 +126,14 @@ fn with_incompatible_types() {
 
             let program = format!(
                 r#"
-                let a: {} = {};
-                let b: {} = {};
+                let a: {left_type} = {left_value};
+                let b: {right_type} = {right_value};
                 print_value(a / b);
-                "#,
-                left_type, left_value, right_type, right_value
+                "#
             );
 
             let expected_error = format!(
-                "Type mismatch: cannot apply '/' operator on {} and {}",
-                left_type, right_type
+                "Type mismatch: cannot apply '/' operator on {left_type} and {right_type}"
             );
 
             execute_program_expect_error(

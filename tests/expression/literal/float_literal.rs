@@ -14,7 +14,7 @@ fn basic() {
 #[case("2.718f64")]
 fn with_suffix(#[case] literal: &str) {
     let expected = literal.replace("f32", "").replace("f64", "");
-    let program = format!(r#"print_value({});"#, literal);
+    let program = format!(r#"print_value({literal});"#);
     execute_program_and_assert(&program, &expected);
 }
 

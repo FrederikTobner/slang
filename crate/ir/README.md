@@ -17,14 +17,22 @@ The IR consists of several key components:
 - **AST Definitions (`ast.rs`)**: Defines the core Abstract Syntax Tree structures representing Slang programs
 - **Visitor Pattern (`visitor.rs`)**: Implements the visitor design pattern for traversing the AST
 - **AST Printer (`ast_printer.rs`)**: Debugging utility to visualize AST structures
+- **Location Tracking (`location.rs`)**: Source position tracking for precise error reporting
+- **Factory Methods (`factory/`)**: Type-safe construction utilities for AST nodes
+  - **Expressions (`factory/expressions.rs`)**: Factory methods for expression nodes
+  - **Statements (`factory/statements.rs`)**: Factory methods for statement nodes
+  - **Types (`factory/types.rs`)**: Factory methods for type expressions
+  - **Locations (`factory/locations.rs`)**: Factory methods for location tracking
 - **Core Library (`lib.rs`)**: Exports the public API and connects the components
 
 ## Features
 
 - Complete AST representation of Slang language constructs
-- Location tracking for precise error reporting
-- Visitor pattern for clean, extensible AST traversal
+- Location tracking for precise error reporting and source mapping
+- Visitor pattern for clean, extensible AST traversal and transformation
+- Type-safe factory methods for constructing AST nodes
 - Support for all Slang language features (expressions, statements, types)
+- Rich debugging utilities for AST visualization
 
 ## Usage
 

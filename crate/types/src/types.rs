@@ -202,7 +202,7 @@ impl TypeId {
         PRIMITIVE_IDS
             .get(&primitive)
             .cloned()
-            .unwrap_or_else(|| panic!("Unknown primitive type: {:?}", primitive))
+            .unwrap_or_else(|| panic!("Unknown primitive type: {primitive:?}"))
     }
 
     /// Returns the TypeId for bool type

@@ -102,8 +102,8 @@ impl<'a> TypeCoercion<'a> {
 
         Err(SemanticAnalysisError::OperationTypeMismatch {
             operator: bin_expr.operator.to_string(),
-            left_type: left_type.clone(),
-            right_type: right_type.clone(),
+            left_type: *left_type,
+            right_type: *right_type,
             location: bin_expr.location,
         })
     }
@@ -136,8 +136,8 @@ pub fn check_unspecified_int_for_type(
                         || context.get_type_name(target_type) == TYPE_NAME_U64
                     {
                         return Err(SemanticAnalysisError::ValueOutOfRange {
-                            value: format!("-{}", n),
-                            target_type: target_type.clone(),
+                            value: format!("-{n}"),
+                            target_type: *target_type,
                             is_float: false,
                             location: expr.location(),
                         });
@@ -153,18 +153,18 @@ pub fn check_unspecified_int_for_type(
             let value_in_range = context.check_value_in_range(n, target_type);
 
             if value_in_range {
-                return Ok(target_type.clone());
+                return Ok(*target_type);
             } else {
                 return Err(SemanticAnalysisError::ValueOutOfRange {
                     value: n.to_string(),
-                    target_type: target_type.clone(),
+                    target_type: *target_type,
                     is_float: false,
                     location: expr.location(),
                 });
             }
         }
     }
-    Ok(target_type.clone())
+    Ok(*target_type)
 }
 
 /// Checks if an unspecified float literal is in the valid range for a target type.
@@ -189,16 +189,16 @@ pub fn check_unspecified_float_for_type(
             let value_in_range = context.check_float_value_in_range(f, target_type);
 
             if value_in_range {
-                return Ok(target_type.clone());
+                return Ok(*target_type);
             } else {
                 return Err(SemanticAnalysisError::ValueOutOfRange {
                     value: f.to_string(),
-                    target_type: target_type.clone(),
+                    target_type: *target_type,
                     is_float: true,
                     location: expr.location(),
                 });
             }
         }
     }
-    Ok(target_type.clone())
+    Ok(*target_type)
 }

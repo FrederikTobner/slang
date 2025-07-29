@@ -156,50 +156,47 @@ impl<'a> CompilationPipeline<'a> {
     /// let result = pipeline.parse(tokens);
     /// ```
     pub fn parse(self, tokens: Vec<Token>) -> PipelineStage<'a, Vec<Statement>> {
-        match self {
-            Self {
-                mut context,
-                mut diagnostics,
-                source,
-                file_name,
-            } => {
-                let line_info = LineInfo::new(&source);
-                let mut parser = slang_frontend::parser::Parser::new(&tokens, &line_info, &mut context);
-                match parser.parse() {
-                    Ok(statements) => PipelineStage::Success {
+        let Self {
+            mut context,
+            mut diagnostics,
+            source,
+            file_name,
+        } = self;
+        let line_info = LineInfo::new(source);
+        let mut parser = slang_frontend::parser::Parser::new(&tokens, &line_info, &mut context);
+        match parser.parse() {
+            Ok(statements) => PipelineStage::Success {
+                pipeline: Self {
+                    context,
+                    diagnostics,
+                    source,
+                    file_name,
+                },
+                data: statements,
+            },
+            Err(errors) => {
+                for error in errors {
+                    diagnostics.emit_compiler_error(error);
+                }
+
+                if diagnostics.is_recovery_mode() {
+                    PipelineStage::Success {
                         pipeline: Self {
                             context,
                             diagnostics,
                             source,
                             file_name,
                         },
-                        data: statements,
-                    },
-                    Err(errors) => {
-                        for error in errors {
-                            diagnostics.emit_compiler_error(error);
-                        }
-
-                        if diagnostics.is_recovery_mode() {
-                            PipelineStage::Success {
-                                pipeline: Self {
-                                    context,
-                                    diagnostics,
-                                    source,
-                                    file_name,
-                                },
-                                data: Vec::new(),
-                            }
-                        } else {
-                            PipelineStage::Failed {
-                                pipeline: Self {
-                                    context,
-                                    diagnostics,
-                                    source,
-                                    file_name,
-                                },
-                            }
-                        }
+                        data: Vec::new(),
+                    }
+                } else {
+                    PipelineStage::Failed {
+                        pipeline: Self {
+                            context,
+                            diagnostics,
+                            source,
+                            file_name,
+                        },
                     }
                 }
             }
@@ -240,15 +237,29 @@ impl<'a> CompilationPipeline<'a> {
         self,
         statements: Vec<Statement>,
     ) -> PipelineStage<'a, Vec<Statement>> {
-        match self {
-            Self {
-                mut context,
-                mut diagnostics,
-                source,
-                file_name,
-            } => {
-                match slang_frontend::semantic_analysis::execute(&statements, &mut context) {
-                    Ok(()) => PipelineStage::Success {
+        let Self {
+            mut context,
+            mut diagnostics,
+            source,
+            file_name,
+        } = self;
+        match slang_frontend::semantic_analysis::execute(&statements, &mut context) {
+            Ok(()) => PipelineStage::Success {
+                pipeline: Self {
+                    context,
+                    diagnostics,
+                    source,
+                    file_name,
+                },
+                data: statements,
+            },
+            Err(errors) => {
+                for error in errors {
+                    diagnostics.emit_compiler_error(error);
+                }
+                // In recovery mode, continue with the statements we have
+                if diagnostics.is_recovery_mode() {
+                    PipelineStage::Success {
                         pipeline: Self {
                             context,
                             diagnostics,
@@ -256,32 +267,15 @@ impl<'a> CompilationPipeline<'a> {
                             file_name,
                         },
                         data: statements,
-                    },
-                    Err(errors) => {
-                        for error in errors {
-                            diagnostics.emit_compiler_error(error);
-                        }
-                        // In recovery mode, continue with the statements we have
-                        if diagnostics.is_recovery_mode() {
-                            PipelineStage::Success {
-                                pipeline: Self {
-                                    context,
-                                    diagnostics,
-                                    source,
-                                    file_name,
-                                },
-                                data: statements,
-                            }
-                        } else {
-                            PipelineStage::Failed {
-                                pipeline: Self {
-                                    context,
-                                    diagnostics,
-                                    source,
-                                    file_name,
-                                },
-                            }
-                        }
+                    }
+                } else {
+                    PipelineStage::Failed {
+                        pipeline: Self {
+                            context,
+                            diagnostics,
+                            source,
+                            file_name,
+                        },
                     }
                 }
             }
@@ -322,21 +316,20 @@ impl<'a> CompilationPipeline<'a> {
     /// }
     /// ```
     pub fn codegen(self, statements: Vec<Statement>) -> CompilationResult<'a> {
-        match self {
-            Self {
-                context: _context,
-                mut diagnostics,
-                source: _source,
-                file_name: _file_name,
-            } => match slang_backend::codegen::generate_bytecode(&statements) {
-                Ok(chunk) => CompilationResult::Success { chunk, diagnostics },
-                Err(errors) => {
-                    for error in errors {
-                        diagnostics.emit_compiler_error(error);
-                    }
-                    CompilationResult::Failed { diagnostics }
+        let Self {
+            context: _context,
+            mut diagnostics,
+            source: _source,
+            file_name: _file_name,
+        } = self;
+        match slang_backend::codegen::generate_bytecode(&statements) {
+            Ok(chunk) => CompilationResult::Success { chunk, diagnostics },
+            Err(errors) => {
+                for error in errors {
+                    diagnostics.emit_compiler_error(error);
                 }
-            },
+                CompilationResult::Failed { diagnostics }
+            }
         }
     }
 

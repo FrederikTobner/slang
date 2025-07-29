@@ -10,11 +10,10 @@ use rstest::rstest;
 fn with_integer_types(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 50;
-        let b: {} = 8;
+        let a: {type_name} = 50;
+        let b: {type_name} = 8;
         print_value(a - b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "42");
 }
@@ -25,11 +24,10 @@ fn with_integer_types(#[case] type_name: &str) {
 fn with_float_types(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 50.0;
-        let b: {} = 8.0;
+        let a: {type_name} = 50.0;
+        let b: {type_name} = 8.0;
         print_value(a - b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "42");
 }
@@ -42,9 +40,8 @@ fn with_float_types(#[case] type_name: &str) {
 fn with_integer_literals(#[case] type_name: &str) {
     let program = format!(
         r#"
-        print_value(50{} - 8{});
-    "#,
-        type_name, type_name
+        print_value(50{type_name} - 8{type_name});
+    "#
     );
     execute_program_and_assert(&program, "42");
 }
@@ -56,9 +53,8 @@ fn with_integer_literals(#[case] type_name: &str) {
 fn with_float_literals(#[case] type_name: &str) {
     let program = format!(
         r#"
-        print_value(50.0{} - 8.0{});
-    "#,
-        type_name, type_name
+        print_value(50.0{type_name} - 8.0{type_name});
+    "#
     );
     execute_program_and_assert(&program, "42");
 }
@@ -101,16 +97,14 @@ fn with_incompatible_types() {
 
             let program = format!(
                 r#"
-                let a: {} = {};
-                let b: {} = {};
+                let a: {left_type} = {left_value};
+                let b: {right_type} = {right_value};
                 print_value(a - b);
-                "#,
-                left_type, left_value, right_type, right_value
+                "#
             );
 
             let expected_error = format!(
-                "Type mismatch: cannot apply '-' operator on {} and {}",
-                left_type, right_type
+                "Type mismatch: cannot apply '-' operator on {left_type} and {right_type}"
             );
 
             execute_program_expect_error(

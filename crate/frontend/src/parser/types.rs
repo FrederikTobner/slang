@@ -5,7 +5,7 @@ use super::core::Parser;
 use super::error::ParseError;
 use crate::token::Tokentype;
 use slang_error::ErrorCode;
-use slang_ir::ast::{Expression, FunctionTypeExpr};
+use slang_ir::ast::Expression;
 use slang_shared::SymbolKind;
 use slang_types::{
     PrimitiveType, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64,
@@ -64,8 +64,7 @@ impl TypeParser {
             return Ok(function_type_id);
         }
 
-        if parser.check(&Tokentype::LeftParen) {
-            parser.advance();
+        if parser.match_token(&Tokentype::LeftParen) {
             if !parser.match_token(&Tokentype::RightParen) {
                 return Err(parser.error(
                     ErrorCode::ExpectedClosingParen,
@@ -75,48 +74,45 @@ impl TypeParser {
             return Ok(PrimitiveType::Unit.into());
         }
 
-        if !parser.check(&Tokentype::Identifier) {
+        let (type_name, _position) = if let Some((name, position)) = parser.match_identifier_token() {
+            (name.to_string(), position)
+        } else {
             return Err(parser.error(ErrorCode::ExpectedIdentifier, "Expected type identifier"));
-        }
-
-        let type_name_token = parser.advance();
-        let type_name = type_name_token.lexeme.clone();
+        };
 
         if type_name == TYPE_NAME_INT {
             return Err(parser.error(
                 ErrorCode::UnknownType,
                 &format!(
-                    "'{}' is not a valid type specifier. Use '{}', '{}', '{}', or '{}' instead",
-                    TYPE_NAME_INT, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64
+                    "'{TYPE_NAME_INT}' is not a valid type specifier. Use '{TYPE_NAME_I32}', '{TYPE_NAME_I64}', '{TYPE_NAME_U32}', or '{TYPE_NAME_U64}' instead"
                 ),
             ));
         } else if type_name == TYPE_NAME_FLOAT {
             return Err(parser.error(
                 ErrorCode::UnknownType,
                 &format!(
-                    "'{}' is not a valid type specifier. Use '{}' or '{}' instead",
-                    TYPE_NAME_FLOAT, TYPE_NAME_F32, TYPE_NAME_F64
+                    "'{TYPE_NAME_FLOAT}' is not a valid type specifier. Use '{TYPE_NAME_F32}' or '{TYPE_NAME_F64}' instead"
                 ),
             ));
         } else if type_name == TYPE_NAME_UNKNOWN {
             return Err(parser.error_previous(
                 ErrorCode::UnknownType,
-                &format!("'{}' is not a valid type specifier", TYPE_NAME_UNKNOWN),
+                &format!("'{TYPE_NAME_UNKNOWN}' is not a valid type specifier"),
             ));
         }
         if let Some(symbol) = parser.context.lookup_symbol(&type_name) {
             if symbol.kind() == SymbolKind::Type {
-                Ok(symbol.type_id.clone())
+                Ok(symbol.type_id)
             } else {
                 Err(parser.error_previous(
                     ErrorCode::UnknownType,
-                    &format!("'{}' is not a type name", type_name),
+                    &format!("'{type_name}' is not a type name"),
                 ))
             }
         } else {
             Err(parser.error_previous(
                 ErrorCode::UnknownType,
-                &format!("Unknown type: {}", type_name),
+                &format!("Unknown type: {type_name}"),
             ))
         }
     }
@@ -128,7 +124,6 @@ impl TypeParser {
     /// The parsed function type expression or an error message
     pub fn parse_function_type_expression(parser: &mut Parser) -> Result<Expression, ParseError> {
         let fn_token_pos = parser.previous().pos;
-        let (start_line, start_column) = parser.line_info.get_line_col(fn_token_pos);
 
         if !parser.match_token(&Tokentype::LeftParen) {
             return Err(parser.error(ErrorCode::ExpectedOpeningParen, "Expected '(' after 'fn'"));
@@ -160,23 +155,14 @@ impl TypeParser {
 
         let return_type = Self::parse_type(parser)?;
 
-        let end_token_pos = parser.previous().pos;
-        let end_token_lexeme_len = parser.previous().lexeme.len();
-        let end_pos = end_token_pos + end_token_lexeme_len;
-        let location = slang_ir::location::Location::new(
-            fn_token_pos,
-            start_line,
-            start_column,
-            end_pos - fn_token_pos,
-        );
+        // Use utility function for cleaner location calculation
+        let end_pos = parser.previous().pos + parser.previous().lexeme.len();
+        let location = parser.location_from_range(fn_token_pos, end_pos);
 
-        let expr_type = PrimitiveType::Unknown.into();
-
-        Ok(Expression::FunctionType(FunctionTypeExpr {
+        Ok(slang_ir::ExprFactory::function_type_with_location(
             param_types,
             return_type,
-            expr_type,
             location,
-        }))
+        ))
     }
 }

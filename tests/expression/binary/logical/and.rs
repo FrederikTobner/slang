@@ -10,11 +10,10 @@ use rstest::rstest;
 fn with_boolean_types(#[case] first: &str, #[case] second: &str, #[case] expected: &str) {
     let program = format!(
         r#"
-        let a: bool = {};
-        let b: bool = {};
+        let a: bool = {first};
+        let b: bool = {second};
         print_value(a && b);
-    "#,
-        first, second
+    "#
     );
     execute_program_and_assert(&program, expected);
 }
@@ -25,7 +24,7 @@ fn with_boolean_types(#[case] first: &str, #[case] second: &str, #[case] expecte
 #[case("false", "true", "false")]
 #[case("false", "false", "false")]
 fn with_boolean_literals(#[case] first: &str, #[case] second: &str, #[case] expected: &str) {
-    let program = format!("print_value({} && {});", first, second);
+    let program = format!("print_value({first} && {second});");
 
     execute_program_and_assert(&program, expected);
 }

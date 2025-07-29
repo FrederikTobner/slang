@@ -67,7 +67,7 @@ enum ExecutionMode {
 /// ### Arguments
 /// * `input` - The input compiled bytecode file
 pub fn run_file(input: &str) -> CliResult<()> {
-    println!("Running compiled file: {}", input);
+    println!("Running compiled file: {input}");
 
     // Validate file extension for better user experience
     validate_file_extension(input, SLANG_BYTECODE_EXTENSION, "bytecode execution")?;
@@ -113,7 +113,7 @@ fn process_source_file(input: &str, mode: ExecutionMode) -> CliResult<()> {
             match mode {
                 ExecutionMode::Compile { output_path } => {
                     write_bytecode(&chunk, &output_path)?;
-                    println!("Successfully compiled to {}", output_path);
+                    println!("Successfully compiled to {output_path}");
                 }
                 ExecutionMode::Execute => {
                     vm::execute_bytecode(&chunk).map_err(|e| CliError::Generic {
@@ -127,7 +127,7 @@ fn process_source_file(input: &str, mode: ExecutionMode) -> CliResult<()> {
         CompilationResult::Failed { diagnostics, .. } => {
             diagnostics.report_all(&source);
             Err(CliError::Generic {
-                message: format!("Compilation failed for file '{}'", input),
+                message: format!("Compilation failed for file '{input}'"),
                 exit_code: exit::Code::Software,
             })
         }
@@ -151,7 +151,7 @@ fn resolve_output_path(input: &str, output: Option<String>) -> String {
                 .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("output");
-            format!("{}.{}", stem, SLANG_BYTECODE_EXTENSION)
+            format!("{stem}.{SLANG_BYTECODE_EXTENSION}")
         }
     }
 }
@@ -174,7 +174,7 @@ fn read_source_file(path: &str) -> CliResult<String> {
         {
             CliError::Io {
                 source,
-                path: format!("{} (attempted to read source file)", path),
+                path: format!("{path} (attempted to read source file)"),
                 exit_code,
             }
         } else {
@@ -316,8 +316,7 @@ fn validate_file_extension(path: &str, expected_ext: &str, operation: &str) -> C
     } else {
         Err(CliError::Generic {
             message: format!(
-                "Missing file extension for {}: expected '.{}' (file: '{}')",
-                operation, expected_ext, path
+                "Missing file extension for {operation}: expected '.{expected_ext}' (file: '{path}')",
             ),
             exit_code: exit::Code::Usage,
         })
@@ -331,7 +330,7 @@ fn validate_file_extension(path: &str, expected_ext: &str, operation: &str) -> C
 /// * `output` - The output file path (if provided)
 pub fn compile_file(input: &str, output: Option<String>) -> CliResult<()> {
     let output_path = resolve_output_path(input, output);
-    println!("Compiling {} to {}", input, output_path);
+    println!("Compiling {input} to {output_path}");
     process_source_file(input, ExecutionMode::Compile { output_path })
 }
 
@@ -340,6 +339,6 @@ pub fn compile_file(input: &str, output: Option<String>) -> CliResult<()> {
 /// ### Arguments
 /// * `input` - The input source file
 pub fn execute_file(input: &str) -> CliResult<()> {
-    println!("Executing source file: {}", input);
+    println!("Executing source file: {input}");
     process_source_file(input, ExecutionMode::Execute)
 }

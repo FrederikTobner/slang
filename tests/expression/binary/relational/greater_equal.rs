@@ -10,11 +10,10 @@ use rstest::rstest;
 fn smaller_on_int(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 20;
-        let b: {} = 22;
+        let a: {type_name} = 20;
+        let b: {type_name} = 22;
         print_value(a >= b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "false");
 }
@@ -27,11 +26,10 @@ fn smaller_on_int(#[case] type_name: &str) {
 fn equal_on_int(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 20;
-        let b: {} = 20;
+        let a: {type_name} = 20;
+        let b: {type_name} = 20;
         print_value(a >= b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "true");
 }
@@ -44,11 +42,10 @@ fn equal_on_int(#[case] type_name: &str) {
 fn greater_on_int(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 22;
-        let b: {} = 20;
+        let a: {type_name} = 22;
+        let b: {type_name} = 20;
         print_value(a >= b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "true");
 }
@@ -59,11 +56,10 @@ fn greater_on_int(#[case] type_name: &str) {
 fn smaller_on_float(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 20.0;
-        let b: {} = 22.0;
+        let a: {type_name} = 20.0;
+        let b: {type_name} = 22.0;
         print_value(a >= b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "false");
 }
@@ -74,11 +70,10 @@ fn smaller_on_float(#[case] type_name: &str) {
 fn equal_on_float(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 20.0;
-        let b: {} = 20.0;
+        let a: {type_name} = 20.0;
+        let b: {type_name} = 20.0;
         print_value(a >= b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "true");
 }
@@ -89,11 +84,10 @@ fn equal_on_float(#[case] type_name: &str) {
 fn greater_on_float(#[case] type_name: &str) {
     let program = format!(
         r#"
-        let a: {} = 22.0;
-        let b: {} = 20.0;
+        let a: {type_name} = 22.0;
+        let b: {type_name} = 20.0;
         print_value(a >= b);
-    "#,
-        type_name, type_name
+    "#
     );
     execute_program_and_assert(&program, "true");
 }

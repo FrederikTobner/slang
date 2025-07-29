@@ -511,14 +511,14 @@ impl<'a> DiagnosticEngine<'a> {
             diagnostic.message
         );
 
-        eprintln!("  {} {}:{}:{}", "-->".yellow(), "main", line, col);
+        eprintln!("  {} main:{}:{}", "-->".yellow(), line, col);
 
-        let line_num_str = format!("{}", line);
+        let line_num_str = format!("{line}");
         let indent_width = line_num_str.len() + 1;
         let indent = " ".repeat(indent_width);
         let pipe = "|".yellow();
 
-        eprintln!("{indent}{}", pipe);
+        eprintln!("{indent}{pipe}");
         eprintln!("{} {} {}", line_num_str.yellow(), pipe, current_line_text);
 
         let error_marker = " ".repeat(col.saturating_sub(1))
@@ -527,7 +527,7 @@ impl<'a> DiagnosticEngine<'a> {
                 .bold()
                 .red()
                 .to_string();
-        eprintln!("{indent}{} {}", pipe, error_marker);
+        eprintln!("{indent}{pipe} {error_marker}");
 
         for suggestion in &diagnostic.suggestions {
             eprintln!(

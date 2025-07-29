@@ -15,7 +15,7 @@ fn codegen_performance_simple(bencher: Bencher) {
     let program = &SIMPLE_ARITHMETIC;
 
     bencher.bench_local(|| {
-        black_box(compile_to_bytecode(&program.source).expect("Code generation should succeed"))
+        black_box(compile_to_bytecode(program.source).expect("Code generation should succeed"))
     });
 }
 
@@ -24,7 +24,7 @@ fn codegen_performance_complex(bencher: Bencher) {
     let program = &COMPLEX_ARITHMETIC;
 
     bencher.bench_local(|| {
-        black_box(compile_to_bytecode(&program.source).expect("Code generation should succeed"))
+        black_box(compile_to_bytecode(program.source).expect("Code generation should succeed"))
     });
 }
 

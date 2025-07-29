@@ -16,7 +16,7 @@ fn basic() {
 #[case("42u32")]
 #[case("42u64")]
 fn with_suffix(#[case] literal: &str) {
-    let program = format!(r#"print_value({});"#, literal);
+    let program = format!(r#"print_value({literal});"#);
     execute_program_and_assert(&program, "42");
 }
 

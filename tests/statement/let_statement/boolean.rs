@@ -8,10 +8,9 @@ use rstest::rstest;
 fn from_boolean_literal(#[case] value: &str) {
     let program = format!(
         r#"
-        let boolean_var: bool = {};
+        let boolean_var: bool = {value};
         print_value(boolean_var);
-    "#,
-        value
+    "#
     );
     execute_program_and_assert(&program, value);
 }
@@ -47,17 +46,15 @@ fn from_string_literal() {
 fn from_integer_literal(#[case] value: &str, #[case] _type: &str) {
     let program = format!(
         r#"
-        let a: bool = {};
+        let a: bool = {value};
         print_value(a);
-    "#,
-        value
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::TypeMismatch,
         &format!(
-            "Type mismatch: variable a is bool but expression is {}",
-            _type
+            "Type mismatch: variable a is bool but expression is {_type}"
         ),
     );
 }
@@ -69,17 +66,15 @@ fn from_integer_literal(#[case] value: &str, #[case] _type: &str) {
 fn from_float_literal(#[case] value: &str, #[case] _type: &str) {
     let program = format!(
         r#"
-        let a: bool = {};
+        let a: bool = {value};
         print_value(a);
-    "#,
-        value
+    "#
     );
     execute_program_expect_error(
         &program,
         ErrorCode::TypeMismatch,
         &format!(
-            "Type mismatch: variable a is bool but expression is {}",
-            _type
+            "Type mismatch: variable a is bool but expression is {_type}"
         ),
     );
 }
@@ -90,7 +85,7 @@ fn using_boolean_type_as_name() {
         let bool: bool = true;
     "#;
     execute_program_expect_error(
-        &program,
+        program,
         ErrorCode::SymbolRedefinition,
         "Symbol \'bool\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.",
     );
