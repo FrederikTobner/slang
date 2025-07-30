@@ -353,14 +353,6 @@ impl ExpressionParser {
         if !parser.match_token(&Tokentype::RightBrace) {
             return Err(parser.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after block"));
         }
-
-        // Use factory for automatic location calculation from statements and return expression
-        let block_expr = ExprFactory::block(statements, return_expr);
-        
-        // Extract the BlockExpr from the Expression::Block wrapper
-        match block_expr {
-            Expression::Block(block) => Ok(block),
-            _ => unreachable!("ExprFactory::block should always return Expression::Block"),
-        }
+        return Ok(ExprFactory::block_expr(statements, return_expr));
     }
 }

@@ -9,8 +9,6 @@ use super::types::TypeParser;
 use crate::token::{Token, Tokentype};
 use slang_error::{CompileResult, CompilerError, ErrorCode, LineInfo};
 use slang_ir::ast::{BlockExpr, Expression, Statement, BinaryOperator};
-use slang_ir::factory::locations::ParserLocationUtils;
-
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
 
@@ -278,7 +276,9 @@ impl<'a> Parser<'a> {
     /// 
     /// A Location struct covering the range from start_pos to end_pos
     pub(super) fn location_from_range(&self, start_pos: usize, end_pos: usize) -> slang_ir::location::Location {
-        slang_ir::location::Location::from_range_with_line_info(start_pos, end_pos, |p| self.line_info.get_line_col(p))
+        let (start_line, start_column) = self.line_info.get_line_col(start_pos);
+        let length = end_pos - start_pos;
+        slang_ir::location::Location::new(start_pos, start_line, start_column, length)
     }
 
     /// Parses a single statement
@@ -324,11 +324,6 @@ impl<'a> Parser<'a> {
         TypeParser::parse_function_type_expression(self)
     }
 
-    // Enhanced Token Matching API Methods
-    // ===================================
-    // These methods follow the design specification for zero-copy token access
-    // patterns, eliminating the need for frequent previous() calls.
-
     /// Enhanced token matching that returns a reference to the matched token
     /// 
     /// ### Arguments
@@ -337,11 +332,6 @@ impl<'a> Parser<'a> {
     /// ### Returns
     /// * `Some(&Token)` - Reference to the consumed token if match succeeded
     /// * `None` - If the current token doesn't match the expected type
-    /// 
-    /// ### Benefits
-    /// - Zero-copy: Returns reference instead of requiring previous() call
-    /// - Atomic operation: Match and access in single call
-    /// - Clear semantics: Option<&Token> clearly indicates success/failure
     #[inline]
     pub(super) fn match_token_ref(&mut self, token_type: &Tokentype) -> Option<&Token> {
         if self.check(token_type) {
