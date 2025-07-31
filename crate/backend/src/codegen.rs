@@ -1,6 +1,6 @@
 use crate::bytecode::{Chunk, OpCode};
 use crate::value::{Value, Function};
-use slang_error::{CompilerError, CompileResult, ErrorCode};
+use slang_error::{CompileResult, CompilerError, ErrorCode, CodegenError, CodegenResult, DomainError};
 use slang_ir::Visitor;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
@@ -65,6 +65,26 @@ impl CodeGenerator {
             None, // token_length - not applicable for codegen errors
         );
         self.errors.push(error);
+    }
+
+    /// Helper to create a CodegenError with current location context
+    fn create_codegen_error(&self, error: CodegenError) -> CompilerError {
+        error.to_compiler_error()
+    }
+
+    /// Check if we've exceeded the maximum function recursion depth
+    fn check_stack_depth(&self, location: slang_ir::Location) -> CodegenResult<()> {
+        const MAX_FUNCTION_DEPTH: usize = 1000;
+        
+        if self.functions.len() > MAX_FUNCTION_DEPTH {
+            Err(CodegenError::StackOverflow { 
+                current_depth: self.functions.len(),
+                max_depth: MAX_FUNCTION_DEPTH,
+                location,
+            })
+        } else {
+            Ok(())
+        }
     }
 
     /// Compiles a list of statements into bytecode
@@ -203,6 +223,13 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
             Statement::If(if_stmt) => if_stmt.location,
         };
         self.set_current_location(&location);
+        
+        // Demonstrate new error handling capability, but convert to old format for compatibility
+        if let Err(codegen_error) = self.check_stack_depth(location) {
+            let compiler_error = self.create_codegen_error(codegen_error);
+            self.errors.push(compiler_error);
+            return Err(()); // Keep old Result<(), ()> for now
+        }
         
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),

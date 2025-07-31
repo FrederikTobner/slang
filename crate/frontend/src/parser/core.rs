@@ -1,13 +1,13 @@
 // Core parser infrastructure module
 // Contains the main Parser struct and fundamental parsing methods
 
-use super::error::ParseError;
+use slang_error::ParseError;
 use super::expressions::ExpressionParser;
 use super::literals::LiteralParser;
 use super::statements::StatementParser;
 use super::types::TypeParser;
 use crate::token::{Token, Tokentype};
-use slang_error::{CompileResult, CompilerError, ErrorCode, LineInfo};
+use slang_error::{CompileResult, CompilerError, LineInfo, DomainError};
 use slang_ir::ast::{BlockExpr, Expression, Statement, BinaryOperator};
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
@@ -22,6 +22,11 @@ pub struct TokenPosition {
 }
 
 impl TokenPosition {
+    /// Create a new TokenPosition
+    pub fn new(pos: usize, len: usize) -> Self {
+        TokenPosition { pos, len }
+    }
+    
     /// Convert to a source location using line info
     pub fn to_location(self, line_info: &LineInfo) -> slang_ir::location::Location {
         let (line, column) = line_info.get_line_col(self.pos);
@@ -33,6 +38,8 @@ impl TokenPosition {
         self.pos + self.len
     }
 }
+
+
 
 /// Parser that converts tokens into an abstract syntax tree
 pub struct Parser<'a> {
@@ -82,7 +89,7 @@ impl<'a> Parser<'a> {
             match self.statement() {
                 Ok(stmt) => statements.push(stmt),
                 Err(e) => {
-                    self.errors.push(e.to_compiler_error(self.line_info));
+                    self.errors.push(e.to_compiler_error());
                     self.synchronize();
                 }
             }
@@ -190,42 +197,13 @@ impl<'a> Parser<'a> {
         self.tokens[self.current + 1].token_type == *token_type
     }
 
-    // Error handling methods
+    // Error handling methods - removed helper methods, use ParseErrorFactory directly
 
-    /// Creates an error at the current token position
-    ///
-    /// ### Arguments
-    ///
-    /// * `error_code` - The error code for the error
-    /// * `message` - The error message to display
-    ///
-    /// ### Returns
-    /// A new ParseError with the current token position and length
-    pub(super) fn error(&self, error_code: ErrorCode, message: &str) -> ParseError {
-        ParseError::new(
-            error_code,
-            message,
-            self.peek().pos,
-            self.peek().lexeme.len(),
-        )
-    }
-
-    /// Creates an error at the previous token position
-    ///
-    /// ### Arguments
-    ///
-    /// * `error_code` - The error code for the error
-    /// * `message` - The error message to display
-    ///
-    /// ### Returns
-    /// A new ParseError with the previous token position and length
-    pub(super) fn error_previous(&self, error_code: ErrorCode, message: &str) -> ParseError {
-        ParseError::new(
-            error_code,
-            message,
-            self.previous().pos,
-            self.previous().lexeme.len(),
-        )
+    /// Helper to get current token location
+    pub(super) fn current_location(&self) -> slang_ir::Location {
+        let current_token = self.peek();
+        TokenPosition::new(current_token.pos, current_token.lexeme.len())
+            .to_location(&self.line_info)
     }
 
     /// Skip tokens until a safe synchronization point for error recovery

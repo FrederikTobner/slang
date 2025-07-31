@@ -2,11 +2,10 @@
 // Contains logic for parsing expressions with operator precedence
 
 use super::core::Parser;
-use super::error::ParseError;
+use slang_error::{ParseError, ParseErrorFactory};
 use crate::token::Tokentype;
-use slang_error::ErrorCode;
 use slang_ir::ast::{BinaryOperator, Expression, UnaryOperator, BlockExpr};
-use slang_ir::ExprFactory; // Import factory system
+use slang_ir::ExprFactory; 
 
 /// Expression parser that handles operator precedence parsing
 ///
@@ -200,10 +199,7 @@ impl ExpressionParser {
 
             let expr = parser.expression()?;
             if !parser.match_token(&Tokentype::RightParen) {
-                return Err(parser.error(
-                    ErrorCode::ExpectedClosingParen,
-                    "Expected ')' after expression",
-                ));
+                return Err(ParseErrorFactory::expected_closing_paren(parser.current_location(), Some("after expression")));
             }
             return Ok(expr);
         }
@@ -226,9 +222,10 @@ impl ExpressionParser {
             return Ok(Expression::Variable(ExprFactory::variable_expr_with_location(name_string, name_location)));
         }
 
-        Err(parser.error(
-            ErrorCode::ExpectedExpression,
+        Err(ParseErrorFactory::invalid_syntax(
+            parser.current_location(),
             &format!("Expected expression, found {}", parser.peek()),
+            None
         ))
     }
 
@@ -251,9 +248,10 @@ impl ExpressionParser {
 
             while parser.match_token(&Tokentype::Comma) {
                 if arguments.len() >= 255 {
-                    return Err(parser.error(
-                        ErrorCode::InvalidSyntax,
+                    return Err(ParseErrorFactory::invalid_syntax(
+                        parser.current_location(),
                         "Cannot have more than 255 arguments",
+                        None
                     ));
                 }
                 arguments.push(parser.expression()?);
@@ -261,10 +259,7 @@ impl ExpressionParser {
         }
 
         if !parser.match_token(&Tokentype::RightParen) {
-            return Err(parser.error(
-                ErrorCode::ExpectedClosingParen,
-                "Expected ')' after function arguments",
-            ));
+            return Err(ParseErrorFactory::expected_closing_paren(parser.current_location(), Some("after function arguments")));
         }
 
         // Create function call using factory with original name location
@@ -289,23 +284,17 @@ impl ExpressionParser {
         let condition = parser.expression()?;
 
         if !parser.match_token(&Tokentype::LeftBrace) {
-            return Err(parser.error(
-                ErrorCode::ExpectedOpeningBrace,
-                "Expected '{' after if condition",
-            ));
+            return Err(ParseErrorFactory::expected_opening_brace(parser.current_location(), Some("after if condition")));
         }
 
         let then_branch = Self::parse_block_expression(parser)?;
 
         if !parser.match_token(&Tokentype::Else) {
-            return Err(parser.error(
-                ErrorCode::ExpectedElse,
-                "Expected 'else' after if expression",
-            ));
+            return Err(ParseErrorFactory::expected_else_after_if(parser.current_location()));
         }
 
         if !parser.match_token(&Tokentype::LeftBrace) {
-            return Err(parser.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after else"));
+            return Err(ParseErrorFactory::expected_opening_brace(parser.current_location(), Some("after else")));
         }
 
         let else_branch = Self::parse_block_expression(parser)?;
@@ -351,7 +340,7 @@ impl ExpressionParser {
         }
 
         if !parser.match_token(&Tokentype::RightBrace) {
-            return Err(parser.error(ErrorCode::ExpectedClosingBrace, "Expected '}' after block"));
+            return Err(ParseErrorFactory::expected_closing_brace(parser.current_location(), Some("after block")));
         }
         return Ok(ExprFactory::block_expr(statements, return_expr));
     }

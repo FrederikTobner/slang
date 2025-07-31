@@ -2,8 +2,7 @@
 // Contains logic for parsing literal values (integers, floats, strings, booleans)
 
 use super::core::Parser;
-use super::error::ParseError;
-use slang_error::ErrorCode;
+use slang_error::{ParseError, ParseErrorFactory};
 use slang_ir::ast::{Expression, LiteralValue};
 use slang_ir::ExprFactory; // Import factory system
 use slang_types::{
@@ -24,8 +23,9 @@ impl LiteralParser {
         let token = parser.previous();
         let value_str = token.lexeme.clone();
         let base_value = value_str.parse::<i64>().map_err(|_| {
-            parser.error_previous(
-                ErrorCode::InvalidNumberLiteral,
+            ParseErrorFactory::invalid_number_literal(
+                parser.current_location(),
+                &value_str,
                 &format!("Invalid integer: {value_str}"),
             )
         })?;
@@ -35,8 +35,9 @@ impl LiteralParser {
             match type_name {
                 TYPE_NAME_I32 => {
                     if base_value > i32::MAX as i64 || base_value < i32::MIN as i64 {
-                        return Err(parser.error_previous(
-                            ErrorCode::ValueOutOfRange,
+                        return Err(ParseErrorFactory::value_out_of_range(
+                            parser.current_location(),
+                            &base_value.to_string(),
                             &format!("Value {base_value} is out of range for {TYPE_NAME_I32}"),
                         ));
                     }
@@ -53,8 +54,9 @@ impl LiteralParser {
                 }
                 TYPE_NAME_U32 => {
                     if base_value < 0 || base_value > u32::MAX as i64 {
-                        return Err(parser.error_previous(
-                            ErrorCode::ValueOutOfRange,
+                        return Err(ParseErrorFactory::value_out_of_range(
+                            parser.current_location(),
+                            &base_value.to_string(),
                             &format!("Value {base_value} is out of range for {TYPE_NAME_U32}"),
                         ));
                     }
@@ -65,8 +67,9 @@ impl LiteralParser {
                 }
                 TYPE_NAME_U64 => {
                     if base_value < 0 {
-                        return Err(parser.error_previous(
-                            ErrorCode::ValueOutOfRange,
+                        return Err(ParseErrorFactory::value_out_of_range(
+                            parser.current_location(),
+                            &base_value.to_string(),
                             &format!("Value {base_value} is out of range for {TYPE_NAME_U64}"),
                         ));
                     }
@@ -108,8 +111,9 @@ impl LiteralParser {
         let value_str = token.lexeme.clone();
         let location = parser.source_location_from_token(token);
         let value = value_str.parse::<f64>().map_err(|_| {
-            parser.error_previous(
-                ErrorCode::InvalidNumberLiteral,
+            ParseErrorFactory::invalid_number_literal(
+                parser.current_location(),
+                &value_str,
                 &format!("Invalid float: {value_str}"),
             )
         })?;

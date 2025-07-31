@@ -2,9 +2,8 @@
 // Contains logic for parsing type expressions and type resolution
 
 use super::core::Parser;
-use super::error::ParseError;
+use slang_error::{ParseError, ParseErrorFactory};
 use crate::token::Tokentype;
-use slang_error::ErrorCode;
 use slang_ir::ast::Expression;
 use slang_shared::SymbolKind;
 use slang_types::{
@@ -28,7 +27,7 @@ impl TypeParser {
 
             if !parser.match_token(&Tokentype::LeftParen) {
                 return Err(
-                    parser.error(ErrorCode::ExpectedOpeningParen, "Expected '(' after 'fn'")
+                    ParseErrorFactory::expected_opening_paren(parser.current_location(), Some("after 'fn'"))
                 );
             }
 
@@ -43,16 +42,17 @@ impl TypeParser {
             }
 
             if !parser.match_token(&Tokentype::RightParen) {
-                return Err(parser.error(
-                    ErrorCode::ExpectedClosingParen,
-                    "Expected ')' after function parameters",
+                return Err(ParseErrorFactory::expected_closing_paren(
+                    parser.current_location(),
+                    Some("after function parameters"),
                 ));
             }
 
             if !parser.match_token(&Tokentype::Arrow) {
-                return Err(parser.error(
-                    ErrorCode::InvalidSyntax,
+                return Err(ParseErrorFactory::invalid_syntax(
+                    parser.current_location(),
                     "Expected '->' after function parameters",
+                    None,
                 ));
             }
 
@@ -66,9 +66,9 @@ impl TypeParser {
 
         if parser.match_token(&Tokentype::LeftParen) {
             if !parser.match_token(&Tokentype::RightParen) {
-                return Err(parser.error(
-                    ErrorCode::ExpectedClosingParen,
-                    "Expected ')' for unit type",
+                return Err(ParseErrorFactory::expected_closing_paren(
+                    parser.current_location(),
+                    Some("for unit type"),
                 ));
             }
             return Ok(PrimitiveType::Unit.into());
@@ -77,26 +77,26 @@ impl TypeParser {
         let (type_name, _position) = if let Some((name, position)) = parser.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(parser.error(ErrorCode::ExpectedIdentifier, "Expected type identifier"));
+            return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some("type identifier")));
         };
 
         if type_name == TYPE_NAME_INT {
-            return Err(parser.error(
-                ErrorCode::UnknownType,
+            return Err(ParseErrorFactory::unknown_type(
+                parser.current_location(),
                 &format!(
                     "'{TYPE_NAME_INT}' is not a valid type specifier. Use '{TYPE_NAME_I32}', '{TYPE_NAME_I64}', '{TYPE_NAME_U32}', or '{TYPE_NAME_U64}' instead"
                 ),
             ));
         } else if type_name == TYPE_NAME_FLOAT {
-            return Err(parser.error(
-                ErrorCode::UnknownType,
+            return Err(ParseErrorFactory::unknown_type(
+                parser.current_location(),
                 &format!(
                     "'{TYPE_NAME_FLOAT}' is not a valid type specifier. Use '{TYPE_NAME_F32}' or '{TYPE_NAME_F64}' instead"
                 ),
             ));
         } else if type_name == TYPE_NAME_UNKNOWN {
-            return Err(parser.error_previous(
-                ErrorCode::UnknownType,
+            return Err(ParseErrorFactory::unknown_type(
+                parser.current_location(),
                 &format!("'{TYPE_NAME_UNKNOWN}' is not a valid type specifier"),
             ));
         }
@@ -104,14 +104,14 @@ impl TypeParser {
             if symbol.kind() == SymbolKind::Type {
                 Ok(symbol.type_id)
             } else {
-                Err(parser.error_previous(
-                    ErrorCode::UnknownType,
+                Err(ParseErrorFactory::unknown_type(
+                    parser.current_location(),
                     &format!("'{type_name}' is not a type name"),
                 ))
             }
         } else {
-            Err(parser.error_previous(
-                ErrorCode::UnknownType,
+            Err(ParseErrorFactory::unknown_type(
+                parser.current_location(),
                 &format!("Unknown type: {type_name}"),
             ))
         }
@@ -126,7 +126,7 @@ impl TypeParser {
         let fn_token_pos = parser.previous().pos;
 
         if !parser.match_token(&Tokentype::LeftParen) {
-            return Err(parser.error(ErrorCode::ExpectedOpeningParen, "Expected '(' after 'fn'"));
+            return Err(ParseErrorFactory::expected_opening_paren(parser.current_location(), Some("'(' after 'fn'")));
         }
 
         let mut param_types = Vec::new();
@@ -140,16 +140,17 @@ impl TypeParser {
         }
 
         if !parser.match_token(&Tokentype::RightParen) {
-            return Err(parser.error(
-                ErrorCode::ExpectedClosingParen,
-                "Expected ')' after function parameters",
+            return Err(ParseErrorFactory::expected_closing_paren(
+                parser.current_location(),
+                Some("after function parameters"),
             ));
         }
 
         if !parser.match_token(&Tokentype::Arrow) {
-            return Err(parser.error(
-                ErrorCode::InvalidSyntax,
+            return Err(ParseErrorFactory::invalid_syntax(
+                parser.current_location(),
                 "Expected '->' after function parameters",
+                None,
             ));
         }
 

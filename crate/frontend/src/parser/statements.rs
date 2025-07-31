@@ -2,13 +2,12 @@
 // Contains logic for parsing all statement types
 
 use super::core::Parser;
-use super::error::ParseError;
+use slang_error::{ParseError, ParseErrorFactory};
 use crate::token::Tokentype;
-use slang_error::ErrorCode;
 use slang_ir::ast::{
     Expression, Parameter, Statement,
 };
-use slang_ir::StmtFactory; // Import factory system
+use slang_ir::StmtFactory;
 use slang_types::PrimitiveType;
 
 /// Statement parser that handles all statement types
@@ -57,10 +56,7 @@ impl StatementParser {
         let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(parser.error(
-                ErrorCode::ExpectedIdentifier,
-                "Expected identifier after 'let'",
-            ));
+            return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some("Expected identifier after 'let'")));
         };
 
         let location = parser.location_from_range(position.pos, position.end_pos());
@@ -71,19 +67,13 @@ impl StatementParser {
         }
 
         if !parser.match_token(&Tokentype::Equal) {
-            return Err(parser.error(
-                ErrorCode::ExpectedEquals,
-                "Expected '=' after variable name",
-            ));
+            return Err(ParseErrorFactory::expected_equals(parser.current_location()));
         }
 
         let expr = parser.expression()?;
 
         if !parser.match_token(&Tokentype::Semicolon) {
-            return Err(parser.error(
-                ErrorCode::ExpectedSemicolon,
-                "Expected ';' after let statement",
-            ));
+            return Err(ParseErrorFactory::expected_semicolon(parser.current_location(), Some("after let statement")));
         }
 
         // Use factory based on whether we have explicit type annotation
@@ -119,22 +109,19 @@ impl StatementParser {
         let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(parser.error(
-                ErrorCode::ExpectedIdentifier,
-                &format!("Expected function name found {}", parser.peek().token_type),
-            ));
+            return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some(&format!(
+                "function name found {}",
+                parser.peek().token_type
+            ))));
         };
 
         let name_location = parser.location_from_range(position.pos, position.end_pos());
 
         if !parser.match_token(&Tokentype::LeftParen) {
-            return Err(parser.error(
-                ErrorCode::ExpectedOpeningParen,
-                &format!(
-                    "Expected '(' after function name found {}",
-                    parser.peek().token_type
-                ),
-            ));
+            return Err(ParseErrorFactory::expected_opening_paren(parser.current_location(), Some(&format!(
+                "after function name found {}",
+                parser.peek().token_type
+            ))));
         }
 
         let mut parameters = Vec::new();
@@ -143,9 +130,10 @@ impl StatementParser {
 
             while parser.match_token(&Tokentype::Comma) {
                 if parameters.len() >= 255 {
-                    return Err(parser.error(
-                        ErrorCode::InvalidSyntax,
+                    return Err(ParseErrorFactory::invalid_syntax(
+                        parser.current_location(),
                         "Cannot have more than 255 parameters",
+                        None
                     ));
                 }
                 parameters.push(Self::parse_parameter(parser)?);
@@ -153,13 +141,10 @@ impl StatementParser {
         }
 
         if !parser.match_token(&Tokentype::RightParen) {
-            return Err(parser.error(
-                ErrorCode::ExpectedClosingParen,
-                &format!(
-                    "Expected ')' after parameters found {}",
-                    parser.peek().token_type
-                ),
-            ));
+            return Err(ParseErrorFactory::expected_closing_paren(parser.current_location(), Some(&format!(
+                "after parameters found {}",
+                parser.peek().token_type
+            ))));
         }
 
         let return_type = if parser.match_token(&Tokentype::Arrow) {
@@ -169,10 +154,7 @@ impl StatementParser {
         };
 
         if !parser.match_token(&Tokentype::LeftBrace) {
-            return Err(parser.error(
-                ErrorCode::ExpectedOpeningBrace,
-                "Expected '{' before function body",
-            ));
+            return Err(ParseErrorFactory::expected_opening_brace(parser.current_location(), Some("before function body")));
         }
 
         let body = parser.parse_block_expression()?;
@@ -199,10 +181,7 @@ impl StatementParser {
         };
 
         if !parser.match_token(&Tokentype::Semicolon) {
-            return Err(parser.error(
-                ErrorCode::ExpectedSemicolon,
-                "Expected ';' after return statement",
-            ));
+            return Err(ParseErrorFactory::expected_semicolon(parser.current_location(), Some("after return statement")));
         }
 
         // Use utility function for cleaner location calculation
@@ -232,19 +211,13 @@ impl StatementParser {
         let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(parser.error(
-                ErrorCode::ExpectedIdentifier,
-                "Expected struct name after 'struct' keyword",
-            ));
+            return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some("struct name after 'struct' keyword")));
         };
 
         let location = parser.location_from_range(position.pos, position.end_pos());
 
         if !parser.match_token(&Tokentype::LeftBrace) {
-            return Err(parser.error(
-                ErrorCode::ExpectedOpeningBrace,
-                "Expected '{' after struct name",
-            ));
+            return Err(ParseErrorFactory::expected_opening_brace(parser.current_location(), Some("after struct name")));
         }
 
         let mut fields = Vec::new();
@@ -253,35 +226,27 @@ impl StatementParser {
             let field_name = if let Some((name, _position)) = parser.match_identifier_token() {
                 name.to_string()
             } else {
-                return Err(parser.error(ErrorCode::ExpectedIdentifier, "Expected field name"));
+                return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some("field name")));
             };
 
             if !parser.match_token(&Tokentype::Colon) {
-                return Err(parser.error(ErrorCode::ExpectedColon, "Expected ':' after field name"));
+                return Err(ParseErrorFactory::expected_colon(parser.current_location()));
             }
 
             let field_type = parser.parse_type()?;
             fields.push((field_name, field_type));
 
             if !parser.match_token(&Tokentype::Comma) && !parser.check(&Tokentype::RightBrace) {
-                return Err(
-                    parser.error(ErrorCode::ExpectedComma, "Expected ',' after field or '}'")
-                );
+                return Err(ParseErrorFactory::expected_comma(parser.current_location(), Some("after field or '}'")));
             }
         }
 
         if !parser.match_token(&Tokentype::RightBrace) {
-            return Err(parser.error(
-                ErrorCode::ExpectedClosingBrace,
-                "Expected '}' after struct fields",
-            ));
+            return Err(ParseErrorFactory::expected_closing_brace(parser.current_location(), Some("after struct fields")));
         }
 
         if !parser.match_token(&Tokentype::Semicolon) {
-            return Err(parser.error(
-                ErrorCode::ExpectedSemicolon,
-                "Expected ';' after struct definition",
-            ));
+            return Err(ParseErrorFactory::expected_semicolon(parser.current_location(), Some("after struct definition")));
         }
 
         Ok(Statement::TypeDefinition(StmtFactory::type_definition_stmt_with_location(name, fields, location)))
@@ -300,25 +265,19 @@ impl StatementParser {
         let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(parser.error(
-                ErrorCode::ExpectedIdentifier,
-                "Expected identifier for assignment",
-            ));
+            return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some("for assignment")));
         };
 
         let token_pos = position.pos;
 
         if !parser.match_token(&Tokentype::Equal) {
-            return Err(parser.error(ErrorCode::ExpectedEquals, "Expected '=' for assignment"));
+            return Err(ParseErrorFactory::expected_equals(parser.current_location()));
         }
 
         let value = parser.expression()?;
 
         if !parser.match_token(&Tokentype::Semicolon) {
-            return Err(parser.error(
-                ErrorCode::ExpectedSemicolon,
-                "Expected ';' after assignment",
-            ));
+            return Err(ParseErrorFactory::expected_semicolon(parser.current_location(), Some("after assignment")));
         }
 
         // Calculate proper location span using utility
@@ -343,19 +302,14 @@ impl StatementParser {
         let condition = parser.expression()?;
 
         if !parser.match_token(&Tokentype::LeftBrace) {
-            return Err(parser.error(
-                ErrorCode::ExpectedOpeningBrace,
-                "Expected '{' after if condition",
-            ));
+            return Err(ParseErrorFactory::expected_opening_brace(parser.current_location(), Some("after if condition")));
         }
 
         let then_branch = parser.parse_block_expression()?;
 
         let else_expr = if parser.match_token(&Tokentype::Else) {
             if !parser.match_token(&Tokentype::LeftBrace) {
-                return Err(
-                    parser.error(ErrorCode::ExpectedOpeningBrace, "Expected '{' after else")
-                );
+                return Err(ParseErrorFactory::expected_opening_brace(parser.current_location(), Some("after else")));
             }
             Some(parser.parse_block_expression()?)
         } else {
@@ -387,10 +341,7 @@ impl StatementParser {
             }
             _ => {
                 if !parser.match_token(&Tokentype::Semicolon) {
-                    return Err(parser.error(
-                        ErrorCode::ExpectedSemicolon,
-                        "Expected ';' after expression",
-                    ));
+                    return Err(ParseErrorFactory::expected_semicolon(parser.current_location(), Some("after expression")));
                 }
             }
         }
@@ -411,14 +362,11 @@ impl StatementParser {
         let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(parser.error(ErrorCode::ExpectedIdentifier, "Expected parameter name"));
+            return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some("parameter name")));
         };
 
         if !parser.match_token(&Tokentype::Colon) {
-            return Err(parser.error(
-                ErrorCode::ExpectedColon,
-                "Expected ':' after parameter name",
-            ));
+            return Err(ParseErrorFactory::expected_colon(parser.current_location()));
         }
 
         let param_type = parser.parse_type()?;

@@ -28,7 +28,6 @@
 
 // Module declarations
 mod core;
-mod error;
 mod expressions;
 mod literals;
 mod statements;
