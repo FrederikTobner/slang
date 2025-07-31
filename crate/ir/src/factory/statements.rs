@@ -7,7 +7,7 @@ use crate::ast::{
     AssignmentStatement, Expression, FunctionDeclarationStmt, IfStatement, LetStatement,
     Parameter, ReturnStatement, TypeDefinitionStmt, BlockExpr,
 };
-use crate::location::Location;
+use slang_error::location::Location;
 use slang_types::types::TypeId;
 
 /// Factory for creating statement AST nodes
@@ -21,7 +21,8 @@ impl StmtFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{StmtFactory, ExprFactory, Location, ast::Expression};
+    /// use slang_ir::{StmtFactory, ExprFactory, ast::Expression};
+    /// use slang_error::location::Location;
     /// 
     /// let location = Location::new(0, 1, 1, 10);
     /// let loc = Location::new(0, 1, 1, 1);
@@ -52,7 +53,8 @@ impl StmtFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{StmtFactory, ExprFactory, Location, ast::Expression};
+    /// use slang_ir::{StmtFactory, ExprFactory, ast::Expression};
+    /// use slang_error::location::Location;
     /// use slang_types::TypeId;
     /// 
     /// let location = Location::new(0, 1, 1, 15);
@@ -84,8 +86,9 @@ impl StmtFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{StmtFactory, ExprFactory, Location, ast::Expression};
-    /// 
+    /// use slang_ir::{StmtFactory, ExprFactory, ast::Expression};
+    /// use slang_error::location::Location;
+    ///
     /// let location = Location::new(0, 1, 1, 10);
     /// let loc = Location::new(0, 1, 1, 1);
     /// let literal = ExprFactory::literal_expr_with_location(42, loc);
@@ -116,7 +119,8 @@ impl StmtFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{StmtFactory, ExprFactory, Location, ast::Expression};
+    /// use slang_ir::{StmtFactory, ExprFactory, ast::Expression};
+    /// use slang_error::location::Location;
     /// use slang_types::TypeId;
     /// 
     /// let location = Location::new(0, 1, 1, 15);
@@ -152,7 +156,8 @@ impl StmtFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{StmtFactory, ExprFactory, Location, ast::Expression};
+    /// use slang_ir::{StmtFactory, ExprFactory, ast::Expression};
+    /// use slang_error::location::Location;
     /// 
     /// let location = Location::new(0, 1, 1, 15);
     /// let loc = Location::new(0, 1, 1, 1);
@@ -180,8 +185,9 @@ impl StmtFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{StmtFactory, ExprFactory, Location, ast::Expression};
-    /// 
+    /// use slang_ir::{StmtFactory, ExprFactory, ast::{Expression, BlockExpr}};
+    /// use slang_error::location::Location;
+    ///
     /// let location = Location::new(0, 1, 1, 10);
     /// let loc = Location::new(0, 1, 1, 1);
     /// let variable = ExprFactory::variable_expr_with_location("result", loc);
@@ -203,7 +209,8 @@ impl StmtFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{StmtFactory, Location};
+    /// use slang_ir::StmtFactory;
+    /// use slang_error::location::Location;
     /// 
     /// let location = Location::new(0, 1, 1, 6);
     /// let return_stmt = StmtFactory::return_void_stmt_with_location(location);
@@ -227,9 +234,9 @@ impl StmtFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{StmtFactory, ExprFactory, Location};
-    /// use slang_ir::ast::{BlockExpr, Parameter};
+    /// use slang_ir::{StmtFactory, ExprFactory, ast::{BlockExpr, Parameter}};
     /// use slang_types::TypeId;
+    /// use slang_error::location::Location;
     /// 
     /// let location = Location::new(0, 1, 1, 20);
     /// let body = BlockExpr {
@@ -268,7 +275,8 @@ impl StmtFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{StmtFactory, ExprFactory, Location, ast::{Expression, BlockExpr}};
+    /// use slang_ir::{StmtFactory, ExprFactory, ast::{Expression, BlockExpr}};
+    /// use slang_error::location::Location;
     /// use slang_types::TypeId;
     /// 
     /// let location = Location::new(0, 1, 1, 20);
@@ -304,7 +312,8 @@ impl StmtFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{StmtFactory, Location};
+    /// use slang_ir::StmtFactory;
+    /// use slang_error::location::Location;
     /// use slang_types::TypeId;
     /// 
     /// let location = Location::new(0, 1, 1, 10);

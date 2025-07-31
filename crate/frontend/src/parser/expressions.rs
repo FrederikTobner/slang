@@ -240,7 +240,7 @@ impl ExpressionParser {
     /// ### Returns
     ///
     /// The parsed function call expression or an error message
-    pub fn finish_call(parser: &mut Parser, name: String, name_location: slang_ir::location::Location) -> Result<Expression, ParseError> {
+    pub fn finish_call(parser: &mut Parser, name: String, name_location: slang_error::location::Location) -> Result<Expression, ParseError> {
         let mut arguments = Vec::new();
 
         if !parser.check(&Tokentype::RightParen) {

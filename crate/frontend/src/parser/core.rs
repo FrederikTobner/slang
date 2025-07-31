@@ -28,9 +28,9 @@ impl TokenPosition {
     }
     
     /// Convert to a source location using line info
-    pub fn to_location(self, line_info: &LineInfo) -> slang_ir::location::Location {
+    pub fn to_location(self, line_info: &LineInfo) -> slang_error::location::Location {
         let (line, column) = line_info.get_line_col(self.pos);
-        slang_ir::location::Location::new(self.pos, line, column, self.len)
+        slang_error::location::Location::new(self.pos, line, column, self.len)
     }
     
     /// Calculate end position
@@ -200,7 +200,7 @@ impl<'a> Parser<'a> {
     // Error handling methods - removed helper methods, use ParseErrorFactory directly
 
     /// Helper to get current token location
-    pub(super) fn current_location(&self) -> slang_ir::Location {
+    pub(super) fn current_location(&self) -> slang_error::Location {
         let current_token = self.peek();
         TokenPosition::new(current_token.pos, current_token.lexeme.len())
             .to_location(&self.line_info)
@@ -238,9 +238,9 @@ impl<'a> Parser<'a> {
     /// ### Returns
     /// 
     /// A Location struct with line, column, position and length information
-    pub(super) fn source_location_from_token(&self, token: &Token) -> slang_ir::location::Location {
+    pub(super) fn source_location_from_token(&self, token: &Token) -> slang_error::location::Location {
         let (line, column) = self.line_info.get_line_col(token.pos);
-        slang_ir::location::Location::new(token.pos, line, column, token.lexeme.len())
+        slang_error::location::Location::new(token.pos, line, column, token.lexeme.len())
     }
 
     /// Creates a Location spanning from one position to another
@@ -253,10 +253,10 @@ impl<'a> Parser<'a> {
     /// ### Returns
     /// 
     /// A Location struct covering the range from start_pos to end_pos
-    pub(super) fn location_from_range(&self, start_pos: usize, end_pos: usize) -> slang_ir::location::Location {
+    pub(super) fn location_from_range(&self, start_pos: usize, end_pos: usize) -> slang_error::location::Location {
         let (start_line, start_column) = self.line_info.get_line_col(start_pos);
         let length = end_pos - start_pos;
-        slang_ir::location::Location::new(start_pos, start_line, start_column, length)
+        slang_error::location::Location::new(start_pos, start_line, start_column, length)
     }
 
     /// Parses a single statement
@@ -286,7 +286,7 @@ impl<'a> Parser<'a> {
         LiteralParser::parse_float(self)
     }
 
-    pub(super) fn finish_call(&mut self, name: String, name_location: slang_ir::location::Location) -> Result<Expression, ParseError> {
+    pub(super) fn finish_call(&mut self, name: String, name_location: slang_error::location::Location) -> Result<Expression, ParseError> {
         ExpressionParser::finish_call(self, name, name_location)
     }
 

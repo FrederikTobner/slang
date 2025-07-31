@@ -74,7 +74,7 @@ impl<'a> TypeChecker<'a> {
                     function_name: "unknown".to_string(), // TODO: Pass function name from caller
                     expected: func_type.param_types.len(),
                     actual: argument_types.len(),
-                    location: slang_ir::location::Location::default(),
+                    location: slang_error::location::Location::default(),
                 });
             }
 
@@ -86,7 +86,7 @@ impl<'a> TypeChecker<'a> {
                         argument_position: i + 1,
                         expected: *expected,
                         actual: *actual,
-                        location: slang_ir::location::Location::default(),
+                        location: slang_error::location::Location::default(),
                     });
                 }
             }
@@ -95,7 +95,7 @@ impl<'a> TypeChecker<'a> {
         } else {
             Err(SemanticAnalysisError::UndefinedFunction {
                 name: "unknown".to_string(), // TODO: Pass function name from caller
-                location: slang_ir::location::Location::default(),
+                location: slang_error::location::Location::default(),
             })
         }
     }

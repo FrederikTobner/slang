@@ -1,6 +1,6 @@
 use super::super::traits::SemanticResult;
 use super::helpers;
-use slang_ir::Location;
+use slang_error::Location;
 use slang_ir::ast::{BinaryExpr, BinaryOperator};
 use slang_shared::CompilationContext;
 use slang_types::TypeId;

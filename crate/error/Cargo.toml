@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 colored = "2.0.4"
-slang_ir = { path = "../ir" }
 thiserror = "1.0"
 
 [lib]

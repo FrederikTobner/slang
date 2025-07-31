@@ -1,5 +1,5 @@
 use super::super::error::SemanticAnalysisError;
-use slang_ir::Location;
+use slang_error::Location;
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
 

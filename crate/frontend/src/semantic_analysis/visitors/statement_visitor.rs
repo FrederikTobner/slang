@@ -1,4 +1,4 @@
-use slang_ir::Location;
+use slang_error::Location;
 use slang_ir::ast::*;
 use slang_shared::{CompilationContext, SymbolKind};
 use slang_types::{TYPE_NAME_U32, TYPE_NAME_U64, TypeId};

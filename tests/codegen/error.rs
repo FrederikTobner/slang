@@ -9,7 +9,7 @@ fn too_many_constants() {
     }
     execute_program_expect_error(
         &program,
-        ErrorCode::GenericCompileError,
+        ErrorCode::TooManyConstants,
         "Too many constants",
     );
 }

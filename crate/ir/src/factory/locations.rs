@@ -4,7 +4,7 @@
 //! and span management in AST construction.
 
 use crate::ast::{Expression, Statement};
-use crate::location::Location;
+use slang_error::location::Location;
 
 /// Extension trait to provide location access for AST nodes
 pub trait AstLocation {

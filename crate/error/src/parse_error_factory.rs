@@ -1,6 +1,6 @@
 use crate::ErrorCode;
 use crate::parse_error::ParseError;
-use slang_ir::Location;
+use crate::Location;
 
 /// Factory for creating specific parse errors with clear, intention-revealing methods.
 /// Each method creates a semantically meaningful error with appropriate error codes.

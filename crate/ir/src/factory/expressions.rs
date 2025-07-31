@@ -7,7 +7,7 @@ use crate::ast::{
     BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
     FunctionTypeExpr, LiteralExpr, Statement, UnaryExpr, UnaryOperator, VariableExpr,
 };
-use crate::location::Location;
+use slang_error::location::Location;
 use slang_types::types::TypeId;
 
 use super::locations::LocationExtensions;
@@ -25,7 +25,8 @@ impl ExprFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{ExprFactory, Location};
+    /// use slang_ir::ExprFactory;
+    /// use slang_error::location::Location;
     /// 
     /// let location = Location::new(0, 1, 1, 10);
     /// let literal = ExprFactory::literal_expr_with_location(42i32, location);
@@ -49,7 +50,8 @@ impl ExprFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{ExprFactory, Location};
+    /// use slang_ir::ExprFactory;
+    /// use slang_error::location::Location;
     /// 
     /// let location = Location::new(0, 1, 1, 5);
     /// let var_ref = ExprFactory::variable_expr_with_location("my_var", location);
@@ -66,7 +68,8 @@ impl ExprFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{ExprFactory, Location, ast::{Expression, LiteralExpr}};
+    /// use slang_ir::{ExprFactory, ast::{Expression, LiteralExpr}};
+    /// use slang_error::location::Location;
     /// use slang_types::TypeId;
     /// 
     /// let location = Location::new(0, 1, 1, 5);
@@ -134,7 +137,8 @@ impl ExprFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{ExprFactory, Location, ast::{Expression, BinaryOperator}};
+    /// use slang_ir::{ExprFactory, ast::{Expression, BinaryOperator}};
+    /// use slang_error::location::Location;
     /// 
     /// let location = Location::new(0, 1, 1, 5);
     /// // Creating a binary expression: a + 5
@@ -210,7 +214,8 @@ impl ExprFactory {
     /// 
     /// # Examples  
     /// ```rust
-    /// use slang_ir::{ExprFactory, Location, ast::{Expression, UnaryOperator}};
+    /// use slang_ir::{ExprFactory, ast::{Expression, UnaryOperator}};
+    /// use slang_error::location::Location;
     /// 
     /// let location = Location::new(0, 1, 1, 5);
     /// // Creating a unary expression: -x
@@ -244,7 +249,8 @@ impl ExprFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{ExprFactory, Location, ast::Expression};
+    /// use slang_ir::{ExprFactory, ast::Expression};
+    /// use slang_error::location::Location;
     /// 
     /// let location = Location::new(0, 1, 1, 5);
     /// // Creating a conditional expression: flag ? 10 : 20
@@ -287,8 +293,9 @@ impl ExprFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{ExprFactory, Location, ast::{Statement, Expression}};
+    /// use slang_ir::{ExprFactory, ast::{Statement, Expression}};
     /// use slang_types::TypeId;
+    /// use slang_error::location::Location;
     /// 
     /// let location = Location::new(0, 1, 1, 5);
     /// // Creating a block expression: { let x = 5; x }
@@ -354,7 +361,8 @@ impl ExprFactory {
     /// 
     /// # Examples
     /// ```rust
-    /// use slang_ir::{ExprFactory, Location};
+    /// use slang_ir::{ExprFactory, ast::Expression};
+    /// use slang_error::location::Location;
     /// use slang_types::TypeId;
     /// 
     /// let location = Location::new(0, 1, 1, 5);

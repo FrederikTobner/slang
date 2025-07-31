@@ -1,5 +1,6 @@
-use crate::Location;
+use slang_error::Location;
 use crate::Visitor;
+use slang_error::DomainResult;
 use slang_types::types::TypeId;
 use std::fmt::Display;
 
@@ -359,7 +360,7 @@ impl Statement {
     ///
     /// ### Returns
     /// The result of the visitor's visit method for this statement
-    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> DomainResult<T> {
         match self {
             Statement::Let(let_stmt) => visitor.visit_let_statement(let_stmt),
             Statement::Assignment(assign_stmt) => visitor.visit_assignment_statement(assign_stmt),
@@ -384,7 +385,7 @@ impl Expression {
     ///
     /// ### Returns
     /// The result of the visitor's visit method for this expression
-    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> DomainResult<T> {
         match self {
             Expression::Literal(lit) => visitor.visit_literal_expression(lit),
             Expression::Binary(bin) => visitor.visit_binary_expression(bin),

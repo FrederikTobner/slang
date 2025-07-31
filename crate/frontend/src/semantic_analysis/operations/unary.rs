@@ -1,6 +1,6 @@
 use super::super::{error::SemanticAnalysisError, traits::SemanticResult};
 use super::helpers;
-use slang_ir::Location;
+use slang_error::Location;
 use slang_ir::ast::{Expression, LiteralValue, UnaryExpr, UnaryOperator};
 use slang_shared::CompilationContext;
 use slang_types::TypeId;

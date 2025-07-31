@@ -6,6 +6,7 @@
 
 pub mod error_codes;
 pub mod compiler_error;
+pub mod location;
 pub mod domain_error;
 pub mod parse_error;
 pub mod semantic_error;
@@ -13,6 +14,7 @@ pub mod codegen_error;
 pub mod type_error;
 pub mod parse_error_factory;
 
+pub use location::Location;
 pub use error_codes::ErrorCode;
 pub use compiler_error::{CompilerError, CompileResult, ErrorCollector, LineInfo, report_errors};
 pub use domain_error::{DomainError, ErrorCategory, DomainResult};

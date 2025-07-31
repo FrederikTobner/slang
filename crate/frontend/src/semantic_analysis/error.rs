@@ -1,5 +1,5 @@
 use slang_error::{CompilerError, ErrorCode};
-use slang_ir::Location;
+use slang_error::Location;
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
 

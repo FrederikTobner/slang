@@ -2,7 +2,7 @@
 use crate::compiler_error::CompilerError;
 use crate::domain_error::{DomainError, ErrorCategory};
 use crate::error_codes::ErrorCode;
-use slang_ir::Location;
+use crate::Location;
 
 /// Enhanced semantic analysis errors (based on existing SemanticAnalysisError)
 #[derive(Debug, Clone)]

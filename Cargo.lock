@@ -998,7 +998,6 @@ name = "slang_error"
 version = "0.1.0"
 dependencies = [
  "colored",
- "slang_ir",
  "thiserror",
 ]
 
@@ -1017,6 +1016,7 @@ dependencies = [
 name = "slang_ir"
 version = "0.1.0"
 dependencies = [
+ "slang_error",
  "slang_types",
 ]
 

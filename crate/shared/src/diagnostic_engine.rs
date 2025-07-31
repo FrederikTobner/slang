@@ -1,6 +1,6 @@
 use colored::Colorize;
 use slang_error::{CompilerError, ErrorCode, LineInfo};
-use slang_ir::location::Location;
+use slang_error::location::Location;
 
 /// Represents the severity level of a diagnostic message
 #[derive(Debug, Clone)]
@@ -57,8 +57,7 @@ pub struct Suggestion {
 /// ### Example
 /// ```rust
 /// use slang_shared::DiagnosticEngine;
-/// use slang_error::ErrorCode;
-/// use slang_ir::location::Location;
+/// use slang_error::{ErrorCode, Location};
 /// let source_code = "let x = 42\nlet y = x + 1"; // Example source code
 /// let mut engine = DiagnosticEngine::new();
 /// engine.set_file_name("example.sl".to_string());
@@ -117,8 +116,7 @@ impl<'a> DiagnosticEngine<'a> {
     /// ### Example
     /// ```rust
     /// use slang_shared::diagnostic_engine::{DiagnosticEngine, Diagnostic, ErrorSeverity};
-    /// use slang_error::ErrorCode;
-    /// use slang_ir::location::Location;
+    /// use slang_error::{ErrorCode, Location};
     ///
     /// let mut engine = DiagnosticEngine::new();
     /// let diagnostic = Diagnostic {
@@ -158,8 +156,7 @@ impl<'a> DiagnosticEngine<'a> {
     /// ### Example
     /// ```rust
     /// use slang_shared::DiagnosticEngine;
-    /// use slang_error::ErrorCode;
-    /// use slang_ir::location::Location;
+    /// use slang_error::{ErrorCode, Location};
     ///
     /// let mut engine = DiagnosticEngine::new();
     /// engine.emit_error(
@@ -191,8 +188,7 @@ impl<'a> DiagnosticEngine<'a> {
     /// ### Example
     /// ```rust
     /// use slang_shared::DiagnosticEngine;
-    /// use slang_error::ErrorCode;
-    /// use slang_ir::location::Location;
+    /// use slang_error::{ErrorCode, Location};
     ///
     /// let mut engine = DiagnosticEngine::new();
     /// engine.emit_warning(
@@ -226,7 +222,7 @@ impl<'a> DiagnosticEngine<'a> {
     /// ```rust
     /// use slang_shared::{DiagnosticEngine, Suggestion};
     /// use slang_error::ErrorCode;
-    /// use slang_ir::location::Location;
+    /// use slang_error::location::Location;
     ///
     /// let mut engine = DiagnosticEngine::new();
     /// let suggestion = Suggestion {
@@ -307,8 +303,7 @@ impl<'a> DiagnosticEngine<'a> {
     /// ### Example
     /// ```rust
     /// use slang_shared::DiagnosticEngine;
-    /// use slang_error::ErrorCode;
-    /// use slang_ir::location::Location;
+    /// use slang_error::{ErrorCode, location::Location};
     ///
     /// let mut engine = DiagnosticEngine::new();
     /// engine.emit_error(

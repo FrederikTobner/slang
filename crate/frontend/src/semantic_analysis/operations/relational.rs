@@ -3,7 +3,7 @@ use super::helpers::{
     bool_type, is_unspecified_float_type, is_unspecified_integer_type,
     operation_type_mismatch_error, types_are_identical,
 };
-use slang_ir::Location;
+use slang_error::Location;
 use slang_ir::ast::BinaryOperator;
 use slang_shared::CompilationContext;
 use slang_types::TypeId;

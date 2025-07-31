@@ -1,6 +1,6 @@
 // Core trait and types for the unified error system
 use crate::compiler_error::CompilerError;
-use slang_ir::Location;
+use crate::Location;
 
 /// Core trait for all domain-specific errors that can be converted to CompilerError
 /// 
