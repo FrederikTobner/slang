@@ -1,5 +1,5 @@
-use crate::compilation_pipeline::CompilationResult;
-use crate::compiler::{CompileOptions, Compiler};
+use slang_compilation_pipeline::{CompilationResult, CompilationPipeline};
+use crate::compile_options::CompileOptions;
 use crate::error::{CliError, CliResult};
 use crate::exit;
 use clap::{Parser as ClapParser, Subcommand};
@@ -91,15 +91,15 @@ pub fn run_file(input: &str) -> CliResult<()> {
 /// Result indicating success or failure
 fn process_source_file(input: &str, mode: ExecutionMode) -> CliResult<()> {
     let source = read_source_file(input)?;
-    let compiler = Compiler::new();
     let recovery_mode = matches!(mode, ExecutionMode::Execute);
 
     let compile_options = CompileOptions {
         recovery_mode,
         file_name: Some(input.to_string()),
     };
+    let pipeline = CompilationPipeline::new(&source, compile_options.file_name, compile_options.recovery_mode);
 
-    let result = compiler.compile_source(&source, compile_options);
+    let result =  pipeline.execute_all_stages();
 
     match result {
         CompilationResult::Success {
@@ -205,7 +205,7 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> CliResult<()> {
     })?;
 
     let mut zip = ZipWriter::new(file);
-    let options = FileOptions::<()>::default()
+    let options = FileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated)
         .unix_permissions(0o755);
 

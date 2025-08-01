@@ -4,7 +4,7 @@ mod utils;
 use divan::{Bencher, black_box, AllocProfiler};
 use programs::e2e::{E2E_SIMPLE_ARITHMETIC, E2E_FIBONACCI_RECURSIVE, E2E_NESTED_SCOPES, E2E_FUNCTION_DEFINITIONS, E2E_CONTROL_FLOW};
 use programs::templates::ProgramTemplates;
-use slang::compilation_pipeline::CompilationPipeline;
+use slang_compilation_pipeline::CompilationPipeline;
 use utils::pipeline::compile_to_bytecode;
 
 const E2E_COMPLEXITY_LEVELS: [usize; 5] = [10, 20, 50, 100, 200];

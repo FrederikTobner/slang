@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = [
+    "token-printer",
+]
+
+[workspace.dependencies]
+slang_frontend = { path = "../crate/frontend" }
+slang_compilation_pipeline  = { path = "../crate/compilation_pipeline"}
+clap = { version = "4.0", features = ["derive"] }
+colored = "2.0"

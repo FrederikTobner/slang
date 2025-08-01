@@ -2,7 +2,7 @@ use crate::error_codes::ErrorCode;
 use colored::Colorize;
 
 /// Represents a compiler error with a message, line number, column number, position, and token length
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CompilerError {
     /// The structured error code for this error
     pub error_code: ErrorCode,

@@ -1,0 +1,20 @@
+[package]
+name = "slang-tokens"
+version = "0.1.0"
+edition = "2021"
+description = "Token analysis and printing tool for Slang"
+authors = ["Frederik Tobner <f.tobner@gmail.com>"]
+
+[lib]
+name = "slang_tokens"
+path = "src/lib.rs"
+
+[[bin]]
+name = "slang-tokens"
+path = "src/main.rs"
+
+[dependencies]
+slang_compilation_pipeline = { workspace = true }
+slang_frontend = { workspace = true }
+clap = { workspace = true }
+colored = { workspace = true }

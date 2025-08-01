@@ -1,6 +1,5 @@
 mod cli;
-mod compilation_pipeline;
-mod compiler;
+mod compile_options;
 mod error;
 mod exit;
 

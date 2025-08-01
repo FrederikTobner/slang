@@ -5,7 +5,7 @@ use crate::ast::{
     LiteralExpr, LiteralValue, ReturnStatement, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator, VariableExpr,
 };
-use slang_error::{DomainResult, ParseError, ParseResult};
+use slang_error::{DomainResult, ParseError, ParseResult, Location, ErrorCode};
 use slang_types::{
     TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64,
     TYPE_NAME_INT, TYPE_NAME_STRING, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNIT,
@@ -36,7 +36,8 @@ impl ASTPrinter {
                 return Err(ParseError::InvalidSyntax {
                     message: format!("Failed to print AST: {}", e),
                     suggestion: None,
-                    location: crate::Location::default(),
+                    location: Location::default(),
+                    error_code: Some(ErrorCode::InvalidSyntax),
                 });
             }
         }

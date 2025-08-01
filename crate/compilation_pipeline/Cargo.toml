@@ -1,0 +1,27 @@
+[package]
+name = "slang_compilation_pipeline"
+version = "0.1.0"
+edition = "2021"
+description = "Compilation pipeline infrastructure for the Slang programming language"
+license = "GPL-3.0"
+repository = "https://github.com/FrederikTObner/slang"
+
+[dependencies]
+# Core Slang crates
+slang_shared = { path = "../shared" }
+slang_frontend = { path = "../frontend" }
+slang_ir = { path = "../ir" }
+slang_backend = { path = "../backend" }
+
+# External dependencies for pipeline features
+colored = "2.0.4"
+criterion = { version = "0.5", optional = true }
+
+[features]
+default = []
+# Feature flags for debugging output
+print-ast = ["slang_ir/print-ast"]
+print-byte_code = ["slang_backend/print-byte_code"]
+
+# Development features
+benchmarking = ["criterion"]

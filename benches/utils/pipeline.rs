@@ -1,4 +1,5 @@
-use slang::compilation_pipeline::{CompilationPipeline, CompilationResult, PipelineStage};
+use slang_compilation_pipeline::{CompilationPipeline, CompilationResult, PipelineBuilder};
+use slang_compilation_pipeline::pipeline::stages::*;
 use slang_backend::VM;
 use slang_backend::bytecode::Chunk;
 use slang_ir::ast::Statement;
@@ -18,30 +19,46 @@ pub fn compile_to_bytecode(program: &str) -> Result<Chunk, String> {
     }
 }
 
-/// Helper function to parse only using CompilationPipeline
+/// Helper function to parse only using PipelineBuilder
 pub fn parse_only(program: &str) -> Result<Vec<Statement>, String> {
-    let pipeline = CompilationPipeline::new(program, Some("benchmark.sl".to_string()), false);
-
-    match pipeline
-        .tokenize()
-        .and_then(|pipeline, tokens| pipeline.parse(tokens))
-    {
-        PipelineStage::Success { data, .. } => Ok(data),
-        PipelineStage::Failed { .. } => Err("AST compilation failed".to_string()),
+    let pipeline = PipelineBuilder::new(program)
+        .add_stage(TokenizationStage)
+        .add_stage(ParsingStage)
+        .build();
+    
+    match pipeline.execute() {
+        slang_compilation_pipeline::pipeline::result::CompilationResult::Success { output, .. } => {
+            // Try to downcast to Vec<Statement>
+            match output.downcast::<Vec<Statement>>() {
+                Ok(statements) => Ok(*statements),
+                Err(_) => Err("Failed to extract AST from pipeline output".to_string()),
+            }
+        }
+        slang_compilation_pipeline::pipeline::result::CompilationResult::Failed { .. } => {
+            Err("AST compilation failed".to_string())
+        }
     }
 }
 
-/// Helper function to perform semantic analysis using CompilationPipeline
+/// Helper function to perform semantic analysis using PipelineBuilder
 pub fn semantic_analysis_only(program: &str) -> Result<Vec<Statement>, String> {
-    let pipeline = CompilationPipeline::new(program, Some("benchmark.sl".to_string()), false);
-
-    match pipeline
-        .tokenize()
-        .and_then(|pipeline, tokens| pipeline.parse(tokens))
-        .and_then(|pipeline, statements| pipeline.semantic_analysis(statements))
-    {
-        PipelineStage::Success { data, .. } => Ok(data),
-        PipelineStage::Failed { .. } => Err("Semantic analysis failed".to_string()),
+    let pipeline = PipelineBuilder::new(program)
+        .add_stage(TokenizationStage)
+        .add_stage(ParsingStage)
+        .add_stage(SemanticAnalysisStage)
+        .build();
+        
+    match pipeline.execute() {
+        slang_compilation_pipeline::pipeline::result::CompilationResult::Success { output, .. } => {
+            // Try to downcast to Vec<Statement>
+            match output.downcast::<Vec<Statement>>() {
+                Ok(statements) => Ok(*statements),
+                Err(_) => Err("Failed to extract statements from pipeline output".to_string()),
+            }
+        }
+        slang_compilation_pipeline::pipeline::result::CompilationResult::Failed { .. } => {
+            Err("Semantic analysis failed".to_string())
+        }
     }
 }
 

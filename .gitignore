@@ -1,5 +1,5 @@
 # Build directories
-/target
+**/target
 
 # General
 /.planning
