@@ -55,8 +55,7 @@ jobs:
       run: cargo install cargo-llvm-cov
     
     - name: Build
-      run: cargo build --verbose
-
+      run: cargo build --verbose --workspace
 
     - name: Create coverage directory
       run: mkdir -p coverage

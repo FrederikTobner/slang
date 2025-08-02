@@ -2,10 +2,13 @@
 name = "slang_error"
 version = "0.1.0"
 edition = "2024"
+license = "GPL-3.0"
+description = "Error handling and error codes"
+authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 
 [dependencies]
-colored = "2.0.4"
-thiserror = "1.0"
+colored = "3.0.0"
+thiserror = "2.0.12"
 
 [lib]
 name = "slang_error"

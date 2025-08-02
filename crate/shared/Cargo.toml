@@ -2,6 +2,9 @@
 name = "slang_shared"
 version = "0.1.0"
 edition = "2024"
+license = "GPL-3.0"
+description = "Shared utilities and infrastructure for the Slang compiler"
+authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 
 [features]
 default = []
@@ -14,4 +17,4 @@ path = "src/lib.rs"
 slang_types = { path = "../types" }
 slang_error = { path = "../error" }
 slang_ir = { path = "../ir" }
-colored = "2.0.4"
+colored = "3.0.0"

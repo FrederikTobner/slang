@@ -194,18 +194,18 @@ fn read_source_file(path: &str) -> CliResult<String> {
 fn write_bytecode(chunk: &Chunk, output_path: &str) -> CliResult<()> {
     let path = Path::new(output_path);
 
-    let file = File::create(path).map_err(|e| CliError::Io {
-        exit_code: if e.kind() == std::io::ErrorKind::PermissionDenied {
+    let file = File::create(path).map_err(|err| CliError::Io {
+        exit_code: if err.kind() == std::io::ErrorKind::PermissionDenied {
             exit::Code::NoPerm
         } else {
             exit::Code::CantCreat
         },
-        source: e,
+        source: err,
         path: output_path.to_string(),
     })?;
 
     let mut zip = ZipWriter::new(file);
-    let options = FileOptions::default()
+    let options = FileOptions::<()>::default()
         .compression_method(zip::CompressionMethod::Deflated)
         .unix_permissions(0o755);
 

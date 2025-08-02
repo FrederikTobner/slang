@@ -24,7 +24,7 @@ fn valid_file() {
 }
 
 #[test]
-fn test_compile_with_default_output() {
+fn compile_with_default_output() {
     let temp_dir = TempDir::new().unwrap();
     let input_file = temp_dir.path().join("test.sl");
     let expected_output = temp_dir.path().join("test.sip");
@@ -52,7 +52,7 @@ fn nonexistent_file() {
 }
 
 #[test]
-fn test_compile_invalid_syntax() {
+fn compile_invalid_syntax() {
     let temp_dir = TempDir::new().unwrap();
     let input_file = temp_dir.path().join("invalid.sl");
 

@@ -1,22 +1,26 @@
 [package]
-name = "token-printer"
+name = "bytecode-printer"
 version = "0.1.0"
 edition = "2024"
 license = "GPL-3.0"
-description = "Token analysis and printing tool for Slang"
+description = "Bytecode analysis and printing tool for Slang"
 authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 
 [lib]
-name = "token_printer_lib"
+name = "bytecode_printer_lib"
 path = "src/lib.rs"
 
 [[bin]]
-name = "token-printer"
+name = "bytecode-printer"
 path = "src/main.rs"
 
 [dependencies]
 slang_compilation_pipeline = { workspace = true }
-slang_frontend = { workspace = true }
+slang_backend = { workspace = true }
 clap = { workspace = true }
 colored = { workspace = true }
 serde_json = { workspace = true }
+zip = "4.3.0"
+
+[dev-dependencies]
+tempfile = "3.20.0"

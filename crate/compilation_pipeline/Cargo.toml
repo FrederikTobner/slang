@@ -1,10 +1,10 @@
 [package]
 name = "slang_compilation_pipeline"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Compilation pipeline infrastructure for the Slang programming language"
 license = "GPL-3.0"
-repository = "https://github.com/FrederikTObner/slang"
+authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 
 [dependencies]
 # Core Slang crates
@@ -14,8 +14,8 @@ slang_ir = { path = "../ir" }
 slang_backend = { path = "../backend" }
 
 # External dependencies for pipeline features
-colored = "2.0.4"
-criterion = { version = "0.5", optional = true }
+colored = "3.0.0"
+criterion = { version = "0.7.0", optional = true }
 
 [features]
 default = []

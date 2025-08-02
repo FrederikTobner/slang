@@ -1,11 +1,9 @@
 use crate::format::TokenFormat;
 use crate::observer::TokenPrinterObserver;
 use clap::Parser as ClapParser;
-use colored::Colorize;
 use slang_compilation_pipeline::PipelineBuilder;
 use slang_compilation_pipeline::pipeline::stages::TokenizationStage;
 use std::fs;
-use std::path::Path;
 
 /// Command line interface for the Slang token analyzer
 #[derive(ClapParser)]
@@ -39,44 +37,4 @@ pub fn tokenize_file(file_path: &str, format: TokenFormat) -> Result<(), Box<dyn
     
     let _result = pipeline.execute();
     Ok(())
-}
-
-/// Validate that the input file exists and has the correct extension
-fn validate_input_file(input_path: &str) -> Result<(), String> {
-    let path = Path::new(input_path);
-    
-    // Check if file exists
-    if !path.exists() {
-        return Err(format!("File '{}' does not exist", input_path));
-    }
-    
-    // Check if it's a file (not a directory)
-    if !path.is_file() {
-        return Err(format!("'{}' is not a file", input_path));
-    }
-    
-    // Check file extension (optional but helpful)
-    if let Some(extension) = path.extension() {
-        if extension != "sl" {
-            eprintln!(
-                "{}: File '{}' does not have .sl extension",
-                "Warning".yellow().bold(),
-                input_path
-            );
-        }
-    } else {
-        eprintln!(
-            "{}: File '{}' has no extension, expected .sl",
-            "Warning".yellow().bold(),
-            input_path
-        );
-    }
-    
-    Ok(())
-}
-
-/// Read the source file content
-fn read_source_file(input_path: &str) -> Result<String, String> {
-    fs::read_to_string(input_path)
-        .map_err(|e| format!("Failed to read file '{}': {}", input_path, e))
 }
