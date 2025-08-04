@@ -1,4 +1,5 @@
-use slang_compilation_pipeline::{CompilationResult, CompilationPipeline};
+use slang_compilation_pipeline::{ChainPipeline, ErrorStrategy};
+use slang_compilation_pipeline::pipeline::result::CompilationResult;
 use crate::compile_options::CompileOptions;
 use crate::error::{CliError, CliResult};
 use crate::exit;
@@ -97,13 +98,23 @@ fn process_source_file(input: &str, mode: ExecutionMode) -> CliResult<()> {
         recovery_mode,
         file_name: Some(input.to_string()),
     };
-    let pipeline = CompilationPipeline::new(&source, compile_options.file_name, compile_options.recovery_mode);
 
-    let result =  pipeline.execute_all_stages();
+    let mut pipeline = ChainPipeline::full_compilation(&source)
+        .with_error_strategy(if compile_options.recovery_mode {
+            ErrorStrategy::Recover { continue_on_non_critical: true }
+        } else {
+            ErrorStrategy::FailFast
+        });
+
+    if let Some(file_name) = compile_options.file_name {
+        pipeline = pipeline.with_file_name(file_name);
+    }
+
+    let result = pipeline.compile_to_bytecode();
 
     match result {
         CompilationResult::Success {
-            chunk, diagnostics, ..
+            output: chunk, diagnostics
         } => {
             let has_diagnostics = diagnostics.error_count() > 0 || diagnostics.warning_count() > 0;
             if has_diagnostics {
@@ -124,7 +135,7 @@ fn process_source_file(input: &str, mode: ExecutionMode) -> CliResult<()> {
             }
             Ok(())
         }
-        CompilationResult::Failed { diagnostics, .. } => {
+        CompilationResult::Failed { diagnostics } => {
             diagnostics.report_all(&source);
             Err(CliError::Generic {
                 message: format!("Compilation failed for file '{input}'"),

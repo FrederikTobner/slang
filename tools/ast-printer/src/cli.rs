@@ -2,10 +2,7 @@ use crate::format::AstFormat;
 use clap::Parser as ClapParser;
 use colored::Colorize;
 use std::fs;
-use slang_compilation_pipeline::pipeline::builder::PipelineBuilder;
-use slang_compilation_pipeline::pipeline::stages::{TokenizationStage, ParsingStage};
-use slang_compilation_pipeline::pipeline::error::ErrorStrategy;
-use slang_ir::ast::Statement;
+use slang_compilation_pipeline::pipeline::{ChainPipeline, error::ErrorStrategy};
 
 /// Command line interface for the Slang AST analyzer
 #[derive(ClapParser)]
@@ -61,38 +58,32 @@ pub fn parse_and_print_ast(
         println!("{}: Parsing {}", "Info".blue().bold(), file_path);
     }
     
-    // Create a pipeline that only runs tokenization and parsing stages
-    let pipeline = PipelineBuilder::new(&source)
-        .add_stage(TokenizationStage)
-        .add_stage(ParsingStage)
-        .with_error_strategy(ErrorStrategy::Recover { continue_on_non_critical: false })
-        .build();
+    // Create a pipeline that only runs tokenization and parsing stages - type-safe!
+    let pipeline = ChainPipeline::parsing_only(&source)
+        .with_file_name(file_path.to_string())
+        .with_error_strategy(ErrorStrategy::Recover { continue_on_non_critical: false });
     
-    // Execute the pipeline to get AST
+    // Execute the pipeline to get AST - no downcasting needed!
     match pipeline.execute() {
         slang_compilation_pipeline::pipeline::result::CompilationResult::Success { output, diagnostics } => {
-            // Try to downcast the output to Vec<Statement>
-            if let Ok(statements) = output.downcast::<Vec<Statement>>() {
-                let statements = *statements;
-                
-                if format == AstFormat::Pretty {
-                    println!("{}: Successfully parsed {} statements", 
-                        "Success".green().bold(), 
-                        statements.len()
-                    );
-                }
-                
-                // Format and print the AST
-                let formatter = format.create_formatter();
-                let formatted_ast = formatter.format(&statements)?;
-                println!("{}", formatted_ast);
-                
-                // Print any warnings or notes
-                if diagnostics.has_errors() && format == AstFormat::Pretty {
-                    eprintln!("\n{}: Compilation completed with diagnostics", "Info".blue().bold());
-                }
-            } else {
-                return Err("Pipeline output was not in expected format".into());
+            // Output is already Vec<Statement> - no downcasting required!
+            let statements = output;
+            
+            if format == AstFormat::Pretty {
+                println!("{}: Successfully parsed {} statements", 
+                    "Success".green().bold(), 
+                    statements.len()
+                );
+            }
+            
+            // Format and print the AST
+            let formatter = format.create_formatter();
+            let formatted_ast = formatter.format(&statements)?;
+            println!("{}", formatted_ast);
+            
+            // Print any warnings or notes
+            if diagnostics.has_errors() && format == AstFormat::Pretty {
+                eprintln!("\n{}: Compilation completed with diagnostics", "Info".blue().bold());
             }
         }
         slang_compilation_pipeline::pipeline::result::CompilationResult::Failed { diagnostics: _ } => {

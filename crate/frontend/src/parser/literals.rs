@@ -31,8 +31,9 @@ impl LiteralParser {
         })?;
         let location = parser.source_location_from_token(token);
 
-        if let Some((type_name, _position)) = parser.match_identifier_token() {
-            match type_name {
+        // Check if the token has a suffix
+        if let Some(ref suffix) = token.suffix {
+            match suffix.as_str() {
                 TYPE_NAME_I32 => {
                     if base_value > i32::MAX as i64 || base_value < i32::MIN as i64 {
                         return Err(ParseErrorFactory::value_out_of_range(
@@ -118,8 +119,9 @@ impl LiteralParser {
             )
         })?;
 
-        if let Some((type_name, _position)) = parser.match_identifier_token() {
-            match type_name {
+        // Check if the token has a suffix
+        if let Some(ref suffix) = token.suffix {
+            match suffix.as_str() {
                 TYPE_NAME_F32 => {
                     return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
                         value as f32,

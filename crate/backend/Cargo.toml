@@ -14,7 +14,6 @@ slang_error = { path = "../error" }
 [features]
 default = []
 trace-execution = []
-print-byte_code = []
 
 [lib]
 name = "slang_backend"

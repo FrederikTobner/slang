@@ -1,4 +1,4 @@
-use crate::formatter::TokenFormatter;
+use crate::formatters::TokenFormatter;
 use slang_compilation_pipeline::pipeline::observers::StageObserver;
 use slang_frontend::Token;
 

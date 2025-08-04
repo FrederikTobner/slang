@@ -7,7 +7,6 @@ description = "Frontend components of the Slang programming language"
 authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 
 [dependencies]
-colored = "3.0.0"
 slang_ir = { path = "../ir" }
 slang_types = { path = "../types" }
 slang_shared = { path = "../shared" }

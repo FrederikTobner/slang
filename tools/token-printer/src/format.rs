@@ -1,4 +1,4 @@
-use crate::formatter::{TokenFormatter, PrettyFormatter, DebugFormatter};
+use crate::formatters::{TokenFormatter, PrettyFormatter, DebugFormatter};
 
 /// Available output formats for token display
 #[derive(Clone)]

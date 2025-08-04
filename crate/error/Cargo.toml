@@ -8,7 +8,6 @@ authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 
 [dependencies]
 colored = "3.0.0"
-thiserror = "2.0.12"
 
 [lib]
 name = "slang_error"

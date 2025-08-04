@@ -15,13 +15,6 @@ slang_backend = { path = "../backend" }
 
 # External dependencies for pipeline features
 colored = "3.0.0"
-criterion = { version = "0.7.0", optional = true }
 
 [features]
 default = []
-# Feature flags for debugging output
-print-ast = ["slang_ir/print-ast"]
-print-byte_code = ["slang_backend/print-byte_code"]
-
-# Development features
-benchmarking = ["criterion"]

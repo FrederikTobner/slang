@@ -48,8 +48,6 @@ build-tools = "cargo build --package ast-printer --package token-printer --packa
 
 [features]
 default = []
-print-byte_code = ["slang_backend/print-byte_code"]
-print-ast = ["slang_ir/print-ast"]
 trace-execution = ["slang_backend/trace-execution"]
 
 [dependencies]
@@ -60,8 +58,6 @@ slang_compilation_pipeline = { path = "crate/compilation_pipeline", features = [
 slang_error = { path = "crate/error", features = [] }
 slang_frontend = { path = "crate/frontend", features = [] }
 slang_ir = { path = "crate/ir", features = [] }
-slang_shared = { path = "crate/shared", features = [] }
-slang_types = { path = "crate/types", features = [] }
 zip = "4.3.0"
 
 

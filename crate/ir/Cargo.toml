@@ -12,7 +12,6 @@ slang_error = { path = "../error" }
 
 [features]
 default = []
-print-ast = []
 
 
 [lib]

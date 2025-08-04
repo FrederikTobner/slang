@@ -7,7 +7,7 @@ use tempfile::NamedTempFile;
 use test_utils::*;
 
 #[test]
-fn test_pretty_format_basic() {
+fn pretty_format_basic() {
     let (_temp_dir, file_path) = create_temp_slang_file(SAMPLE_SLANG_CODE)
         .expect("Failed to create temp file");
     
@@ -21,7 +21,7 @@ fn test_pretty_format_basic() {
 }
 
 #[test]
-fn test_json_format_basic() {
+fn json_format_basic() {
     let (_temp_dir, file_path) = create_temp_slang_file(SIMPLE_EXPRESSION)
         .expect("Failed to create temp file");
     
@@ -34,7 +34,7 @@ fn test_json_format_basic() {
 }
 
 #[test]
-fn test_compact_format_basic() {
+fn compact_format_basic() {
     let (_temp_dir, file_path) = create_temp_slang_file(SIMPLE_EXPRESSION)
         .expect("Failed to create temp file");
     
@@ -47,7 +47,7 @@ fn test_compact_format_basic() {
 }
 
 #[test]
-fn test_nonexistent_file() {
+fn nonexistent_file() {
     let result = parse_and_print_ast("/nonexistent/file.sl", AstFormat::Pretty);
     
     assert!(result.is_err(), "Should fail for nonexistent file");
@@ -56,7 +56,7 @@ fn test_nonexistent_file() {
 }
 
 #[test]
-fn test_invalid_slang_syntax() {
+fn invalid_slang_syntax() {
     // Create a file with invalid Slang syntax
     let invalid_code = "this is not valid slang syntax {{{ +++";
     let (_temp_dir, file_path) = create_temp_slang_file(invalid_code)
@@ -67,23 +67,18 @@ fn test_invalid_slang_syntax() {
         AstFormat::Pretty
     );
     
-    // Should handle parse errors gracefully
-    // Note: The exact behavior depends on how the parser handles invalid syntax
-    // This test mainly ensures the tool doesn't crash
-    match result {
-        Ok(_) => {
-            // If parsing succeeded, the invalid syntax might have been interpreted differently
-            // This is acceptable behavior
-        }
-        Err(_) => {
-            // If parsing failed, that's expected for invalid syntax
-            // This is also acceptable behavior
-        }
-    }
+    // Invalid syntax should result in a parsing error
+    assert!(result.is_err(), "Invalid syntax should result in an error");
+    let error_msg = result.unwrap_err().to_string();
+    assert!(
+        error_msg.contains("Failed to parse source code") || error_msg.contains("syntax error"),
+        "Error message should indicate parsing failure, got: {}", 
+        error_msg
+    );
 }
 
 #[test]
-fn test_empty_file() {
+fn empty_file() {
     let (_temp_dir, file_path) = create_temp_slang_file("")
         .expect("Failed to create temp file");
     
@@ -92,20 +87,12 @@ fn test_empty_file() {
         AstFormat::Pretty
     );
     
-    // Empty file handling should be graceful
-    match result {
-        Ok(_) => {
-            // Empty AST is valid
-        }
-        Err(_) => {
-            // Parser might require at least some content
-            // Both behaviors are acceptable
-        }
-    }
+    // Empty file should succeed with 0 statements
+    assert!(result.is_ok(), "Empty file should parse successfully");
 }
 
 #[test]
-fn test_all_formats_with_complex_code() {
+fn all_formats_with_complex_code() {
     let (_temp_dir, file_path) = create_temp_slang_file(COMPLEX_CODE)
         .expect("Failed to create temp file");
     
@@ -123,7 +110,7 @@ fn test_all_formats_with_complex_code() {
 }
 
 #[test]
-fn test_file_extension_warning() {
+fn file_extension_warning() {
     // Create a temporary file without .sl extension
     let mut temp_file = NamedTempFile::new()
         .expect("Failed to create temp file");
@@ -136,7 +123,55 @@ fn test_file_extension_warning() {
         AstFormat::Pretty
     );
     
-    // Should still work, but might show a warning
-    // The exact behavior depends on implementation
+    // Should still work regardless of file extension, as long as content is valid
     assert!(result.is_ok(), "Should parse file even without .sl extension");
+}
+
+#[test]
+fn multiple_invalid_syntax_cases() {
+    use test_utils::*;
+    
+    let invalid_cases = [
+        ("unclosed_brace", INVALID_SYNTAX_UNCLOSED_BRACE),
+        ("unexpected_token", INVALID_SYNTAX_UNEXPECTED_TOKEN), 
+        ("missing_semicolon", INVALID_SYNTAX_MISSING_SEMICOLON),
+        ("completely_invalid", COMPLETELY_INVALID),
+    ];
+    
+    for (case_name, invalid_code) in invalid_cases {
+        let (_temp_dir, file_path) = create_temp_slang_file(invalid_code)
+            .expect("Failed to create temp file");
+        
+        let result = parse_and_print_ast(
+            file_path.to_str().unwrap(), 
+            AstFormat::Pretty
+        );
+        
+        assert!(
+            result.is_err(), 
+            "Invalid syntax case '{}' should result in an error", 
+            case_name
+        );
+    }
+}
+
+#[test]
+fn error_message_contains_relevant_info() {
+    let (_temp_dir, file_path) = create_temp_slang_file("invalid syntax")
+        .expect("Failed to create temp file");
+    
+    let result = parse_and_print_ast(
+        file_path.to_str().unwrap(), 
+        AstFormat::Pretty
+    );
+    
+    assert!(result.is_err(), "Should fail for invalid syntax");
+    let error_msg = result.unwrap_err().to_string();
+    
+    // Error message should be informative
+    assert!(
+        error_msg.len() > 10,
+        "Error message should be substantial, got: '{}'", 
+        error_msg
+    );
 }

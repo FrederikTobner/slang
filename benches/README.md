@@ -18,7 +18,7 @@ This directory contains a streamlined performance testing suite for the Slang co
 - **`pipeline.rs`** - Compilation pipeline utilities for stage-specific testing
 - **`mod.rs`** - Module organization for common utilities
 
-**Key Design Principle**: All benchmarks use `CompilationPipeline` and `compilation_pipeline` directly - no abstraction layers.
+**Key Design Principle**: All benchmarks use `ChainPipeline` directly - no abstraction layers, compile-time observer validation.
 
 ## Quick Start
 
@@ -143,20 +143,27 @@ The `ProgramTemplates` provides scalable test generation:
 All benchmarks use the main compilation APIs directly:
 
 ```rust
-// Direct compilation pipeline usage
-use slang::compilation_pipeline::{self, CompilationPipeline, CompilationResult, PipelineStage};
+// Direct ChainPipeline usage with compile-time observer validation
+use slang_compilation_pipeline::pipeline::ChainPipeline;
 
 // For full compilation
-match compilation_pipeline::compile_to_bytecode(program, Some("benchmark.sl".to_string()), false) {
-    CompilationResult::Success { chunk, .. } => Ok(chunk),
-    CompilationResult::Failed { diagnostics } => Err(format!("Failed: {}", diagnostics.error_count()))
+let pipeline = ChainPipeline::full_compilation(program)
+    .with_file_name("benchmark.sl".to_string());
+
+match pipeline.execute() {
+    slang_compilation_pipeline::pipeline::result::CompilationResult::Success { output, .. } => Ok(output),
+    slang_compilation_pipeline::pipeline::result::CompilationResult::Failed { diagnostics } => {
+        Err(format!("Failed: {}", diagnostics.error_count()))
+    }
 }
 
-// For individual stages  
-let pipeline = CompilationPipeline::new(program, Some("benchmark.sl".to_string()));
-match pipeline.tokenize().and_then(|pipeline, tokens| pipeline.parse(tokens)) {
-    PipelineStage::Success { data, .. } => Ok(data),
-    PipelineStage::Failed { .. } => Err("Parse failed".to_string())
+// For individual stages - type-safe observer registration  
+let pipeline = ChainPipeline::parsing_only(program)
+    .with_file_name("benchmark.sl".to_string());
+
+match pipeline.execute() {
+    slang_compilation_pipeline::pipeline::result::CompilationResult::Success { output, .. } => Ok(output),
+    slang_compilation_pipeline::pipeline::result::CompilationResult::Failed { .. } => Err("Parse failed".to_string())
 }
 ```
 
@@ -226,7 +233,7 @@ Use benchmarks during development:
 
 ### Writing Benchmarks
 
-- **Use direct APIs** - Call `CompilationPipeline` and `compilation_pipeline` directly
+- **Use direct APIs** - Call `ChainPipeline` directly with compile-time observer validation
 - **Leverage memory profiling** - Use `AllocProfiler` to understand allocation patterns
 - **Include diverse test cases** - Test various input sizes and complexity levels
 - **Document purpose** - Clear comments about what each benchmark measures

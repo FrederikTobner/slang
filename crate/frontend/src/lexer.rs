@@ -81,6 +81,19 @@ impl<'a> Lexer<'a> {
         self.tokens_on_current_line += 1;
     }
 
+    /// Adds a token with suffix to the list
+    ///
+    /// ### Arguments
+    /// * `state` - The current lexer state
+    /// * `token_type` - The type of token to add
+    /// * `lexeme` - The string representation of the token
+    /// * `start_pos` - The starting position of the token in the input
+    /// * `suffix` - The optional suffix for numeric literals
+    fn add_token_with_suffix(&mut self, token_type: Tokentype, lexeme: String, start_pos: usize, suffix: Option<String>) {
+        self.tokens.push(Token::new_with_suffix(token_type, lexeme, start_pos, suffix));
+        self.tokens_on_current_line += 1;
+    }
+
     /// Adds an error to the error list
     ///
     /// ### Arguments
@@ -227,7 +240,7 @@ fn handle_identifier(state: &mut Lexer, start_pos: usize) {
     state.add_token(token_type, identifier, start_pos);
 }
 
-/// Handles numeric literals (integers and floating point)
+/// Handles numeric literals (integers and floating point) with optional type suffix
 ///
 /// ### Arguments
 /// * `state` - The current lexer state
@@ -236,6 +249,7 @@ fn handle_number(state: &mut Lexer, start_pos: usize) {
     let mut number = String::new();
     let mut is_float = false;
 
+    // Parse the numeric part
     while let Some(&c) = state.peek() {
         if c.is_ascii_digit() {
             number.push(c);
@@ -261,13 +275,50 @@ fn handle_number(state: &mut Lexer, start_pos: usize) {
         }
     }
 
+    // Check for type suffix (i32, i64, u32, u64, f32, f64)
+    let mut suffix = None;
+    if let Some(&c) = state.peek() {
+        if c.is_ascii_alphabetic() {
+            let mut potential_suffix = String::new();
+            
+            // Collect potential suffix characters
+            while let Some(&c) = state.peek() {
+                if c.is_ascii_alphanumeric() {
+                    potential_suffix.push(c);
+                    state.advance();
+                } else {
+                    break;
+                }
+            }
+            
+            // Validate the suffix - only allow known type suffixes
+            match potential_suffix.as_str() {
+                "i32" | "i64" | "u32" | "u64" | "f32" | "f64" => {
+                    suffix = Some(potential_suffix);
+                }
+                _ => {
+                    // This is not a valid type suffix, so we need to rewind
+                    // the lexer position back to before the suffix
+                    for _ in 0..potential_suffix.len() {
+                        if state.current_pos > 0 {
+                            state.current_pos -= 1;
+                        }
+                    }
+                    // Reset the peekable iterator by recreating it from the current position
+                    let remaining_input = &state.input[state.current_pos..];
+                    state.chars = remaining_input.chars().peekable();
+                }
+            }
+        }
+    }
+
     let token_type = if is_float {
         Tokentype::FloatLiteral
     } else {
         Tokentype::IntegerLiteral
     };
 
-    state.add_token(token_type, number, start_pos);
+    state.add_token_with_suffix(token_type, number, start_pos, suffix);
 }
 
 /// Handles string literals

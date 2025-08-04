@@ -17,8 +17,6 @@ path = "src/main.rs"
 [dependencies]
 slang_compilation_pipeline = { workspace = true }
 slang_ir = { workspace = true }
-slang_frontend = { workspace = true }
-slang_shared = { workspace = true }
 slang_error = { workspace = true }
 clap = { workspace = true }
 colored = { workspace = true }

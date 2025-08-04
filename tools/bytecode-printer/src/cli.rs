@@ -1,8 +1,9 @@
 use crate::format::BytecodeFormat;
+use crate::observer::BytecodePrintObserver;
 use clap::Parser as ClapParser;
 use colored::Colorize;
-use slang_compilation_pipeline::pipeline::builder::PipelineBuilder;
-use slang_compilation_pipeline::pipeline::stages::*;
+use slang_compilation_pipeline::{ChainPipeline};
+use slang_compilation_pipeline::pipeline::result::CompilationResult;
 use slang_backend::bytecode::Chunk;
 use std::fs;
 use zip::ZipArchive;
@@ -153,35 +154,23 @@ fn load_bytecode_from_sip(file_path: &str) -> Result<Chunk, Box<dyn std::error::
 fn compile_source_to_bytecode(file_path: &str, verbose: bool) -> Result<Chunk, Box<dyn std::error::Error>> {
     // Read source file
     let source = read_source_file(file_path)?;
-    
-    // Create a full compilation pipeline
-    let pipeline = PipelineBuilder::new(&source)
-        .add_stage(TokenizationStage)
-        .add_stage(ParsingStage)
-        .add_stage(SemanticAnalysisStage)
-        .add_stage(CodeGenerationStage)
+    // Create a full compilation pipeline - using the high-level API for type safety
+    let pipeline = ChainPipeline::full_compilation(&source)
         .with_file_name(file_path.to_string())
-        .build();
-    
+        .with_codegen_observer(BytecodePrintObserver::new());
+
     // Execute the pipeline to get bytecode
-    match pipeline.execute() {
-        slang_compilation_pipeline::pipeline::result::CompilationResult::Success { output, diagnostics } => {
-            // Try to downcast the output to Chunk
-            if let Ok(chunk) = output.downcast::<Chunk>() {
-                let chunk = *chunk;
-                
-                if verbose && diagnostics.has_errors() {
-                    println!("{}: Compilation completed with diagnostics", 
-                        "Warning".yellow().bold()
-                    );
-                }
-                
-                Ok(chunk)
-            } else {
-                Err("Pipeline output was not in expected bytecode format".into())
+    match pipeline.compile_to_bytecode() {
+        CompilationResult::Success { output: chunk, diagnostics } => {
+            if verbose && diagnostics.has_errors() {
+                println!("{}: Compilation completed with diagnostics", 
+                    "Warning".yellow().bold()
+                );
             }
+            
+            Ok(chunk)
         }
-        slang_compilation_pipeline::pipeline::result::CompilationResult::Failed { diagnostics: _ } => {
+        CompilationResult::Failed { diagnostics } => {
             if verbose {
                 eprintln!("{}: Compilation failed", 
                     "Error".red().bold()
@@ -192,7 +181,8 @@ fn compile_source_to_bytecode(file_path: &str, verbose: bool) -> Result<Chunk, B
                 "Error".red().bold()
             );
             
-            Err("Failed to compile source code to bytecode. Check source file for errors.".into())
+            Err(format!("Failed to compile source code to bytecode. {} errors found.", 
+                diagnostics.error_count()).into())
         }
     }
 }

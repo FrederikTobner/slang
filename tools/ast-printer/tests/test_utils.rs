@@ -58,3 +58,26 @@ fn main() -> i32 {
     }
 }
 "#;
+
+/// Invalid syntax examples for testing error handling
+pub const INVALID_SYNTAX_UNCLOSED_BRACE: &str = r#"
+fn test() {
+    let x = 42;
+    // Missing closing brace
+"#;
+
+pub const INVALID_SYNTAX_UNEXPECTED_TOKEN: &str = r#"
+fn test() -> i32 {
+    let x = 42 +++ 10;  // Invalid operator
+    return x;
+}
+"#;
+
+pub const INVALID_SYNTAX_MISSING_SEMICOLON: &str = r#"
+fn test() -> i32 {
+    let x = 42  // Missing semicolon
+    return x;
+}
+"#;
+
+pub const COMPLETELY_INVALID: &str = "this is not code at all {{{ +++ ??? 123 abc";

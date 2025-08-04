@@ -1,6 +1,6 @@
 mod cli;
 mod format;
-mod formatter;
+mod formatters;
 mod observer;
 
 use clap::Parser;

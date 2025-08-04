@@ -7,6 +7,7 @@
 pub mod cli;
 pub mod format;
 pub mod formatter;
+pub mod observer;
 
 // Re-export main functionality
 pub use cli::{analyze_bytecode, Parser};

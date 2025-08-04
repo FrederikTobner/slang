@@ -1,6 +1,7 @@
 mod cli;
 mod format;
 mod formatter;
+mod observer;
 
 use cli::{Parser, analyze_bytecode};
 use clap::Parser as ClapParser;

@@ -1,12 +1,12 @@
 use std::any::Any;
 use slang_shared::DiagnosticEngine;
 
-/// Result of pipeline execution
-pub enum CompilationResult<'a> {
+/// Result of pipeline execution with typed output
+pub enum CompilationResult<'a, T = Box<dyn Any>> {
     /// Compilation succeeded
     Success {
         /// The final output data
-        output: Box<dyn Any>,
+        output: T,
         /// Diagnostic engine with any warnings/info
         diagnostics: DiagnosticEngine<'a>,
     },
@@ -17,7 +17,10 @@ pub enum CompilationResult<'a> {
     },
 }
 
-impl<'a> CompilationResult<'a> {
+/// Legacy type alias for backward compatibility
+pub type LegacyCompilationResult<'a> = CompilationResult<'a, Box<dyn Any>>;
+
+impl<'a, T> CompilationResult<'a, T> {
     /// Check if the compilation succeeded
     pub fn is_success(&self) -> bool {
         matches!(self, CompilationResult::Success { .. })
@@ -39,18 +42,11 @@ impl<'a> CompilationResult<'a> {
     /// Extract the output data if compilation succeeded
     /// 
     /// Returns None if compilation failed
-    pub fn output(self) -> Option<Box<dyn Any>> {
+    pub fn output(self) -> Option<T> {
         match self {
             CompilationResult::Success { output, .. } => Some(output),
             CompilationResult::Failed { .. } => None,
         }
-    }
-
-    /// Extract the output data if compilation succeeded, downcasting to the expected type
-    /// 
-    /// Returns None if compilation failed or the type doesn't match
-    pub fn output_as<T: 'static>(self) -> Option<T> {
-        self.output()?.downcast::<T>().ok().map(|boxed| *boxed)
     }
 
     /// Extract the diagnostics, consuming the result
@@ -62,64 +58,12 @@ impl<'a> CompilationResult<'a> {
     }
 }
 
-/// Intermediate result that represents a stage in a compilation pipeline
-/// 
-/// This is used internally during pipeline execution to chain stages together.
-pub enum PipelineStage<'a, T> {
-    /// Stage completed successfully
-    Success {
-        /// The pipeline state for the next stage
-        pipeline: crate::compilation_pipeline::CompilationPipeline<'a>,
-        /// The data produced by this stage
-        data: T,
-    },
-    /// Stage failed
-    Failed {
-        /// The pipeline state with error information
-        pipeline: crate::compilation_pipeline::CompilationPipeline<'a>,
-    },
-}
-
-impl<'a, T: 'static> PipelineStage<'a, T> {
-    /// Chain another stage if this one succeeded
-    pub fn and_then<U, F>(self, f: F) -> PipelineStage<'a, U>
-    where
-        F: FnOnce(crate::compilation_pipeline::CompilationPipeline<'a>, T) -> PipelineStage<'a, U>,
-    {
-        match self {
-            PipelineStage::Success { pipeline, data } => f(pipeline, data),
-            PipelineStage::Failed { pipeline } => PipelineStage::Failed { pipeline },
-        }
-    }
-
-    /// Extract the pipeline, consuming the result
-    pub fn into_pipeline(self) -> crate::compilation_pipeline::CompilationPipeline<'a> {
-        match self {
-            PipelineStage::Success { pipeline, .. } => pipeline,
-            PipelineStage::Failed { pipeline } => pipeline,
-        }
-    }
-
-    /// Check if the stage succeeded
-    pub fn is_success(&self) -> bool {
-        matches!(self, PipelineStage::Success { .. })
-    }
-
-    /// Check if the stage failed
-    pub fn is_failed(&self) -> bool {
-        matches!(self, PipelineStage::Failed { .. })
-    }
-
-    /// Convert to a CompilationResult, consuming the stage
-    pub fn into_result(self) -> CompilationResult<'a> {
-        match self {
-            PipelineStage::Success { pipeline, data } => CompilationResult::Success {
-                output: Box::new(data) as Box<dyn Any>,
-                diagnostics: pipeline.into_diagnostics(),
-            },
-            PipelineStage::Failed { pipeline } => CompilationResult::Failed {
-                diagnostics: pipeline.into_diagnostics(),
-            },
-        }
+// Legacy implementation for backward compatibility
+impl<'a> CompilationResult<'a, Box<dyn Any>> {
+    /// Extract the output data if compilation succeeded, downcasting to the expected type
+    /// 
+    /// Returns None if compilation failed or the type doesn't match
+    pub fn output_as<U: 'static>(self) -> Option<U> {
+        self.output()?.downcast::<U>().ok().map(|boxed| *boxed)
     }
 }

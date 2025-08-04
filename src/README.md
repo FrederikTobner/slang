@@ -25,7 +25,7 @@ The main application consists of several key modules:
 
 ## Compilation Pipeline
 
-The compiler orchestrates a multi-stage compilation process through the `CompilationPipeline`:
+The compiler orchestrates a multi-stage compilation process through the type-safe `ChainPipeline`:
 
 1. **Lexical Analysis** - Tokenize source code with position tracking
 2. **Parsing** - Generate Abstract Syntax Tree with error recovery
