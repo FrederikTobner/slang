@@ -11,107 +11,116 @@ use slang_types::{
     TYPE_NAME_INT, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNKNOWN, TypeId,
 };
 
-/// Type parser module providing static methods for parsing type expressions
-pub struct TypeParser;
+/// Extension trait for type parsing functionality
+/// 
+/// This trait extends the Parser with type parsing methods,
+/// providing a clean interface for parsing all type expressions.
+pub trait TypeParsing {
+    /// Parse a type
+    fn parse_type(&mut self) -> Result<TypeId, ParseError>;
+    
+    /// Parse function type expression
+    fn parse_function_type_expression(&mut self) -> Result<Expression, ParseError>;
+}
 
-impl TypeParser {
+impl<'a> TypeParsing for Parser<'a> {
     /// Parses a type name
     ///
     /// ### Returns
     ///
     /// The type ID for the parsed type or an error
-    pub fn parse_type(parser: &mut Parser) -> Result<TypeId, ParseError> {
+    fn parse_type(&mut self) -> Result<TypeId, ParseError> {
         // Handle function types: fn(param_types) -> return_type
-        if parser.check(&Tokentype::Fn) {
-            parser.advance(); // consume 'fn'
+        if self.check(&Tokentype::Fn) {
+            self.advance(); // consume 'fn'
 
-            if !parser.match_token(&Tokentype::LeftParen) {
+            if !self.match_token(&Tokentype::LeftParen) {
                 return Err(
-                    ParseErrorFactory::expected_opening_paren(parser.current_location(), Some("after 'fn'"))
+                    ParseErrorFactory::expected_opening_paren(self.current_location(), Some("after 'fn'"))
                 );
             }
 
             let mut param_types = Vec::new();
-            if !parser.check(&Tokentype::RightParen) {
+            if !self.check(&Tokentype::RightParen) {
                 loop {
-                    param_types.push(Self::parse_type(parser)?);
-                    if !parser.match_token(&Tokentype::Comma) {
+                    param_types.push(self.parse_type()?);
+                    if !self.match_token(&Tokentype::Comma) {
                         break;
                     }
                 }
             }
 
-            if !parser.match_token(&Tokentype::RightParen) {
+            if !self.match_token(&Tokentype::RightParen) {
                 return Err(ParseErrorFactory::expected_closing_paren(
-                    parser.current_location(),
+                    self.current_location(),
                     Some("after function parameters"),
                 ));
             }
 
-            if !parser.match_token(&Tokentype::Arrow) {
+            if !self.match_token(&Tokentype::Arrow) {
                 return Err(ParseErrorFactory::invalid_syntax(
-                    parser.current_location(),
+                    self.current_location(),
                     "Expected '->' after function parameters",
                     None,
                 ));
             }
 
-            let return_type = Self::parse_type(parser)?;
+            let return_type = self.parse_type()?;
 
-            let function_type_id = parser
+            let function_type_id = self
                 .context
                 .register_function_type(param_types, return_type);
             return Ok(function_type_id);
         }
 
-        if parser.match_token(&Tokentype::LeftParen) {
-            if !parser.match_token(&Tokentype::RightParen) {
+        if self.match_token(&Tokentype::LeftParen) {
+            if !self.match_token(&Tokentype::RightParen) {
                 return Err(ParseErrorFactory::expected_closing_paren(
-                    parser.current_location(),
+                    self.current_location(),
                     Some("for unit type"),
                 ));
             }
             return Ok(PrimitiveType::Unit.into());
         }
 
-        let (type_name, _position) = if let Some((name, position)) = parser.match_identifier_token() {
+        let (type_name, _position) = if let Some((name, position)) = self.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some("type identifier")));
+            return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some("type identifier")));
         };
 
         if type_name == TYPE_NAME_INT {
             return Err(ParseErrorFactory::unknown_type(
-                parser.current_location(),
+                self.current_location(),
                 &format!(
                     "'{TYPE_NAME_INT}' is not a valid type specifier. Use '{TYPE_NAME_I32}', '{TYPE_NAME_I64}', '{TYPE_NAME_U32}', or '{TYPE_NAME_U64}' instead"
                 ),
             ));
         } else if type_name == TYPE_NAME_FLOAT {
             return Err(ParseErrorFactory::unknown_type(
-                parser.current_location(),
+                self.current_location(),
                 &format!(
                     "'{TYPE_NAME_FLOAT}' is not a valid type specifier. Use '{TYPE_NAME_F32}' or '{TYPE_NAME_F64}' instead"
                 ),
             ));
         } else if type_name == TYPE_NAME_UNKNOWN {
             return Err(ParseErrorFactory::unknown_type(
-                parser.current_location(),
+                self.current_location(),
                 &format!("'{TYPE_NAME_UNKNOWN}' is not a valid type specifier"),
             ));
         }
-        if let Some(symbol) = parser.context.lookup_symbol(&type_name) {
+        if let Some(symbol) = self.context.lookup_symbol(&type_name) {
             if symbol.kind() == SymbolKind::Type {
                 Ok(symbol.type_id)
             } else {
                 Err(ParseErrorFactory::unknown_type(
-                    parser.current_location(),
+                    self.current_location(),
                     &format!("'{type_name}' is not a type name"),
                 ))
             }
         } else {
             Err(ParseErrorFactory::unknown_type(
-                parser.current_location(),
+                self.current_location(),
                 &format!("Unknown type: {type_name}"),
             ))
         }
@@ -122,43 +131,43 @@ impl TypeParser {
     /// ### Returns
     ///
     /// The parsed function type expression or an error message
-    pub fn parse_function_type_expression(parser: &mut Parser) -> Result<Expression, ParseError> {
-        let fn_token_pos = parser.previous().pos;
+    fn parse_function_type_expression(&mut self) -> Result<Expression, ParseError> {
+        let fn_token_pos = self.previous().pos;
 
-        if !parser.match_token(&Tokentype::LeftParen) {
-            return Err(ParseErrorFactory::expected_opening_paren(parser.current_location(), Some("'(' after 'fn'")));
+        if !self.match_token(&Tokentype::LeftParen) {
+            return Err(ParseErrorFactory::expected_opening_paren(self.current_location(), Some("'(' after 'fn'")));
         }
 
         let mut param_types = Vec::new();
-        if !parser.check(&Tokentype::RightParen) {
+        if !self.check(&Tokentype::RightParen) {
             loop {
-                param_types.push(Self::parse_type(parser)?);
-                if !parser.match_token(&Tokentype::Comma) {
+                param_types.push(self.parse_type()?);
+                if !self.match_token(&Tokentype::Comma) {
                     break;
                 }
             }
         }
 
-        if !parser.match_token(&Tokentype::RightParen) {
+        if !self.match_token(&Tokentype::RightParen) {
             return Err(ParseErrorFactory::expected_closing_paren(
-                parser.current_location(),
+                self.current_location(),
                 Some("after function parameters"),
             ));
         }
 
-        if !parser.match_token(&Tokentype::Arrow) {
+        if !self.match_token(&Tokentype::Arrow) {
             return Err(ParseErrorFactory::invalid_syntax(
-                parser.current_location(),
+                self.current_location(),
                 "Expected '->' after function parameters",
                 None,
             ));
         }
 
-        let return_type = Self::parse_type(parser)?;
+        let return_type = self.parse_type()?;
 
         // Use utility function for cleaner location calculation
-        let end_pos = parser.previous().pos + parser.previous().lexeme.len();
-        let location = parser.location_from_range(fn_token_pos, end_pos);
+        let end_pos = self.previous().pos + self.previous().lexeme.len();
+        let location = self.location_from_range(fn_token_pos, end_pos);
 
         Ok(slang_ir::ExprFactory::function_type_with_location(
             param_types,

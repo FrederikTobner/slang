@@ -3,7 +3,7 @@
 //! This module provides core type system operations that are independent
 //! of AST structure, making them reusable across the entire compiler.
 
-use crate::types::TypeId;
+use crate::type_id::TypeId;
 
 /// Type promotion system for automatic type inference
 /// 

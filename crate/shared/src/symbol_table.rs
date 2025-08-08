@@ -1,4 +1,4 @@
-use slang_types::types::TypeId;
+use slang_types::TypeId;
 use std::collections::HashMap;
 
 /// Represents the specific data for each symbol kind
@@ -136,12 +136,17 @@ impl SymbolTable {
     /// Ends the current scope by popping it from the scope stack
     ///
     /// Used when exiting a block, function, or other lexical scope.
-    /// Will panic if attempting to end the global scope.
-    pub fn end_scope(&mut self) {
+    /// Returns an error if attempting to end the global scope.
+    ///
+    /// ### Returns
+    /// * `Ok(())` if the scope was successfully ended
+    /// * `Err(String)` if attempting to end the global scope
+    pub fn end_scope(&mut self) -> Result<(), String> {
         if self.scopes.len() > 1 {
             self.scopes.pop();
+            Ok(())
         } else {
-            panic!("Cannot end the global scope");
+            Err("Cannot end the global scope".to_string())
         }
     }
 

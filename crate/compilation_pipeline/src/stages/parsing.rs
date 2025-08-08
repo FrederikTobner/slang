@@ -1,4 +1,4 @@
-use crate::pipeline::stage::{CompilationStage, StageContext};
+use crate::stage::{CompilationStage, StageContext};
 use slang_frontend::{Token, parser::Parser, LineInfo};
 use slang_ir::ast::Statement;
 use slang_shared::DiagnosticEngine;

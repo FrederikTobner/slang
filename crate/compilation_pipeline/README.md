@@ -22,22 +22,40 @@ The Slang Compilation Pipeline provides a robust, modular architecture for compi
 
 #### CompilationStage Trait
 ```rust
-pub trait CompilationStage: Send + Sync {
-    type Input: 'static;
-    type Output: 'static;
-    
-    fn execute(&self, input: Self::Input, context: &mut StageContext, 
-               diagnostics: &mut DiagnosticEngine) -> Result<Self::Output, ()>;
+pub trait CompilationStage<Input, Output>: Send + Sync 
+where
+    Input: 'static,
+    Output: 'static,
+{
+    fn execute(&self, input: Input, context: &mut StageContext, 
+               diagnostics: &mut DiagnosticEngine) -> Result<Output, ()>;
     fn name(&self) -> &'static str;
     fn is_critical(&self) -> bool { true }
 }
 ```
 
+The trait uses **parameterized types** instead of associated types, providing maximum flexibility for creating generic stages and custom transformations.
+
 #### Built-in Stages
-- **TokenizationStage** - Converts source code to tokens
-- **ParsingStage** - Transforms tokens into Abstract Syntax Tree (AST)
-- **SemanticAnalysisStage** - Performs type checking and semantic validation
-- **CodeGenerationStage** - Generates bytecode from validated AST
+- **TokenizationStage** - `String → Vec<Token>` - Converts source code to tokens
+- **ParsingStage** - `Vec<Token> → Vec<Statement>` - Transforms tokens into Abstract Syntax Tree (AST)  
+- **SemanticAnalysisStage** - `Vec<Statement> → Vec<Statement>` - Performs type checking and semantic validation
+- **CodeGenerationStage** - `Vec<Statement> → Chunk` - Generates bytecode from validated AST
+
+#### Stage Implementation Example
+```rust
+pub struct CustomStage;
+
+impl CompilationStage<InputType, OutputType> for CustomStage {
+    fn execute(&self, input: InputType, context: &mut StageContext, 
+               diagnostics: &mut DiagnosticEngine) -> Result<OutputType, ()> {
+        // Custom transformation logic
+        Ok(transform(input))
+    }
+    
+    fn name(&self) -> &'static str { "Custom Stage" }
+}
+```
 
 #### PipelineBuilder
 Fluent API for constructing custom compilation pipelines:
@@ -355,17 +373,17 @@ impl StageObserver<Vec<Token>, Vec<Statement>> for CustomErrorReporter {
 }
 ```
 
-### Coreating new stages
+```
+
+### Creating new stages
 ```rust
-// Create custom compilation stages
+```rust
+// Create custom compilation stages with explicit parameterized types
 struct OptimizationStage;
 
-impl CompilationStage for OptimizationStage {
-    type Input = Vec<Statement>;
-    type Output = Vec<Statement>;
-    
-    fn execute(&self, mut input: Self::Input, _context: &mut StageContext, 
-               _diagnostics: &mut DiagnosticEngine) -> Result<Self::Output, ()> {
+impl CompilationStage<Vec<Statement>, Vec<Statement>> for OptimizationStage {
+    fn execute(&self, mut input: Vec<Statement>, _context: &mut StageContext, 
+               _diagnostics: &mut DiagnosticEngine) -> Result<Vec<Statement>, ()> {
         // Perform AST optimizations
         optimize_dead_code(&mut input);
         optimize_constant_folding(&mut input);
@@ -374,6 +392,12 @@ impl CompilationStage for OptimizationStage {
     
     fn name(&self) -> &'static str { "optimization" }
     fn is_critical(&self) -> bool { false }
+}
+
+// Bridge trait implementation for execution system compatibility
+impl ExecutableStage for OptimizationStage {
+    type Input = Vec<Statement>;
+    type Output = Vec<Statement>;
 }
 ```
 

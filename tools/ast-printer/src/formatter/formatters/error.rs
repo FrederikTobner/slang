@@ -1,4 +1,4 @@
-use slang_error::{DomainError, CompilerError, ErrorCode, Location, ErrorCategory};
+use slang_error::{DomainError, CompilationError, ErrorCode, Location, ErrorCategory};
 
 /// Custom error type for formatting operations
 #[derive(Debug)]
@@ -21,8 +21,8 @@ impl std::fmt::Display for FormatError {
 impl std::error::Error for FormatError {}
 
 impl DomainError for FormatError {
-    fn to_compiler_error(&self) -> CompilerError {
-        CompilerError::new(
+    fn to_compiler_error(&self) -> CompilationError {
+        CompilationError::new(
             ErrorCode::InternalError,
             format!("Format error: {}", self.message),
             1, 1, 0, Some(1)

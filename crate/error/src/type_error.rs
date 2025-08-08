@@ -1,5 +1,5 @@
 // Type system error types and implementations
-use crate::compiler_error::CompilerError;
+use crate::compiler_error::CompilationError;
 use crate::domain_error::{DomainError, ErrorCategory};
 use crate::error_codes::ErrorCode;
 use crate::Location;
@@ -31,7 +31,7 @@ pub enum TypeError {
 pub type TypeResult<T> = Result<T, TypeError>;
 
 impl DomainError for TypeError {
-    fn to_compiler_error(&self) -> CompilerError {
+    fn to_compiler_error(&self) -> CompilationError {
         let (code, message) = match self {
             TypeError::TypeNotFound { name, suggestions, .. } => {
                 let base_msg = format!("Type not found: {}", name);
@@ -53,7 +53,7 @@ impl DomainError for TypeError {
         };
         
         let loc = self.location();
-        CompilerError::new(code, message, loc.line, loc.column, loc.position, Some(1))
+        CompilationError::new(code, message, loc.line, loc.column, loc.position, Some(1))
     }
     
     fn location(&self) -> &Location {

@@ -10,70 +10,89 @@ use slang_ir::ast::{
 use slang_ir::StmtFactory;
 use slang_types::PrimitiveType;
 
-/// Statement parser that handles all statement types
-pub struct StatementParser;
+/// Extension trait for statement parsing functionality
+/// 
+/// This trait extends the Parser with statement parsing methods,
+/// providing a clean interface for parsing all statement types.
+pub trait StatementParsing {
+    /// Parse a single statement
+    fn statement(&mut self) -> Result<Statement, ParseError>;
+    
+    /// Parse let statement
+    fn parse_let_statement(&mut self) -> Result<Statement, ParseError>;
+    
+    /// Parse type definition
+    fn parse_type_definition(&mut self) -> Result<Statement, ParseError>;
+    
+    /// Parse function declaration
+    fn parse_function_declaration(&mut self) -> Result<Statement, ParseError>;
+    
+    /// Parse return statement
+    fn parse_return_statement(&mut self) -> Result<Statement, ParseError>;
+    
+    /// Parse if statement
+    fn parse_if_statement(&mut self) -> Result<Statement, ParseError>;
+    
+    /// Parse assignment statement
+    fn parse_assignment_statement(&mut self) -> Result<Statement, ParseError>;
+    
+    /// Parse expression statement
+    fn parse_expression_statement(&mut self) -> Result<Statement, ParseError>;
+}
 
-impl StatementParser {
-    /// Parses a single statement
-    ///
-    /// ### Arguments
-    ///
-    /// * `parser` - Reference to the core parser
+impl<'a> StatementParsing for Parser<'a> {
+    /// Parse a single statement
     ///
     /// ### Returns
     ///
     /// The parsed statement or an error message
-    pub fn parse_statement(parser: &mut Parser) -> Result<Statement, ParseError> {
-        if parser.match_token(&Tokentype::Let) {
-            Self::parse_let_statement(parser)
-        } else if parser.match_token(&Tokentype::Struct) {
-            Self::parse_type_definition(parser)
-        } else if parser.match_token(&Tokentype::Fn) {
-            Self::parse_function_declaration(parser)
-        } else if parser.match_token(&Tokentype::Return) {
-            Self::parse_return_statement(parser)
-        } else if parser.match_token(&Tokentype::If) {
-            Self::parse_if_statement(parser)
-        } else if parser.check(&Tokentype::Identifier) && parser.check_next(&Tokentype::Equal) {
-            Self::parse_assignment_statement(parser)
+    fn statement(&mut self) -> Result<Statement, ParseError> {
+        if self.match_token(&Tokentype::Let) {
+            self.parse_let_statement()
+        } else if self.match_token(&Tokentype::Struct) {
+            self.parse_type_definition()
+        } else if self.match_token(&Tokentype::Fn) {
+            self.parse_function_declaration()
+        } else if self.match_token(&Tokentype::Return) {
+            self.parse_return_statement()
+        } else if self.match_token(&Tokentype::If) {
+            self.parse_if_statement()
+        } else if self.check(&Tokentype::Identifier) && self.check_next(&Tokentype::Equal) {
+            self.parse_assignment_statement()
         } else {
-            Self::parse_expression_statement(parser)
+            self.parse_expression_statement()
         }
     }
 
     /// Parses a let statement
     ///
-    /// ### Arguments
-    ///
-    /// * `parser` - Reference to the core parser
-    ///
     /// ### Returns
     ///
     /// The parsed let statement or an error message
-    fn parse_let_statement(parser: &mut Parser) -> Result<Statement, ParseError> {
-        let is_mutable = parser.match_token(&Tokentype::Mut);
+    fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
+        let is_mutable = self.match_token(&Tokentype::Mut);
 
-        let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
+        let (name, position) = if let Some((name, position)) = self.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some("Expected identifier after 'let'")));
+            return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some("Expected identifier after 'let'")));
         };
 
-        let location = parser.location_from_range(position.pos, position.end_pos());
+        let location = self.location_from_range(position.pos, position.end_pos());
         let mut var_type = PrimitiveType::Unknown.into();
 
-        if parser.match_token(&Tokentype::Colon) {
-            var_type = parser.parse_type()?;
+        if self.match_token(&Tokentype::Colon) {
+            var_type = self.parse_type()?;
         }
 
-        if !parser.match_token(&Tokentype::Equal) {
-            return Err(ParseErrorFactory::expected_equals(parser.current_location()));
+        if !self.match_token(&Tokentype::Equal) {
+            return Err(ParseErrorFactory::expected_equals(self.current_location()));
         }
 
-        let expr = parser.expression()?;
+        let expr = self.expression()?;
 
-        if !parser.match_token(&Tokentype::Semicolon) {
-            return Err(ParseErrorFactory::expected_semicolon(parser.current_location(), Some("after let statement")));
+        if !self.match_token(&Tokentype::Semicolon) {
+            return Err(ParseErrorFactory::expected_semicolon(self.current_location(), Some("after let statement")));
         }
 
         // Use factory based on whether we have explicit type annotation
@@ -96,97 +115,127 @@ impl StatementParser {
         Ok(stmt)
     }
 
-    /// Parses a function declaration statement
-    ///
-    /// ### Arguments
-    ///
-    /// * `parser` - Reference to the core parser
-    ///
-    /// ### Returns
-    ///
-    /// The parsed function declaration or an error message
-    fn parse_function_declaration(parser: &mut Parser) -> Result<Statement, ParseError> {
-        let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
+    /// Parse type definition
+    fn parse_type_definition(&mut self) -> Result<Statement, ParseError> {
+        let (name, position) = if let Some((name, position)) = self.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some(&format!(
+            return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some("struct name after 'struct' keyword")));
+        };
+
+        let location = self.location_from_range(position.pos, position.end_pos());
+
+        if !self.match_token(&Tokentype::LeftBrace) {
+            return Err(ParseErrorFactory::expected_opening_brace(self.current_location(), Some("after struct name")));
+        }
+
+        let mut fields = Vec::new();
+
+        while !self.check(&Tokentype::RightBrace) && !self.is_at_end() {
+            let field_name = if let Some((name, _position)) = self.match_identifier_token() {
+                name.to_string()
+            } else {
+                return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some("field name")));
+            };
+
+            if !self.match_token(&Tokentype::Colon) {
+                return Err(ParseErrorFactory::expected_colon(self.current_location()));
+            }
+
+            let field_type = self.parse_type()?;
+            fields.push((field_name, field_type));
+
+            if !self.match_token(&Tokentype::Comma) && !self.check(&Tokentype::RightBrace) {
+                return Err(ParseErrorFactory::expected_comma(self.current_location(), Some("after field or '}'")));
+            }
+        }
+
+        if !self.match_token(&Tokentype::RightBrace) {
+            return Err(ParseErrorFactory::expected_closing_brace(self.current_location(), Some("after struct fields")));
+        }
+
+        if !self.match_token(&Tokentype::Semicolon) {
+            return Err(ParseErrorFactory::expected_semicolon(self.current_location(), Some("after struct definition")));
+        }
+
+        Ok(Statement::TypeDefinition(StmtFactory::type_definition_stmt_with_location(name, fields, location)))
+    }
+
+    /// Parse function declaration
+    fn parse_function_declaration(&mut self) -> Result<Statement, ParseError> {
+        let (name, position) = if let Some((name, position)) = self.match_identifier_token() {
+            (name.to_string(), position)
+        } else {
+            return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some(&format!(
                 "function name found {}",
-                parser.peek().token_type
+                self.peek().token_type
             ))));
         };
 
-        let name_location = parser.location_from_range(position.pos, position.end_pos());
+        let name_location = self.location_from_range(position.pos, position.end_pos());
 
-        if !parser.match_token(&Tokentype::LeftParen) {
-            return Err(ParseErrorFactory::expected_opening_paren(parser.current_location(), Some(&format!(
+        if !self.match_token(&Tokentype::LeftParen) {
+            return Err(ParseErrorFactory::expected_opening_paren(self.current_location(), Some(&format!(
                 "after function name found {}",
-                parser.peek().token_type
+                self.peek().token_type
             ))));
         }
 
         let mut parameters = Vec::new();
-        if !parser.check(&Tokentype::RightParen) {
-            parameters.push(Self::parse_parameter(parser)?);
+        if !self.check(&Tokentype::RightParen) {
+            parameters.push(self.parse_parameter()?);
 
-            while parser.match_token(&Tokentype::Comma) {
+            while self.match_token(&Tokentype::Comma) {
                 if parameters.len() >= 255 {
                     return Err(ParseErrorFactory::invalid_syntax(
-                        parser.current_location(),
+                        self.current_location(),
                         "Cannot have more than 255 parameters",
                         None
                     ));
                 }
-                parameters.push(Self::parse_parameter(parser)?);
+                parameters.push(self.parse_parameter()?);
             }
         }
 
-        if !parser.match_token(&Tokentype::RightParen) {
-            return Err(ParseErrorFactory::expected_closing_paren(parser.current_location(), Some(&format!(
+        if !self.match_token(&Tokentype::RightParen) {
+            return Err(ParseErrorFactory::expected_closing_paren(self.current_location(), Some(&format!(
                 "after parameters found {}",
-                parser.peek().token_type
+                self.peek().token_type
             ))));
         }
 
-        let return_type = if parser.match_token(&Tokentype::Arrow) {
-            parser.parse_type()?
+        let return_type = if self.match_token(&Tokentype::Arrow) {
+            self.parse_type()?
         } else {
             PrimitiveType::Unit.into()
         };
 
-        if !parser.match_token(&Tokentype::LeftBrace) {
-            return Err(ParseErrorFactory::expected_opening_brace(parser.current_location(), Some("before function body")));
+        if !self.match_token(&Tokentype::LeftBrace) {
+            return Err(ParseErrorFactory::expected_opening_brace(self.current_location(), Some("before function body")));
         }
 
-        let body = parser.parse_block_expression()?;
+        let body = self.parse_block_expression()?;
 
         Ok(Statement::FunctionDeclaration(StmtFactory::function_stmt_with_location(name, parameters, return_type, body, name_location)))
     }
 
-    /// Parses a return statement
-    ///
-    /// ### Arguments
-    ///
-    /// * `parser` - Reference to the core parser
-    ///
-    /// ### Returns
-    ///
-    /// The parsed return statement or an error message
-    fn parse_return_statement(parser: &mut Parser) -> Result<Statement, ParseError> {
-        let return_token_pos = parser.previous().pos;
+    /// Parse return statement
+    fn parse_return_statement(&mut self) -> Result<Statement, ParseError> {
+        let return_token_pos = self.previous().pos;
 
-        let value = if !parser.check(&Tokentype::Semicolon) {
-            Some(parser.expression()?)
+        let value = if !self.check(&Tokentype::Semicolon) {
+            Some(self.expression()?)
         } else {
             None
         };
 
-        if !parser.match_token(&Tokentype::Semicolon) {
-            return Err(ParseErrorFactory::expected_semicolon(parser.current_location(), Some("after return statement")));
+        if !self.match_token(&Tokentype::Semicolon) {
+            return Err(ParseErrorFactory::expected_semicolon(self.current_location(), Some("after return statement")));
         }
 
         // Use utility function for cleaner location calculation
-        let semicolon_end = parser.previous().pos + parser.previous().lexeme.len();
-        let location = parser.location_from_range(return_token_pos, semicolon_end);
+        let semicolon_end = self.previous().pos + self.previous().lexeme.len();
+        let location = self.location_from_range(return_token_pos, semicolon_end);
 
         // Use factory based on whether we have a return value
         let stmt = if let Some(expr) = value {
@@ -198,141 +247,63 @@ impl StatementParser {
         Ok(stmt)
     }
 
-    /// Parses a type definition statement (struct)
-    ///
-    /// ### Arguments
-    ///
-    /// * `parser` - Reference to the core parser
-    ///
-    /// ### Returns
-    ///
-    /// The parsed type definition or an error message
-    fn parse_type_definition(parser: &mut Parser) -> Result<Statement, ParseError> {
-        let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
-            (name.to_string(), position)
-        } else {
-            return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some("struct name after 'struct' keyword")));
-        };
+    /// Parse if statement
+    fn parse_if_statement(&mut self) -> Result<Statement, ParseError> {
+        let if_token_pos = self.previous().pos;
 
-        let location = parser.location_from_range(position.pos, position.end_pos());
+        let condition = self.expression()?;
 
-        if !parser.match_token(&Tokentype::LeftBrace) {
-            return Err(ParseErrorFactory::expected_opening_brace(parser.current_location(), Some("after struct name")));
+        if !self.match_token(&Tokentype::LeftBrace) {
+            return Err(ParseErrorFactory::expected_opening_brace(self.current_location(), Some("after if condition")));
         }
 
-        let mut fields = Vec::new();
+        let then_branch = self.parse_block_expression()?;
 
-        while !parser.check(&Tokentype::RightBrace) && !parser.is_at_end() {
-            let field_name = if let Some((name, _position)) = parser.match_identifier_token() {
-                name.to_string()
-            } else {
-                return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some("field name")));
-            };
-
-            if !parser.match_token(&Tokentype::Colon) {
-                return Err(ParseErrorFactory::expected_colon(parser.current_location()));
+        let else_expr = if self.match_token(&Tokentype::Else) {
+            if !self.match_token(&Tokentype::LeftBrace) {
+                return Err(ParseErrorFactory::expected_opening_brace(self.current_location(), Some("after else")));
             }
-
-            let field_type = parser.parse_type()?;
-            fields.push((field_name, field_type));
-
-            if !parser.match_token(&Tokentype::Comma) && !parser.check(&Tokentype::RightBrace) {
-                return Err(ParseErrorFactory::expected_comma(parser.current_location(), Some("after field or '}'")));
-            }
-        }
-
-        if !parser.match_token(&Tokentype::RightBrace) {
-            return Err(ParseErrorFactory::expected_closing_brace(parser.current_location(), Some("after struct fields")));
-        }
-
-        if !parser.match_token(&Tokentype::Semicolon) {
-            return Err(ParseErrorFactory::expected_semicolon(parser.current_location(), Some("after struct definition")));
-        }
-
-        Ok(Statement::TypeDefinition(StmtFactory::type_definition_stmt_with_location(name, fields, location)))
-    }
-
-    /// Parses an assignment statement
-    ///
-    /// ### Arguments
-    ///
-    /// * `parser` - Reference to the core parser
-    ///
-    /// ### Returns
-    ///
-    /// The parsed assignment statement or an error message
-    fn parse_assignment_statement(parser: &mut Parser) -> Result<Statement, ParseError> {
-        let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
-            (name.to_string(), position)
-        } else {
-            return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some("for assignment")));
-        };
-
-        let token_pos = position.pos;
-
-        if !parser.match_token(&Tokentype::Equal) {
-            return Err(ParseErrorFactory::expected_equals(parser.current_location()));
-        }
-
-        let value = parser.expression()?;
-
-        if !parser.match_token(&Tokentype::Semicolon) {
-            return Err(ParseErrorFactory::expected_semicolon(parser.current_location(), Some("after assignment")));
-        }
-
-        // Calculate proper location span using utility
-        let end_pos = parser.previous().pos + parser.previous().lexeme.len();
-        let location = parser.location_from_range(token_pos, end_pos);
-
-        Ok(Statement::Assignment(StmtFactory::assign_stmt_with_location(name, value, location)))
-    }
-
-    /// Parses an if statement
-    ///
-    /// ### Arguments
-    ///
-    /// * `parser` - Reference to the core parser
-    ///
-    /// ### Returns
-    ///
-    /// The parsed if statement or an error message
-    fn parse_if_statement(parser: &mut Parser) -> Result<Statement, ParseError> {
-        let if_token_pos = parser.previous().pos;
-
-        let condition = parser.expression()?;
-
-        if !parser.match_token(&Tokentype::LeftBrace) {
-            return Err(ParseErrorFactory::expected_opening_brace(parser.current_location(), Some("after if condition")));
-        }
-
-        let then_branch = parser.parse_block_expression()?;
-
-        let else_expr = if parser.match_token(&Tokentype::Else) {
-            if !parser.match_token(&Tokentype::LeftBrace) {
-                return Err(ParseErrorFactory::expected_opening_brace(parser.current_location(), Some("after else")));
-            }
-            Some(parser.parse_block_expression()?)
+            Some(self.parse_block_expression()?)
         } else {
             None
         };
 
-        let end_pos = parser.previous().pos + parser.previous().lexeme.len();
-        let location = parser.location_from_range(if_token_pos, end_pos);
+        let end_pos = self.previous().pos + self.previous().lexeme.len();
+        let location = self.location_from_range(if_token_pos, end_pos);
 
         Ok(Statement::If(StmtFactory::if_stmt_with_location(condition, then_branch, else_expr, location)))
     }
 
-    /// Parses an expression statement
-    ///
-    /// ### Arguments
-    ///
-    /// * `parser` - Reference to the core parser
-    ///
-    /// ### Returns
-    ///
-    /// The parsed expression statement or an error message
-    fn parse_expression_statement(parser: &mut Parser) -> Result<Statement, ParseError> {
-        let expr = parser.expression()?;
+    /// Parse assignment statement
+    fn parse_assignment_statement(&mut self) -> Result<Statement, ParseError> {
+        let (name, position) = if let Some((name, position)) = self.match_identifier_token() {
+            (name.to_string(), position)
+        } else {
+            return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some("for assignment")));
+        };
+
+        let token_pos = position.pos;
+
+        if !self.match_token(&Tokentype::Equal) {
+            return Err(ParseErrorFactory::expected_equals(self.current_location()));
+        }
+
+        let value = self.expression()?;
+
+        if !self.match_token(&Tokentype::Semicolon) {
+            return Err(ParseErrorFactory::expected_semicolon(self.current_location(), Some("after assignment")));
+        }
+
+        // Calculate proper location span using utility
+        let end_pos = self.previous().pos + self.previous().lexeme.len();
+        let location = self.location_from_range(token_pos, end_pos);
+
+        Ok(Statement::Assignment(StmtFactory::assign_stmt_with_location(name, value, location)))
+    }
+
+    /// Parse expression statement
+    fn parse_expression_statement(&mut self) -> Result<Statement, ParseError> {
+        let expr = self.expression()?;
 
         // Block expressions don't need semicolons when used as statements
         match &expr {
@@ -340,37 +311,35 @@ impl StatementParser {
                 // No semicolon required for block expressions
             }
             _ => {
-                if !parser.match_token(&Tokentype::Semicolon) {
-                    return Err(ParseErrorFactory::expected_semicolon(parser.current_location(), Some("after expression")));
+                if !self.match_token(&Tokentype::Semicolon) {
+                    return Err(ParseErrorFactory::expected_semicolon(self.current_location(), Some("after expression")));
                 }
             }
         }
 
         Ok(Statement::Expression(expr))
     }
+}
 
+impl<'a> Parser<'a> {
     /// Parses a function parameter
-    ///
-    /// ### Arguments
-    ///
-    /// * `parser` - Reference to the core parser
     ///
     /// ### Returns
     ///
     /// The parsed parameter or an error message
-    fn parse_parameter(parser: &mut Parser) -> Result<Parameter, ParseError> {
-        let (name, position) = if let Some((name, position)) = parser.match_identifier_token() {
+    fn parse_parameter(&mut self) -> Result<Parameter, ParseError> {
+        let (name, position) = if let Some((name, position)) = self.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(ParseErrorFactory::expected_identifier(parser.current_location(), Some("parameter name")));
+            return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some("parameter name")));
         };
 
-        if !parser.match_token(&Tokentype::Colon) {
-            return Err(ParseErrorFactory::expected_colon(parser.current_location()));
+        if !self.match_token(&Tokentype::Colon) {
+            return Err(ParseErrorFactory::expected_colon(self.current_location()));
         }
 
-        let param_type = parser.parse_type()?;
-        let location = parser.location_from_range(position.pos, position.end_pos());
+        let param_type = self.parse_type()?;
+        let location = self.location_from_range(position.pos, position.end_pos());
 
         Ok(Parameter {
             name,

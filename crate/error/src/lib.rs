@@ -16,10 +16,10 @@ pub mod parse_error_factory;
 
 pub use location::Location;
 pub use error_codes::ErrorCode;
-pub use compiler_error::{CompilerError, CompileResult, ErrorCollector, LineInfo, report_errors};
+pub use compiler_error::{CompilationError, CompileResult, ErrorCollector, LineInfo, report_errors};
 pub use domain_error::{DomainError, ErrorCategory, DomainResult};
 pub use parse_error::{ParseError, ParseResult};
 pub use semantic_error::{SemanticError, SemanticResult, FunctionCallErrorKind};
-pub use codegen_error::{CodegenError, CodegenResult};
+pub use codegen_error::{CodegenError, CodegenResult, ResourceType};
 pub use type_error::{TypeError, TypeResult};
 pub use parse_error_factory::ParseErrorFactory;

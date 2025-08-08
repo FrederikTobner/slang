@@ -1,43 +1,56 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn simple_variable_reference() {
+    // Arrange
     let program = r#"
         let x = 42;
         print_value(x);
     "#;
-    execute_program_and_assert(program, "42");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("42");
 }
 
 #[test]
 fn string_variable_reference() {
+    // Arrange
     let program = r#"
         let message = "hello";
         print_value(message);
     "#;
-    execute_program_and_assert(program, "hello");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("hello");
 }
 
 #[test]
 fn boolean_variable_reference() {
+    // Arrange
     let program = r#"
         let flag = true;
         print_value(flag);
     "#;
-    execute_program_and_assert(program, "true");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("true");
 }
 
 #[test]
 fn unit_variable_reference() {
+    // Arrange
     let program = r#"
         let unit_value = ();
         print_value(unit_value);
     "#;
-    execute_program_and_assert(program, "()");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("()");
 }
 
 #[test]
 fn function_variable_reference() {
+    // Arrange
     let program = r#"
         fn greet() -> string {
             return "hello";
@@ -46,15 +59,20 @@ fn function_variable_reference() {
         let greeting = greet;
         print_value(greeting);
     "#;
-    execute_program_and_assert(program, "<fn greet>");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("<fn greet>");
 }
 
 #[test]
 fn native_function_reference() {
+    // Arrange
     let program = r#"
         let native_print = print_value;
         native_print(native_print);
     "#;
-    execute_program_and_assert(program, "<native fn print_value>");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("<native fn print_value>");
 }
 

@@ -10,6 +10,7 @@ authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 proc-macro = true
 
 [dependencies]
-syn = "2.0.104"
-quote = "1.0.40"
+proc-macro2 = "1.0"
+syn = { workspace = true }
+quote = { workspace = true }
 

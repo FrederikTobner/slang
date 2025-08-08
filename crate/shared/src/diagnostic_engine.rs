@@ -1,5 +1,5 @@
 use colored::Colorize;
-use slang_error::{CompilerError, ErrorCode, LineInfo};
+use slang_error::{CompilationError, ErrorCode, LineInfo};
 use slang_error::location::Location;
 
 /// Represents the severity level of a diagnostic message
@@ -254,28 +254,28 @@ impl<'a> DiagnosticEngine<'a> {
         });
     }
 
-    /// Directly emits a CompilerError as a diagnostic
+    /// Directly emits a CompilationError as a diagnostic
     ///
-    /// This method provides seamless integration with the existing CompilerError type,
+    /// This method provides seamless integration with the existing CompilationError type,
     /// allowing for unified error handling across the compiler pipeline.
     ///
     /// ### Arguments
-    /// * `error` - The CompilerError to emit as a diagnostic
+    /// * `error` - The CompilationError to emit as a diagnostic
     ///
     /// ### Example
     /// ```rust
     /// use slang_shared::DiagnosticEngine;
-    /// use slang_error::{CompilerError, ErrorCode};
+    /// use slang_error::{CompilationError, ErrorCode};
     ///
     /// let mut engine = DiagnosticEngine::new();
-    /// let error = CompilerError::new(
+    /// let error = CompilationError::new(
     ///     ErrorCode::ExpectedSemicolon,
     ///     "Missing semicolon".to_string(),
     ///     5, 10, 42, Some(1)
     /// );
     /// engine.emit_compiler_error(error);
     /// ```
-    pub fn emit_compiler_error(&mut self, error: CompilerError) {
+    pub fn emit_compiler_error(&mut self, error: CompilationError) {
         let diagnostic = Diagnostic {
             severity: ErrorSeverity::Error,
             error_code: error.error_code,
@@ -315,12 +315,12 @@ impl<'a> DiagnosticEngine<'a> {
     /// let errors = engine.get_compiler_errors();
     /// assert_eq!(errors.len(), 1);
     /// ```
-    pub fn get_compiler_errors(&self) -> Vec<CompilerError> {
+    pub fn get_compiler_errors(&self) -> Vec<CompilationError> {
         self.diagnostics
             .iter()
             .filter(|d| matches!(d.severity, ErrorSeverity::Error))
             .map(|d| {
-                CompilerError::new(
+                CompilationError::new(
                     d.error_code,
                     d.message.clone(),
                     d.location.line,

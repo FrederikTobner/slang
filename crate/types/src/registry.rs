@@ -11,7 +11,7 @@ pub struct TypeRegistry {
 
 impl TypeRegistry {
     /// Creates a new TypeRegistry with built-in types registered.
-    pub fn new_instance() -> Self {
+    pub fn new() -> Self {
         let mut registry = TypeRegistry {
             types: HashMap::new(),
             function_type_cache: HashMap::new(),

@@ -2,12 +2,12 @@
 // Contains the main Parser struct and fundamental parsing methods
 
 use slang_error::ParseError;
-use super::expressions::ExpressionParser;
-use super::literals::LiteralParser;
-use super::statements::StatementParser;
-use super::types::TypeParser;
+use super::expressions::ExpressionParsing;
+use super::literals::LiteralParsing;
+use super::statements::StatementParsing;
+use super::types::TypeParsing;
 use crate::token::{Token, Tokentype};
-use slang_error::{CompileResult, CompilerError, LineInfo, DomainError};
+use slang_error::{CompileResult, CompilationError, LineInfo, DomainError};
 use slang_ir::ast::{BlockExpr, Expression, Statement, BinaryOperator};
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
@@ -50,7 +50,7 @@ pub struct Parser<'a> {
     /// Line information for error reporting
     pub(super) line_info: &'a LineInfo<'a>,
     /// Errors collected during parsing
-    pub(super) errors: Vec<CompilerError>,
+    pub(super) errors: Vec<CompilationError>,
     /// Compilation context for type information
     pub(super) context: &'a mut CompilationContext,
 }
@@ -265,41 +265,40 @@ impl<'a> Parser<'a> {
     ///
     /// The parsed statement or an error message
     pub(super) fn statement(&mut self) -> Result<Statement, ParseError> {
-        StatementParser::parse_statement(self)
+        // Will be implemented when StatementParsing trait is complete
+        StatementParsing::statement(self)
     }
-
 
     pub(super) fn expression(&mut self) -> Result<Expression, ParseError> {
-        ExpressionParser::parse_expression(self)
+        ExpressionParsing::expression(self)
     }
 
-
     pub(super) fn parse_type(&mut self) -> Result<TypeId, ParseError> {
-        TypeParser::parse_type(self)
+        TypeParsing::parse_type(self)
     }
 
     pub(super) fn parse_integer(&mut self) -> Result<Expression, ParseError> {
-        LiteralParser::parse_integer(self)
+        LiteralParsing::parse_integer(self)
     }
 
     pub(super) fn parse_float(&mut self) -> Result<Expression, ParseError> {
-        LiteralParser::parse_float(self)
+        LiteralParsing::parse_float(self)
     }
 
     pub(super) fn finish_call(&mut self, name: String, name_location: slang_error::location::Location) -> Result<Expression, ParseError> {
-        ExpressionParser::finish_call(self, name, name_location)
+        ExpressionParsing::finish_call(self, name, name_location)
     }
 
     pub(super) fn conditional_expression(&mut self) -> Result<Expression, ParseError> {
-        ExpressionParser::conditional_expression(self)
+        ExpressionParsing::conditional_expression(self)
     }
 
     pub(super) fn parse_block_expression(&mut self) -> Result<BlockExpr, ParseError> {
-        ExpressionParser::parse_block_expression(self)
+        ExpressionParsing::parse_block_expression(self)
     }
 
     pub(super) fn parse_function_type_expression(&mut self) -> Result<Expression, ParseError> {
-        TypeParser::parse_function_type_expression(self)
+        TypeParsing::parse_function_type_expression(self)
     }
 
     /// Enhanced token matching that returns a reference to the matched token

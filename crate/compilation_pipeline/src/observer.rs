@@ -8,6 +8,7 @@ use std::error::Error;
 use slang_frontend::Token;
 use slang_ir::ast::Statement;
 use slang_backend::bytecode::Chunk;
+use crate::source_file::SlangSourceFile;
 
 /// Generic observer trait for pipeline stages with compile-time type safety
 ///
@@ -21,12 +22,13 @@ use slang_backend::bytecode::Chunk;
 ///
 /// # Examples
 /// ```rust
-/// use slang_compilation_pipeline::pipeline::observers::generic::StageObserver;
+/// use slang_compilation_pipeline::observer::StageObserver;
 /// use slang_frontend::Token;
+/// use slang_compilation_pipeline::SlangSourceFile;
 /// 
 /// struct TokenCounter;
 /// 
-/// impl StageObserver<String, Vec<Token>> for TokenCounter {
+/// impl StageObserver<SlangSourceFile, Vec<Token>> for TokenCounter {
 ///     fn on_stage_success(&self, output: &Vec<Token>) {
 ///         println!("Tokenized {} tokens", output.len());
 ///     }
@@ -60,7 +62,7 @@ where
 /// 
 /// These aliases hide the generic complexity while providing clear, descriptive names
 /// that make the API easier to understand and use.
-pub type TokenizationObserver = dyn StageObserver<String, Vec<Token>>;
+pub type TokenizationObserver = dyn StageObserver<SlangSourceFile, Vec<Token>>;
 pub type ParsingObserver = dyn StageObserver<Vec<Token>, Vec<Statement>>;
 pub type SemanticObserver = dyn StageObserver<Vec<Statement>, Vec<Statement>>;
 pub type CodegenObserver = dyn StageObserver<Vec<Statement>, Chunk>;
@@ -94,7 +96,7 @@ impl ObserverRegistry {
     /// types can be registered, providing compile-time safety.
     pub fn add_tokenization_observer<T>(&mut self, observer: T) 
     where 
-        T: StageObserver<String, Vec<Token>> + 'static 
+        T: StageObserver<SlangSourceFile, Vec<Token>> + 'static 
     {
         self.tokenization_observers.push(Box::new(observer));
     }
@@ -124,7 +126,7 @@ impl ObserverRegistry {
     }
     
     /// Notify tokenization observers of stage start
-    pub fn notify_tokenization_start(&self, input: &String) {
+    pub fn notify_tokenization_start(&self, input: &SlangSourceFile) {
         for observer in &self.tokenization_observers {
             observer.on_stage_start(input);
         }

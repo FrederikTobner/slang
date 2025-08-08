@@ -7,7 +7,7 @@ description = "Error handling and error codes"
 authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 
 [dependencies]
-colored = "3.0.0"
+colored = { workspace = true }
 
 [lib]
 name = "slang_error"

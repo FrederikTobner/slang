@@ -1,4 +1,4 @@
-use crate::pipeline::stage::{CompilationStage, StageContext};
+use crate::stage::{CompilationStage, StageContext};
 use slang_ir::ast::Statement;
 use slang_shared::DiagnosticEngine;
 use slang_frontend::semantic_analysis;
@@ -17,13 +17,10 @@ impl CompilationStage for SemanticAnalysisStage {
         // Use the shared compilation context from StageContext
         match semantic_analysis::execute(&input, &mut context.compilation_context) {
             Ok(()) => {
-                // Notify observers about successful completion
                 context.observer_registry.notify_semantic_success(&input);
-                // Semantic analysis passed, return the statements
                 Ok(input)
             }
             Err(errors) => {
-                // Emit all semantic errors to the diagnostic engine
                 for error in &errors {
                     context.observer_registry.notify_semantic_error(error);
                     diagnostics.emit_compiler_error(error.clone());
@@ -38,6 +35,6 @@ impl CompilationStage for SemanticAnalysisStage {
     }
 
     fn is_critical(&self) -> bool {
-        false // Allow continuing to codegen for better error reporting
+        true 
     }
 }

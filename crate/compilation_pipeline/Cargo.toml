@@ -14,7 +14,10 @@ slang_ir = { path = "../ir" }
 slang_backend = { path = "../backend" }
 
 # External dependencies for pipeline features
-colored = "3.0.0"
+colored = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
 
 [features]
 default = []

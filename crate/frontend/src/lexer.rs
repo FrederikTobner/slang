@@ -1,5 +1,5 @@
 use crate::token::{Token, Tokentype};
-use slang_error::{CompileResult, CompilerError, ErrorCode, LineInfo};
+use slang_error::{CompileResult, CompilationError, ErrorCode, LineInfo};
 
 pub struct LexerResult<'a> {
     /// The list of tokens generated from the input
@@ -25,7 +25,7 @@ pub struct Lexer<'a> {
     /// Line token counts for line info
     line_tokens: Vec<(u16, u16)>,
     /// Collected lexer errors
-    errors: Vec<CompilerError>,
+    errors: Vec<CompilationError>,
 }
 
 impl<'a> Lexer<'a> {
@@ -113,7 +113,7 @@ impl<'a> Lexer<'a> {
         let line_start = self.input[..start_pos].rfind('\n').map_or(0, |pos| pos + 1);
         let column = start_pos - line_start + 1;
 
-        self.errors.push(CompilerError::new(
+        self.errors.push(CompilationError::new(
             error_code,
             message,
             self.current_line,

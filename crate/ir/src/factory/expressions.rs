@@ -8,7 +8,7 @@ use crate::ast::{
     FunctionTypeExpr, LiteralExpr, Statement, UnaryExpr, UnaryOperator, VariableExpr,
 };
 use slang_error::location::Location;
-use slang_types::types::TypeId;
+use slang_types::TypeId;
 
 use super::locations::LocationExtensions;
 use super::traits::{IntoLiteralValue, LiteralTypeInference};

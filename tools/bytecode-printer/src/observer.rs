@@ -1,27 +1,27 @@
-use slang_compilation_pipeline::pipeline::observers::StageObserver;
+use slang_compilation_pipeline::observer::StageObserver;
 use slang_ir::ast::Statement;
 use slang_backend::bytecode::Chunk;
 use colored::Colorize;
 
 /// Observer that prints bytecode when code generation completes
 /// This observer is primarily used for debugging and development purposes
-pub struct BytecodePrintObserver {
+pub struct BytecodePrinter {
 }
 
-impl BytecodePrintObserver {
+impl BytecodePrinter {
     pub fn new() -> Self {
         Self { 
         }
     }
 }
 
-impl Default for BytecodePrintObserver {
+impl Default for BytecodePrinter {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl StageObserver<Vec<Statement>, Chunk> for BytecodePrintObserver {
+impl StageObserver<Vec<Statement>, Chunk> for BytecodePrinter {
     fn on_stage_success(&self, output: &Chunk) {
 
         println!("{}", "=== BYTECODE ===".bright_yellow().bold());

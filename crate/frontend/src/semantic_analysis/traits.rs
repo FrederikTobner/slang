@@ -37,7 +37,11 @@ pub trait ScopeManager {
     fn enter_scope(&mut self);
 
     /// Exit the current scope
-    fn exit_scope(&mut self);
+    /// 
+    /// ### Returns
+    /// * `Ok(())` if the scope was successfully exited
+    /// * `Err(String)` if there was an error (e.g., trying to exit global scope)
+    fn exit_scope(&mut self) -> Result<(), String>;
 
     /// Define a symbol in the current scope
     fn define_symbol(

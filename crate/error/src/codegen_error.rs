@@ -1,8 +1,36 @@
 // Code generation error types and implementations
-use crate::compiler_error::CompilerError;
+use crate::compiler_error::CompilationError;
 use crate::domain_error::{DomainError, ErrorCategory};
 use crate::error_codes::ErrorCode;
 use crate::Location;
+
+/// Common resource types in code generation that have limits
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ResourceType {
+    Constants,
+    LocalVariables,
+    Variables,
+    JumpDistance,
+    Other(String),
+}
+
+impl ResourceType {
+    pub fn as_str(&self) -> &str {
+        match self {
+            ResourceType::Constants => "constants",
+            ResourceType::LocalVariables => "local variables",
+            ResourceType::Variables => "variables", 
+            ResourceType::JumpDistance => "jump distance",
+            ResourceType::Other(s) => s,
+        }
+    }
+}
+
+impl std::fmt::Display for ResourceType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
 
 /// Code generation errors with actionable information
 #[derive(Debug, Clone)]
@@ -15,7 +43,7 @@ pub enum CodegenError {
     },
     /// Too many constants/locals/etc.
     LimitExceeded {
-        resource: String, // "constants", "local variables", etc.
+        resource: ResourceType,
         current: usize,
         limit: usize,
         location: Location,
@@ -38,7 +66,7 @@ pub enum CodegenError {
 pub type CodegenResult<T> = Result<T, CodegenError>;
 
 impl DomainError for CodegenError {
-    fn to_compiler_error(&self) -> CompilerError {
+    fn to_compiler_error(&self) -> CompilationError {
         let (code, message) = match self {
             CodegenError::StackOverflow { current_depth, max_depth, .. } => {
                 (ErrorCode::StackOverflow, 
@@ -64,7 +92,7 @@ impl DomainError for CodegenError {
         };
         
         let loc = self.location();
-        CompilerError::new(code, message, loc.line, loc.column, loc.position, Some(1))
+        CompilationError::new(code, message, loc.line, loc.column, loc.position, Some(1))
     }
     
     fn location(&self) -> &Location {

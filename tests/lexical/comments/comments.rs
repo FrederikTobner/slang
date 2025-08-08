@@ -1,7 +1,8 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn single_line_comments() {
+    // Arrange
     let program = r#"
         let x = 5; // This is a single-line comment
         // This entire line is a comment
@@ -13,11 +14,13 @@ fn single_line_comments() {
         print_value(z);
     "#;
 
-    execute_program_and_assert(program, "15");
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("15");
 }
 
 #[test]
 fn multi_line_comments() {
+    // Arrange
     let program = r#"
         let x = 5;
         /* This is a 
@@ -32,11 +35,13 @@ fn multi_line_comments() {
         print_value(z);
     "#;
 
-    execute_program_and_assert(program, "15");
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("15");
 }
 
 #[test]
 fn nested_multi_line_comments() {
+    // Arrange
     let program = r#"
         let x = 5;
         /* Outer comment
@@ -49,11 +54,13 @@ fn nested_multi_line_comments() {
         print_value(z);
     "#;
 
-    execute_program_and_assert(program, "15");
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("15");
 }
 
 #[test]
 fn in_expressions() {
+    // Arrange
     let program = r#"
         let x = 5 /* inline comment */ + 10;
         let y = 20 // End of line comment
@@ -65,11 +72,13 @@ fn in_expressions() {
         print_value(z);
     "#;
 
-    execute_program_and_assert(program, "65");
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("65");
 }
 
 #[test]
 fn in_complex_code() {
+    // Arrange
     let program = r#"
         // Function definition
         fn add(a: i32, b: i32) -> i32 {
@@ -92,5 +101,6 @@ fn in_complex_code() {
         print_value(z);
     "#;
 
-    execute_program_and_assert(program, "30");
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("30");
 }

@@ -1,5 +1,5 @@
 // Semantic error types and implementations
-use crate::compiler_error::CompilerError;
+use crate::compiler_error::CompilationError;
 use crate::domain_error::{DomainError, ErrorCategory};
 use crate::error_codes::ErrorCode;
 use crate::Location;
@@ -60,7 +60,7 @@ pub enum FunctionCallErrorKind {
 pub type SemanticResult<T> = Result<T, SemanticError>;
 
 impl DomainError for SemanticError {
-    fn to_compiler_error(&self) -> CompilerError {
+    fn to_compiler_error(&self) -> CompilationError {
         let (code, message) = match self {
             SemanticError::UndefinedSymbol { name, suggestions, .. } => {
                 let base_msg = format!("Undefined symbol: {}", name);
@@ -125,7 +125,7 @@ impl DomainError for SemanticError {
         };
         
         let loc = self.location();
-        CompilerError::new(code, message, loc.line, loc.column, loc.position, Some(1))
+        CompilationError::new(code, message, loc.line, loc.column, loc.position, Some(1))
     }
     
     fn location(&self) -> &Location {

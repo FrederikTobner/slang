@@ -1,7 +1,8 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn return_integer() {
+    // Arrange
     let program = r#"
         fn test_function() -> i32 {
             return 42;
@@ -10,11 +11,14 @@ fn return_integer() {
         let result = test_function();
         print_value(result);
     "#;
-    execute_program_and_assert(program, "42");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("42");
 }
 
 #[test]
 fn return_string() {
+    // Arrange
     let program = r#"
         fn test_function() -> string {
             return "hello";
@@ -23,11 +27,14 @@ fn return_string() {
         let result = test_function();
         print_value(result);
     "#;
-    execute_program_and_assert(program, "hello");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("hello");
 }
 
 #[test]
 fn return_boolean() {
+    // Arrange
     let program = r#"
         fn test_function() -> bool {
             return true;
@@ -36,11 +43,14 @@ fn return_boolean() {
         let result = test_function();
         print_value(result);
     "#;
-    execute_program_and_assert(program, "true");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("true");
 }
 
 #[test]
 fn return_float() {
+    // Arrange
     let program = r#"
         fn test_function() -> f64 {
             return 3.14;
@@ -49,11 +59,14 @@ fn return_float() {
         let result = test_function();
         print_value(result);
     "#;
-    execute_program_and_assert(program, "3.14");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("3.14");
 }
 
 #[test]
 fn coerce_integer_return() {
+    // Arrange
     let program = r#"
         fn test_function() -> i32 {
             return 42 + 123;
@@ -62,11 +75,14 @@ fn coerce_integer_return() {
         let result: i32 = test_function();
         print_value(result);
     "#;
-    execute_program_and_assert(program, "165");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("165");
 }
 
 #[test]
 fn coerce_float_return() {
+    // Arrange
     let program = r#"
         fn test_function() -> f64 {
             return 3.14 + 2.86;
@@ -75,6 +91,8 @@ fn coerce_float_return() {
         let result: f64 = test_function();
         print_value(result);
     "#;
-    execute_program_and_assert(program, "6");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("6");
 }
 

@@ -4,7 +4,7 @@
 //! into AST literal values with proper type inference.
 
 use crate::ast::LiteralValue;
-use slang_types::types::TypeId;
+use slang_types::TypeId;
 
 /// Trait for converting Rust values into AST literal values
 pub trait IntoLiteralValue {

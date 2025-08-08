@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use slang_error::{CompilerError, ErrorCode};
+use slang_error::{CompilationError, ErrorCode};
 use slang_shared::CompilationContext;
 use super::error::SemanticAnalysisError;
 
@@ -8,7 +8,7 @@ use super::error::SemanticAnalysisError;
 /// This provides a single source of truth for error handling in the semantic analysis system,
 /// ensuring consistent error formatting and efficient deduplication.
 pub struct ErrorCollector {
-    errors: Vec<CompilerError>,
+    errors: Vec<CompilationError>,
     seen_errors: HashSet<ErrorKey>,
 }
 
@@ -50,7 +50,7 @@ impl ErrorCollector {
     /// 
     /// # Returns
     /// `true` if the error was added (not a duplicate), `false` if it was deduplicated
-    pub fn add_compiler_error(&mut self, error: CompilerError) -> bool {
+    pub fn add_compiler_error(&mut self, error: CompilationError) -> bool {
         let key = ErrorKey {
             code: error.error_code,
             line: error.line,
@@ -67,7 +67,7 @@ impl ErrorCollector {
     }
 
     /// Get all collected errors
-    pub fn into_errors(self) -> Vec<CompilerError> {
+    pub fn into_errors(self) -> Vec<CompilationError> {
         self.errors
     }
 

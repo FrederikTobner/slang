@@ -1,10 +1,11 @@
-use slang_compilation_pipeline::pipeline::{
+use slang_compilation_pipeline::{
     hlist::{HNil, HCons, Execute},
     stages::{TokenizationStage, ParsingStage},
     stage::StageContext,
 };
 use slang_compilation_pipeline::hlist;
 use slang_shared::DiagnosticEngine;
+use slang_compilation_pipeline::SlangSourceFile;
 
 #[test]
 fn hlist_creation() {
@@ -20,39 +21,40 @@ fn hlist_macro() {
 
 #[test]
 fn hlist_execution() {
-    let source = "let x = 42;";
-    let mut context = StageContext::new(source.to_string(), None);
+    let source_file = SlangSourceFile::new("test.sl", "let x = 42;".to_string()).unwrap();
+    let mut context = StageContext::new(source_file.content().to_string(), Some(source_file.file_name().to_string()));
     let mut diagnostics = DiagnosticEngine::new();
     
     let list = hlist![TokenizationStage, ParsingStage];
-    let result = list.execute(source.to_string(), &mut context, &mut diagnostics);
+    let result = list.execute(source_file, &mut context, &mut diagnostics);
     
     assert!(result.is_ok());
 }
 
 #[test]
 fn hlist_single_stage() {
-    let source = "let x = 42;";
-    let mut context = StageContext::new(source.to_string(), None);
+    let source_file = SlangSourceFile::new("test.sl", "let x = 42;".to_string()).unwrap();
+    let mut context = StageContext::new(source_file.content().to_string(), Some(source_file.file_name().to_string()));
     let mut diagnostics = DiagnosticEngine::new();
     
     let list = hlist![TokenizationStage];
-    let result = list.execute(source.to_string(), &mut context, &mut diagnostics);
+    let result = list.execute(source_file, &mut context, &mut diagnostics);
     
     assert!(result.is_ok());
 }
 
 #[test]
 fn hlist_empty() {
-    let source = "let x = 42;";
-    let mut context = StageContext::new(source.to_string(), None);
+    let source_file = SlangSourceFile::new("test.sl", "let x = 42;".to_string()).unwrap();
+    let mut context = StageContext::new(source_file.content().to_string(), Some(source_file.file_name().to_string()));
     let mut diagnostics = DiagnosticEngine::new();
     
     let list: HNil = HNil;
-    let result = list.execute(source, &mut context, &mut diagnostics);
+    let result = list.execute(source_file.clone(), &mut context, &mut diagnostics);
     
     // Empty list should succeed with original input
     assert!(result.is_ok());
+    assert_eq!(result.unwrap(), source_file);
 }
 
 #[test]
@@ -67,12 +69,12 @@ fn hlist_type_safety() {
 #[test]
 fn doctest_equivalent() {
     // Equivalent to the doctest example
-    let source = "let x = 42;";
-    let mut context = StageContext::new(source.to_string(), None);
+    let source_file = SlangSourceFile::new("test.sl", "let x = 42;".to_string()).unwrap();
+    let mut context = StageContext::new(source_file.content().to_string(), Some(source_file.file_name().to_string()));
     let mut diagnostics = DiagnosticEngine::new();
     
     let stages = hlist![TokenizationStage, ParsingStage];
-    let result = stages.execute(source.to_string(), &mut context, &mut diagnostics);
+    let result = stages.execute(source_file, &mut context, &mut diagnostics);
     
     assert!(result.is_ok());
 }

@@ -1,12 +1,16 @@
 use crate::bytecode::{Chunk, OpCode};
 use crate::value::{Value, Function};
-use slang_error::{CompileResult, CompilerError, CodegenError, CodegenResult, DomainResult};
+use slang_error::{CompileResult, CompilationError, CodegenError, CodegenResult, DomainResult, ResourceType};
 use slang_ir::Visitor;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
     FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt,
     UnaryExpr, UnaryOperator, ReturnStatement};
 use slang_error::location::Location;
+
+/// Maximum jump distance for bytecode instructions
+/// Uses 16-bit offset, so maximum value is 2^16 - 1
+const MAX_JUMP_DISTANCE: usize = 0xFFFF;
 
 /// Compiles AST nodes into bytecode instructions
 pub struct CodeGenerator {
@@ -21,7 +25,7 @@ pub struct CodeGenerator {
     /// Stack of scopes for tracking local variables
     local_scopes: Vec<Vec<String>>,
     /// Accumulated errors during compilation
-    errors: Vec<CompilerError>,
+    errors: Vec<CompilationError>,
 }
 
 pub fn generate_bytecode(statements: &[Statement]) -> CompileResult<Chunk> {
@@ -152,7 +156,7 @@ impl CodeGenerator {
         let constant_index = self.chunk.add_constant(value);
         if constant_index > 255 {
             return Err(Box::new(CodegenError::LimitExceeded {
-                resource: "constants".to_string(),
+                resource: ResourceType::Constants,
                 current: constant_index,
                 limit: 255,
                 location: slang_error::Location::default(), // Use default for now since we don't have context
@@ -184,14 +188,24 @@ impl CodeGenerator {
     /// ### Arguments
     ///
     /// * `offset` - The position of the jump offset to patch
-    fn patch_jump(&mut self, offset: usize) {
+    ///
+    /// ### Returns
+    ///
+    /// `Ok(())` if the jump distance is within limits, or `CodegenError::LimitExceeded` if too far
+    fn patch_jump(&mut self, offset: usize) -> CodegenResult<()> {
         let jump = self.chunk.code.len() - offset - 2;
-        if jump > 0xFFFF {
-            panic!("Jump too far");
+        if jump > MAX_JUMP_DISTANCE {
+            return Err(CodegenError::LimitExceeded {
+                resource: ResourceType::JumpDistance,
+                current: jump,
+                limit: MAX_JUMP_DISTANCE,
+                location: Location::new(self.chunk.code.len(), self.line, 1, 1),
+            });
         }
 
         self.chunk.code[offset] = ((jump >> 8) & 0xFF) as u8;
         self.chunk.code[offset + 1] = (jump & 0xFF) as u8;
+        Ok(())
     }
 
     fn begin_scope(&mut self) {
@@ -287,7 +301,9 @@ impl Visitor<()> for CodeGenerator {
         self.emit_op(OpCode::Return);
 
         self.end_scope();
-        self.patch_jump(jump_over);
+        
+        // Convert CodegenError to DomainError for propagation
+        self.patch_jump(jump_over).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
 
         let function = Value::Function(Box::new(Function {
             name: fn_decl.name.clone(),
@@ -335,7 +351,7 @@ impl Visitor<()> for CodeGenerator {
         let var_index = self.chunk.add_identifier(let_stmt.name.clone());
         if var_index > 255 {
             return Err(Box::new(CodegenError::LimitExceeded {
-                resource: "local variables".to_string(),
+                resource: ResourceType::LocalVariables,
                 current: var_index,
                 limit: 255,
                 location: slang_error::Location::new(
@@ -363,7 +379,7 @@ impl Visitor<()> for CodeGenerator {
         let var_index = self.chunk.add_identifier(assign_stmt.name.clone());
         if var_index > 255 {
             return Err(Box::new(CodegenError::LimitExceeded {
-                resource: "variables".to_string(),
+                resource: ResourceType::Variables,
                 current: var_index,
                 limit: 255,
                 location: slang_error::Location::new(
@@ -442,7 +458,7 @@ impl Visitor<()> for CodeGenerator {
                 let jump_if_false = self.emit_jump(OpCode::JumpIfFalse);
                 self.emit_op(OpCode::Pop);
                 self.visit_expression(&bin_expr.right)?;
-                self.patch_jump(jump_if_false);
+                self.patch_jump(jump_if_false).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
                 return Ok(());
             }
 
@@ -450,10 +466,10 @@ impl Visitor<()> for CodeGenerator {
                 self.visit_expression(&bin_expr.left)?;
                 let jump_if_true = self.emit_jump(OpCode::JumpIfFalse);
                 let jump_to_end = self.emit_jump(OpCode::Jump);
-                self.patch_jump(jump_if_true);
+                self.patch_jump(jump_if_true).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
                 self.emit_op(OpCode::Pop);
                 self.visit_expression(&bin_expr.right)?;
-                self.patch_jump(jump_to_end);
+                self.patch_jump(jump_to_end).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
                 return Ok(());
             }
 
@@ -510,7 +526,7 @@ impl Visitor<()> for CodeGenerator {
         let var_index = self.chunk.add_identifier(var_expr.name.clone());
         if var_index > 255 {
             return Err(Box::new(CodegenError::LimitExceeded {
-                resource: "variables".to_string(),
+                resource: ResourceType::Variables,
                 current: var_index,
                 limit: 255,
                 location: slang_error::Location::new(
@@ -543,11 +559,11 @@ impl Visitor<()> for CodeGenerator {
         self.visit_expression(&cond_expr.then_branch)?;
 
         let jump_over_else = self.emit_jump(OpCode::Jump);
-        self.patch_jump(jump_to_else);
+        self.patch_jump(jump_to_else).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
         self.emit_op(OpCode::Pop);
         self.visit_expression(&cond_expr.else_branch)?;
 
-        self.patch_jump(jump_over_else);
+        self.patch_jump(jump_over_else).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
 
         Ok(())
     }
@@ -563,14 +579,14 @@ impl Visitor<()> for CodeGenerator {
         if let Some(else_branch) = &if_stmt.else_branch {
             let jump_over_else = self.emit_jump(OpCode::Jump);
 
-            self.patch_jump(jump_to_else);
+            self.patch_jump(jump_to_else).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
             self.emit_op(OpCode::Pop);
 
             self.visit_block_expression(else_branch)?;
 
-            self.patch_jump(jump_over_else);
+            self.patch_jump(jump_over_else).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
         } else {
-            self.patch_jump(jump_to_else);
+            self.patch_jump(jump_to_else).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
             self.emit_op(OpCode::Pop);
         }
 

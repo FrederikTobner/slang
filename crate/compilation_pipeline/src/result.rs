@@ -1,8 +1,7 @@
-use std::any::Any;
 use slang_shared::DiagnosticEngine;
 
 /// Result of pipeline execution with typed output
-pub enum CompilationResult<'a, T = Box<dyn Any>> {
+pub enum CompilationResult<'a, T> {
     /// Compilation succeeded
     Success {
         /// The final output data
@@ -17,8 +16,7 @@ pub enum CompilationResult<'a, T = Box<dyn Any>> {
     },
 }
 
-/// Legacy type alias for backward compatibility
-pub type LegacyCompilationResult<'a> = CompilationResult<'a, Box<dyn Any>>;
+
 
 impl<'a, T> CompilationResult<'a, T> {
     /// Check if the compilation succeeded
@@ -58,12 +56,4 @@ impl<'a, T> CompilationResult<'a, T> {
     }
 }
 
-// Legacy implementation for backward compatibility
-impl<'a> CompilationResult<'a, Box<dyn Any>> {
-    /// Extract the output data if compilation succeeded, downcasting to the expected type
-    /// 
-    /// Returns None if compilation failed or the type doesn't match
-    pub fn output_as<U: 'static>(self) -> Option<U> {
-        self.output()?.downcast::<U>().ok().map(|boxed| *boxed)
-    }
-}
+

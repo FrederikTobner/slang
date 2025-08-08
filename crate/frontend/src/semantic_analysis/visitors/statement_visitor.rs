@@ -114,7 +114,13 @@ impl<'a> StatementVisitor<'a> {
         let result = self.analyze_function_body(&fn_decl.body);
 
         self.current_return_type = previous_return_type;
-        self.context.end_scope();
+        
+        if let Err(err) = self.context.end_scope() {
+            return Err(SemanticAnalysisError::InvalidExpression {
+                message: format!("Failed to end function scope: {}", err),
+                location: fn_decl.location,
+            });
+        }
 
         result.and(Ok(fn_decl.return_type))
     }

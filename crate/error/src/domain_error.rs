@@ -1,5 +1,5 @@
 // Core trait and types for the unified error system
-use crate::compiler_error::CompilerError;
+use crate::compiler_error::CompilationError;
 use crate::Location;
 
 /// Core trait for all domain-specific errors that can be converted to CompilerError
@@ -13,7 +13,7 @@ pub trait DomainError: std::error::Error + Send + Sync + 'static {
     /// Each domain implements this method to provide context-aware conversion
     /// that preserves as much information as possible in the final error message.
     /// The context parameter is passed from the domain that has access to it.
-    fn to_compiler_error(&self) -> CompilerError;
+    fn to_compiler_error(&self) -> CompilationError;
     
     /// Get the source location where this error occurred
     fn location(&self) -> &Location;

@@ -10,6 +10,12 @@ authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 slang_ir = { path = "../ir" }
 slang_derive = { path = "../derive" }
 slang_error = { path = "../error" }
+thiserror = { workspace = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+zip = { workspace = true }
 
 [features]
 default = []

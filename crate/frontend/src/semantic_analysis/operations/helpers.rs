@@ -18,7 +18,7 @@ pub fn bool_type() -> TypeId {
 /// This is a convenience function to create consistent error messages across operations.
 ///
 /// ### Arguments
-/// * `operator` - The operator that failed
+/// * `operator` - The operator that failed (will be converted to string only once)
 /// * `left_type` - The type of the left operand
 /// * `right_type` - The type of the right operand
 /// * `location` - The source location of the operation
@@ -26,7 +26,7 @@ pub fn bool_type() -> TypeId {
 /// ### Returns
 /// * `SemanticAnalysisError` with operation type mismatch details
 pub fn operation_type_mismatch_error(
-    operator: &str,
+    operator: &impl std::fmt::Display,
     left_type: &TypeId,
     right_type: &TypeId,
     location: &Location,

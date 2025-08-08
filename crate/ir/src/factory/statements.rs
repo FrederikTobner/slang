@@ -8,7 +8,7 @@ use crate::ast::{
     Parameter, ReturnStatement, TypeDefinitionStmt, BlockExpr,
 };
 use slang_error::location::Location;
-use slang_types::types::TypeId;
+use slang_types::TypeId;
 
 /// Factory for creating statement AST nodes
 pub struct StmtFactory;

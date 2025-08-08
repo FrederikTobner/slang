@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput, Expr, ExprLit, Lit, Meta, MetaNameValue, Variant, parse_macro_input};
+use syn::{Data, DeriveInput, Expr, ExprLit, Lit, Meta, MetaNameValue, Variant, parse_macro_input, Error};
 
 /// Derive macro that generates `name()` and `from_str()` methods for enums
 /// based on `#[type_name = "..."]` attributes on the variants.
@@ -26,17 +26,28 @@ pub fn derive_named_enum(input: TokenStream) -> TokenStream {
     let variants = if let Data::Enum(data_enum) = &input.data {
         &data_enum.variants
     } else {
-        panic!("NamedEnum can only be derived for enums");
+        return Error::new_spanned(
+            &input.ident,
+            "NamedEnum can only be derived for enums"
+        ).to_compile_error().into();
     };
     let variant_mappings = variants
         .iter()
         .map(|variant| {
             let variant_name = &variant.ident;
-            let string_name = extract_name_attribute(variant)
-                .unwrap_or_else(|| variant_name.to_string().to_lowercase());
-            (variant_name, string_name)
+            let string_name = match extract_name_attribute(variant) {
+                Ok(Some(name)) => name,
+                Ok(None) => variant_name.to_string().to_lowercase(),
+                Err(err) => return Err(err),
+            };
+            Ok((variant_name, string_name))
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, Error>>();
+
+    let variant_mappings = match variant_mappings {
+        Ok(mappings) => mappings,
+        Err(err) => return err.to_compile_error().into(),
+    };
 
     let type_name_arms = variant_mappings.iter().map(|(variant_name, string_name)| {
         quote! {
@@ -71,25 +82,36 @@ pub fn derive_named_enum(input: TokenStream) -> TokenStream {
 }
 
 /// Extract the string value from a `#[name = "..."]` attribute if present
-fn extract_name_attribute(variant: &Variant) -> Option<String> {
-    variant
+fn extract_name_attribute(variant: &Variant) -> Result<Option<String>, Error> {
+    let name_attr = variant
         .attrs
         .iter()
-        .find(|attr| attr.path().is_ident("name"))
-        .map(|attr| match &attr.meta {
+        .find(|attr| attr.path().is_ident("name"));
+
+    if let Some(attr) = name_attr {
+        match &attr.meta {
             Meta::NameValue(MetaNameValue { value, .. }) => {
                 if let Expr::Lit(ExprLit {
                     lit: Lit::Str(lit_str),
                     ..
                 }) = value
                 {
-                    lit_str.value()
+                    Ok(Some(lit_str.value()))
                 } else {
-                    panic!("name attribute must have a string literal value");
+                    Err(Error::new_spanned(
+                        value,
+                        "name attribute must have a string literal value"
+                    ))
                 }
             }
-            _ => panic!("name attribute must be in the form #[name = \"value\"]"),
-        })
+            _ => Err(Error::new_spanned(
+                attr,
+                "name attribute must be in the form #[name = \"value\"]"
+            )),
+        }
+    } else {
+        Ok(None)
+    }
 }
 
 /// Derive macro that generates bidirectional conversion methods between enum variants and their numeric values.
@@ -142,7 +164,10 @@ pub fn derive_numeric_enum(input: TokenStream) -> TokenStream {
     let variants = if let Data::Enum(data_enum) = &input.data {
         &data_enum.variants
     } else {
-        panic!("NumericEnum can only be derived for enums");
+        return Error::new_spanned(
+            &input.ident,
+            "NumericEnum can only be derived for enums"
+        ).to_compile_error().into();
     };
 
     let mut next_discriminant = 0usize;
@@ -158,13 +183,23 @@ pub fn derive_numeric_enum(input: TokenStream) -> TokenStream {
                 ..
             }) = expr
             {
-                let parsed_value = lit_int
-                    .base10_parse::<usize>()
-                    .expect("Enum discriminant must be a valid integer");
-                next_discriminant = parsed_value + 1;
-                parsed_value
+                match lit_int.base10_parse::<usize>() {
+                    Ok(parsed_value) => {
+                        next_discriminant = parsed_value + 1;
+                        parsed_value
+                    }
+                    Err(_) => {
+                        return Error::new_spanned(
+                            lit_int,
+                            "Enum discriminant must be a valid integer"
+                        ).to_compile_error().into();
+                    }
+                }
             } else {
-                panic!("NumericEnum requires integer literals as enum discriminants");
+                return Error::new_spanned(
+                    expr,
+                    "NumericEnum requires integer literals as enum discriminants"
+                ).to_compile_error().into();
             }
         } else {
             let value = next_discriminant;
@@ -225,14 +260,18 @@ pub fn derive_iterable_enum(input: TokenStream) -> TokenStream {
     let variants = if let Data::Enum(data_enum) = &input.data {
         &data_enum.variants
     } else {
-        panic!("IterableEnum can only be derived for enums");
+        return Error::new_spanned(
+            &input.ident,
+            "IterableEnum can only be derived for enums"
+        ).to_compile_error().into();
     };
 
     for variant in variants.iter() {
         if !variant.fields.is_empty() {
-            panic!(
+            return Error::new_spanned(
+                variant,
                 "IterableEnum can only be derived for enums with unit variants (no associated data)"
-            );
+            ).to_compile_error().into();
         }
     }
 

@@ -1,5 +1,5 @@
 // Parse error types and implementations
-use crate::compiler_error::CompilerError;
+use crate::compiler_error::CompilationError;
 use crate::domain_error::{DomainError, ErrorCategory};
 use crate::error_codes::ErrorCode;
 use crate::Location;
@@ -51,7 +51,7 @@ pub type ParseResult<T> = Result<T, ParseError>;
 
 // Implement DomainError for ParseError
 impl DomainError for ParseError {
-    fn to_compiler_error(&self) -> CompilerError {
+    fn to_compiler_error(&self) -> CompilationError {
         let (code, message) = match self {
             ParseError::ExpectedToken { expected, found, context, error_code, .. } => {
                 let final_code = error_code.unwrap_or(ErrorCode::ExpectedToken);
@@ -90,7 +90,7 @@ impl DomainError for ParseError {
         };
         
         let loc = self.location();
-        CompilerError::new(code, message, loc.line, loc.column, loc.position, Some(1))
+        CompilationError::new(code, message, loc.line, loc.column, loc.position, Some(1))
     }
     
     fn location(&self) -> &Location {

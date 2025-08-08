@@ -16,7 +16,6 @@ fn pretty_format_basic() {
         AstFormat::Pretty
     );
     
-    // Should succeed without errors
     assert!(result.is_ok(), "Pretty format parsing should succeed");
 }
 
@@ -57,7 +56,6 @@ fn nonexistent_file() {
 
 #[test]
 fn invalid_slang_syntax() {
-    // Create a file with invalid Slang syntax
     let invalid_code = "this is not valid slang syntax {{{ +++";
     let (_temp_dir, file_path) = create_temp_slang_file(invalid_code)
         .expect("Failed to create temp file");
@@ -67,7 +65,6 @@ fn invalid_slang_syntax() {
         AstFormat::Pretty
     );
     
-    // Invalid syntax should result in a parsing error
     assert!(result.is_err(), "Invalid syntax should result in an error");
     let error_msg = result.unwrap_err().to_string();
     assert!(
@@ -87,7 +84,6 @@ fn empty_file() {
         AstFormat::Pretty
     );
     
-    // Empty file should succeed with 0 statements
     assert!(result.is_ok(), "Empty file should parse successfully");
 }
 
@@ -111,7 +107,6 @@ fn all_formats_with_complex_code() {
 
 #[test]
 fn file_extension_warning() {
-    // Create a temporary file without .sl extension
     let mut temp_file = NamedTempFile::new()
         .expect("Failed to create temp file");
     
@@ -123,7 +118,6 @@ fn file_extension_warning() {
         AstFormat::Pretty
     );
     
-    // Should still work regardless of file extension, as long as content is valid
     assert!(result.is_ok(), "Should parse file even without .sl extension");
 }
 
@@ -168,7 +162,6 @@ fn error_message_contains_relevant_info() {
     assert!(result.is_err(), "Should fail for invalid syntax");
     let error_msg = result.unwrap_err().to_string();
     
-    // Error message should be informative
     assert!(
         error_msg.len() > 10,
         "Error message should be substantial, got: '{}'", 

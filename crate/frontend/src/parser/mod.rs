@@ -34,3 +34,7 @@ mod statements;
 mod types;
 
 pub use core::{Parser, TokenPosition};
+pub use expressions::ExpressionParsing;
+pub use literals::LiteralParsing;
+pub use statements::StatementParsing;
+pub use types::TypeParsing;

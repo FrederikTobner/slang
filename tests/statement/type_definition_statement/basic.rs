@@ -1,7 +1,8 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn simple_type() {
+    // Arrange
     let program = r#"
         struct MyStruct {
             field1: string,
@@ -9,25 +10,33 @@ fn simple_type() {
         };
         print_value("struct defined successfully");
     "#;
-    execute_program_and_assert(program, "struct defined successfully");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("struct defined successfully");
 }
 
 #[test]
 fn empty_type() {
+    // Arrange
     let program = r#"
         struct EmptyStruct {};
         print_value("empty struct defined");
     "#;
-    execute_program_and_assert(program, "empty struct defined");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("empty struct defined");
 }
 
 #[test]
 fn single_field_concept() {
+    // Arrange
     let program = r#"
         struct SingleFieldStruct {
             field: i32,
         };
         print_value("single field struct defined");
     "#;
-    execute_program_and_assert(program, "single field struct defined");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("single field struct defined");
 }

@@ -4,7 +4,7 @@ pub mod semantic_analysis;
 pub mod token;
 
 // Re-export error handling from slang_error
-pub use slang_error::{ErrorCode, CompilerError, CompileResult, ErrorCollector, LineInfo, report_errors};
+pub use slang_error::{ErrorCode, CompilationError, CompileResult, ErrorCollector, LineInfo, report_errors};
 pub use lexer::Lexer;
 pub use semantic_analysis::{execute};
 pub use semantic_analysis::SemanticAnalysisError;

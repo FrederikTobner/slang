@@ -38,9 +38,17 @@ slang_error = { path = "crate/error" }
 colored = "3.0.0"
 clap = { version = "4.5.42", features = ["derive"] }
 serde_json = "1.0.142"
+syn = "2.0.104"
+quote = "1.0.40"
+thiserror = "2.0.11"
+zip = "4.3.0"
+tempfile = "3.8.1"
 # Dev dependencies  
 rstest = "0.26.1"
 peak_alloc = "0.3.0"
+assert_cmd = "2.0.12"
+predicates = "3.0.4"
+divan = "0.1.21"
 
 # Tool-specific commands via cargo aliases
 [workspace.metadata.commands]
@@ -58,17 +66,17 @@ slang_compilation_pipeline = { path = "crate/compilation_pipeline", features = [
 slang_error = { path = "crate/error", features = [] }
 slang_frontend = { path = "crate/frontend", features = [] }
 slang_ir = { path = "crate/ir", features = [] }
-zip = "4.3.0"
+zip = { workspace = true }
 
 
 [dev-dependencies]
 # E2E tests
-assert_cmd = "2.0.12"
-predicates = "3.0.4"
-tempfile = "3.8.1"
+assert_cmd = { workspace = true }
+predicates = { workspace = true }
+tempfile = { workspace = true }
 rstest = { workspace = true }
 # Performance tests
-divan = "0.1.21"
+divan = { workspace = true }
 peak_alloc = { workspace = true }
 
 

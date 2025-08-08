@@ -1,69 +1,69 @@
-use slang_compilation_pipeline::pipeline::{
+use slang_compilation_pipeline::{
     execution_chain::{ExecutionChain, ExecuteChain},
     stages::{TokenizationStage, ParsingStage, SemanticAnalysisStage},
     stage::StageContext,
 };
 use slang_shared::DiagnosticEngine;
+use slang_compilation_pipeline::SlangSourceFile;
 
 #[test]
 fn single_stage_execution() {
-    let source = "let x = 42;";
-    let mut context = StageContext::new(source.to_string(), None);
+    let source_file = SlangSourceFile::new("test.sl", "let x = 42;".to_string()).unwrap();
+    let mut context = StageContext::new(source_file.content().to_string(), Some(source_file.file_name().to_string()));
     let mut diagnostics = DiagnosticEngine::new();
     
-    let chain = ExecutionChain::new().then(TokenizationStage);
-    let result = chain.execute_chain(source.to_string(), &mut context, &mut diagnostics);
+    let chain = ExecutionChain::starting_with(TokenizationStage);
+    let result = chain.execute_chain(source_file, &mut context, &mut diagnostics);
     
     assert!(result.is_ok());
 }
 
 #[test]
 fn multi_stage_execution() {
-    let source = "let x = 42;";
-    let mut context = StageContext::new(source.to_string(), None);
+    let source_file = SlangSourceFile::new("test.sl", "let x = 42;".to_string()).unwrap();
+    let mut context = StageContext::new(source_file.content().to_string(), Some(source_file.file_name().to_string()));
     let mut diagnostics = DiagnosticEngine::new();
     
-    let chain = ExecutionChain::new()
-        .then(TokenizationStage)
+    let chain = ExecutionChain::starting_with(TokenizationStage)
         .then(ParsingStage);
         
-    let result = chain.execute_chain(source.to_string(), &mut context, &mut diagnostics);
+    let result = chain.execute_chain(source_file, &mut context, &mut diagnostics);
     
     assert!(result.is_ok());
 }
 
 #[test]
 fn execution_order() {
-    let source = "fn main() { let x = 42; }";
-    let mut context = StageContext::new(source.to_string(), None);
+    let source_file = SlangSourceFile::new("test.sl", "fn main() { let x = 42; }".to_string()).unwrap();
+    let mut context = StageContext::new(source_file.content().to_string(), Some(source_file.file_name().to_string()));
     let mut diagnostics = DiagnosticEngine::new();
     
     // Should execute: Tokenization -> Parsing -> Semantic Analysis
-    let chain = ExecutionChain::new()
-        .then(TokenizationStage)
+    let chain = ExecutionChain::starting_with(TokenizationStage)
         .then(ParsingStage)
         .then(SemanticAnalysisStage);
         
-    let result = chain.execute_chain(source.to_string(), &mut context, &mut diagnostics);
+    let result = chain.execute_chain(source_file, &mut context, &mut diagnostics);
     
     assert!(result.is_ok());
 }
 
 #[test]
 fn chain_composition() {
-    let chain1 = ExecutionChain::new().then(TokenizationStage);
-    let chain2 = ExecutionChain::new().then(TokenizationStage);
+    let chain1 = ExecutionChain::starting_with(TokenizationStage);
+    let chain2 = ExecutionChain::starting_with(TokenizationStage);
     
     // Compose chains (this would be implementation-specific)
     // For now, just test that we can create and use both chains
-    let source = "let x = 42;";
-    let mut context1 = StageContext::new(source.to_string(), None);
-    let mut context2 = StageContext::new(source.to_string(), None);
+    let source_file1 = SlangSourceFile::new("test1.sl", "let x = 42;".to_string()).unwrap();
+    let source_file2 = SlangSourceFile::new("test2.sl", "let x = 42;".to_string()).unwrap();
+    let mut context1 = StageContext::new(source_file1.content().to_string(), Some(source_file1.file_name().to_string()));
+    let mut context2 = StageContext::new(source_file2.content().to_string(), Some(source_file2.file_name().to_string()));
     let mut diagnostics1 = DiagnosticEngine::new();
     let mut diagnostics2 = DiagnosticEngine::new();
     
-    let result1 = chain1.execute_chain(source.to_string(), &mut context1, &mut diagnostics1);
-    let result2 = chain2.execute_chain(source.to_string(), &mut context2, &mut diagnostics2);
+    let result1 = chain1.execute_chain(source_file1, &mut context1, &mut diagnostics1);
+    let result2 = chain2.execute_chain(source_file2, &mut context2, &mut diagnostics2);
     
     assert!(result1.is_ok());
     assert!(result2.is_ok());
@@ -71,15 +71,13 @@ fn chain_composition() {
 
 #[test]
 fn execution_chain_builder_pattern() {
-    let source = "let x = 42;";
-    let mut context = StageContext::new(source.to_string(), None);
+    let source_file = SlangSourceFile::new("test.sl", "let x = 42;".to_string()).unwrap();
+    let mut context = StageContext::new(source_file.content().to_string(), Some(source_file.file_name().to_string()));
     let mut diagnostics = DiagnosticEngine::new();
     
-    // Test fluent interface
-    let result = ExecutionChain::new()
-        .then(TokenizationStage)
+    let result = ExecutionChain::starting_with(TokenizationStage)
         .then(ParsingStage)
-        .execute_chain(source.to_string(), &mut context, &mut diagnostics);
+        .execute_chain(source_file, &mut context, &mut diagnostics);
         
     assert!(result.is_ok());
 }

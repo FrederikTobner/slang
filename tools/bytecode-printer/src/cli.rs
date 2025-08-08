@@ -1,12 +1,13 @@
 use crate::format::BytecodeFormat;
-use crate::observer::BytecodePrintObserver;
+use crate::observer::BytecodePrinter;
 use clap::Parser as ClapParser;
 use colored::Colorize;
 use slang_compilation_pipeline::{ChainPipeline};
-use slang_compilation_pipeline::pipeline::result::CompilationResult;
+use slang_compilation_pipeline::result::CompilationResult;
 use slang_backend::bytecode::Chunk;
+use slang_backend::SlangArtifactFile;
+use slang_compilation_pipeline::SlangSourceFile;
 use std::fs;
-use zip::ZipArchive;
 
 /// Command line interface for the Slang bytecode analyzer
 #[derive(ClapParser)]
@@ -111,7 +112,6 @@ fn validate_input_file(file_path: &str) -> Result<(), Box<dyn std::error::Error>
         return Err(format!("Input path '{}' is not a file", file_path).into());
     }
     
-    // Check if file is readable by attempting to open it
     match fs::File::open(path) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Cannot read input file '{}': {}", file_path, e).into()),
@@ -126,41 +126,23 @@ fn read_source_file(file_path: &str) -> Result<String, Box<dyn std::error::Error
 
 /// Load bytecode from a compiled .sip file (ZIP archive containing bytecode.bin)
 fn load_bytecode_from_sip(file_path: &str) -> Result<Chunk, Box<dyn std::error::Error>> {
-    use std::io::Read;
-    
-    // Open the .sip file as a ZIP archive
-    let file = fs::File::open(file_path)
+    let artifact = SlangArtifactFile::from_path(file_path)
         .map_err(|e| format!("Failed to open .sip file '{}': {}", file_path, e))?;
     
-    let mut archive = ZipArchive::new(file)
-        .map_err(|e| format!("Failed to read .sip file as ZIP archive: {}", e))?;
-    
-    // Look for bytecode.bin in the archive
-    let mut bytecode_file = archive.by_name("bytecode.bin")
-        .map_err(|e| format!("Failed to find 'bytecode.bin' in .sip file: {}", e))?;
-    
-    // Read the bytecode data
-    let mut bytecode_data = Vec::new();
-    bytecode_file.read_to_end(&mut bytecode_data)
-        .map_err(|e| format!("Failed to read bytecode data: {}", e))?;
-    
-    // Deserialize the bytecode chunk using the Chunk's custom deserialize method
-    let mut cursor = std::io::Cursor::new(bytecode_data);
-    Chunk::deserialize(&mut cursor)
-        .map_err(|e| format!("Failed to deserialize bytecode: {}", e).into())
+    artifact.read_chunk()
+        .map_err(|e| format!("Failed to read bytecode from .sip file '{}': {}", file_path, e).into())
 }
 
 /// Compile source code to bytecode using the compilation pipeline
 fn compile_source_to_bytecode(file_path: &str, verbose: bool) -> Result<Chunk, Box<dyn std::error::Error>> {
-    // Read source file
     let source = read_source_file(file_path)?;
-    // Create a full compilation pipeline - using the high-level API for type safety
-    let pipeline = ChainPipeline::full_compilation(&source)
-        .with_file_name(file_path.to_string())
-        .with_codegen_observer(BytecodePrintObserver::new());
+    
+    let source_file = SlangSourceFile::for_tooling(file_path, source);
+    
+    let pipeline = ChainPipeline::full_compilation()
+        .with_codegen_observer(BytecodePrinter::new());
 
-    // Execute the pipeline to get bytecode
-    match pipeline.compile_to_bytecode() {
+    match pipeline.execute(source_file) {
         CompilationResult::Success { output: chunk, diagnostics } => {
             if verbose && diagnostics.has_errors() {
                 println!("{}: Compilation completed with diagnostics", 

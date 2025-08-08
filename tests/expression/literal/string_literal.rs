@@ -1,46 +1,68 @@
 use crate::ErrorCode;
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn basic() {
+    // Arrange
     let program = r#"
         print_value("hello");
     "#;
-    execute_program_and_assert(program, "hello");
+    
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("hello");
 }
 
 #[test]
 fn empty() {
+    // Arrange
     let program = r#"
         print_value("");
     "#;
-    execute_program_and_assert(program, "");
+    
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("");
 }
 
 #[test]
 fn with_spaces() {
+    // Arrange
     let program = r#"
         print_value("hello world");
     "#;
-    execute_program_and_assert(program, "hello world");
+    
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("hello world");
 }
 
 #[test]
 fn with_escape_sequences() {
+    // Arrange
     let program = r#"
         print_value("hello\\nworld");
     "#;
-    execute_program_and_assert(program, "hello\\\\nworld");
+    
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("hello\\\\nworld");
 }
 
 #[test]
 fn unterminated() {
+    // Arrange
     let program = r#"
         print_value("unterminated string
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::ExpectedClosingQuote,
-        "Expected closing quote",
-    );
+    
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::ExpectedClosingQuote)
+        .stderr("Expected closing quote");
 }

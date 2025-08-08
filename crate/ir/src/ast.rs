@@ -1,7 +1,7 @@
 use slang_error::Location;
 use crate::Visitor;
 use slang_error::DomainResult;
-use slang_types::types::TypeId;
+use slang_types::TypeId;
 use std::fmt::Display;
 
 #[derive(Debug, PartialEq)]

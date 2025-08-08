@@ -1,5 +1,5 @@
 use crate::ErrorCode;
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::test_utils::ProgramAssertion;
 use rstest::rstest;
 
 #[rstest]
@@ -8,6 +8,7 @@ use rstest::rstest;
 #[case("u32")]
 #[case("u64")]
 fn with_integer_variables(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
         let a: {type_name} = 6;
@@ -15,13 +16,16 @@ fn with_integer_variables(#[case] type_name: &str) {
         print_value(a * b);
     "#
     );
-    execute_program_and_assert(&program, "42");
+    
+    // Act & Assert
+    ProgramAssertion::new(&program).succeeds().stdout("42");
 }
 
 #[rstest]
 #[case("f32")]
 #[case("f64")]
 fn with_float_variables(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
         let a: {type_name} = 6.0;
@@ -29,7 +33,9 @@ fn with_float_variables(#[case] type_name: &str) {
         print_value(a * b);
     "#
     );
-    execute_program_and_assert(&program, "42");
+    
+    // Act & Assert
+    ProgramAssertion::new(&program).succeeds().stdout("42");
 }
 
 #[rstest]
@@ -39,12 +45,15 @@ fn with_float_variables(#[case] type_name: &str) {
 #[case("u32")]
 #[case("u64")]
 fn with_integer_literals(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
         print_value(6{type_name} * 7{type_name});
     "#
     );
-    execute_program_and_assert(&program, "42");
+    
+    // Act & Assert
+    ProgramAssertion::new(&program).succeeds().stdout("42");
 }
 
 #[rstest]
@@ -52,16 +61,20 @@ fn with_integer_literals(#[case] type_name: &str) {
 #[case("f32")]
 #[case("f64")]
 fn with_float_literals(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
         print_value(6.0{type_name} * 7.0{type_name});
     "#
     );
-    execute_program_and_assert(&program, "42");
+    
+    // Act & Assert
+    ProgramAssertion::new(&program).succeeds().stdout("42");
 }
 
 #[test]
 fn with_incompatible_types() {
+    // Arrange
     // Define all the types we want to test
     let all_types = ["i32", "i64", "u32", "u64", "f32", "f64", "bool", "string"];
     // Valid combinations (types that can be added together)
@@ -108,51 +121,57 @@ fn with_incompatible_types() {
                 "Type mismatch: cannot apply '*' operator on {left_type} and {right_type}"
             );
 
-            execute_program_expect_error(
-                &program,
-                ErrorCode::OperationTypeMismatch,
-                &expected_error,
-            );
+            // Act & Assert
+            ProgramAssertion::new(&program)
+                .fails()
+                .error_code(ErrorCode::OperationTypeMismatch)
+                .stderr(&expected_error);
         }
     }
 }
 
 #[test]
 fn with_unit() {
+    // Arrange
     let program = r#"
         let x = ();
         let y = ();
         print_value(x * y);
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::OperationTypeMismatch,
-        "Type mismatch: cannot apply '*' operator on () and ()",
-    );
+    
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::OperationTypeMismatch)
+        .stderr("Type mismatch: cannot apply '*' operator on () and ()");
 }
 
 #[test]
 fn with_function() {
+    // Arrange
     let program = r#"
         fn my_function() {}
         print_value(my_function * my_function);
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::OperationTypeMismatch,
-        "Type mismatch: cannot apply '*' operator on fn() -> () and fn() -> ()",
-    );
+    
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::OperationTypeMismatch)
+        .stderr("Type mismatch: cannot apply '*' operator on fn() -> () and fn() -> ()");
 }
 
 #[test]
 fn with_native_function() {
+    // Arrange
     let program = r#"
         print_value * print_value;
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::OperationTypeMismatch,
-        "Type mismatch: cannot apply '*' operator on fn(unknown) -> i32 and fn(unknown) -> i32",
-    );
+    
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::OperationTypeMismatch)
+        .stderr("Type mismatch: cannot apply '*' operator on fn(unknown) -> i32 and fn(unknown) -> i32");
 }
 

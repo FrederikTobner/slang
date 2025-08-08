@@ -4,7 +4,7 @@
 //! using heterogeneous lists. HLists allow storing different types in a single structure
 //! while maintaining complete type safety and enabling zero-cost abstractions.
 
-use crate::pipeline::stage::{CompilationStage, StageContext};
+use crate::stage::{CompilationStage, StageContext};
 use slang_shared::DiagnosticEngine;
 
 /// Base trait for heterogeneous lists.
@@ -20,7 +20,7 @@ pub trait HList: Send + Sync + 'static {}
 ///
 /// # Example
 /// ```rust
-/// use slang_compilation_pipeline::pipeline::hlist::HNil;
+/// use slang_compilation_pipeline::hlist::HNil;
 /// 
 /// let empty_list = HNil;
 /// ```
@@ -40,7 +40,7 @@ impl HList for HNil {}
 ///
 /// # Example
 /// ```rust
-/// use slang_compilation_pipeline::pipeline::hlist::{HCons, HNil};
+/// use slang_compilation_pipeline::hlist::{HCons, HNil};
 /// 
 /// // Create HList with two different types
 /// let list = HCons {
@@ -148,6 +148,8 @@ impl<'a, H, T, Input> Execute<'a, Input> for HCons<H, T>
 where
     H: CompilationStage<Input = Input>,
     T: HList + Execute<'a, H::Output>,
+    Input: 'static,
+    H::Output: 'static,
 {
     type Output = T::Output;
 
@@ -183,12 +185,12 @@ where
 /// ```
 #[macro_export]
 macro_rules! hlist {
-    () => { $crate::pipeline::hlist::HNil::new() };
+    () => { $crate::hlist::HNil::new() };
     ($head:expr) => { 
-        $crate::pipeline::hlist::HCons::new($head, $crate::pipeline::hlist::HNil::new()) 
+        $crate::hlist::HCons::new($head, $crate::hlist::HNil::new()) 
     };
     ($head:expr, $($tail:expr),+ $(,)?) => { 
-        $crate::pipeline::hlist::HCons::new($head, hlist!($($tail),+)) 
+        $crate::hlist::HCons::new($head, hlist!($($tail),+)) 
     };
 }
 

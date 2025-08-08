@@ -25,12 +25,12 @@
 //! ## Usage
 //!
 //! ```rust
-//! use slang_compilation_pipeline::{ChainPipeline, CompilationResult};
-//! use slang_compilation_pipeline::pipeline::execution_chain::FullCompilationChain;
+//! use slang_compilation_pipeline::{ChainPipeline, CompilationResult, SlangSourceFile};
+//! use slang_compilation_pipeline::execution_chain::FullCompilationChain;
 //!
-//! let source = "let x = 42;";
-//! let result = ChainPipeline::full_compilation(&source)
-//!     .compile_to_bytecode();
+//! let source_file = SlangSourceFile::new("example.sl", "let x = 42;".to_string()).unwrap();
+//! let result = ChainPipeline::full_compilation()
+//!     .execute(source_file);
 //!
 //! match result {
 //!     CompilationResult::Success { output, diagnostics } => {
@@ -44,23 +44,47 @@
 //! }
 //! ```
 
-pub mod pipeline;
+pub mod source_file;
+// Core traits and types for the new pipeline architecture
+pub mod stage;
+pub mod error;
+pub mod result;
+pub mod stages;
+pub mod observer;
 
+// Type-safe HList-based pipeline implementation
+pub mod hlist;
 
-// New preferred API - Type-safe pipeline with compile-time observer validation
-pub use pipeline::typed_builder::{
-    ChainPipeline, TokenizationPipeline, ParsingPipeline, 
-    ASTPipeline, FullCompilationPipeline,
-    HasStage, TokenizationStageMarker, ParsingStageMarker, 
-    SemanticStageMarker, CodegenStageMarker,
+// Macros for defining execution chain types and constructors
+pub mod chain_macros;
+
+// New hybrid pattern: execution chain + true builder
+pub mod execution_chain;
+
+// Chain-aware typed pipeline for compile-time observer validation
+pub mod chain_pipeline;
+
+// Re-export key types for convenient access
+pub use hlist::{Execute, HCons, HList, HList1, HList2, HList3, HList4, HList5, HNil};
+
+// Re-export new hybrid pattern types
+pub use execution_chain::{ExecutionChain, ExecuteChain};
+
+// Re-export typed builder components
+pub use chain_pipeline::{
+    ChainPipeline, TokenizationPipeline, ParsingPipeline, ASTPipeline, FullCompilationPipeline,
 };
 
+
+// Export the source file type
+pub use source_file::{SlangSourceFile, SourceFileError};
+
 // Supporting API
-pub use pipeline::{
+pub use {
     execution_chain::{TokenizationChain, ParsingChain, ASTChain, FullCompilationChain},
     stage::{CompilationStage, StageContext},
-    observers::{StageObserver, ObserverRegistry, TokenizationObserver, ParsingObserver, SemanticObserver, CodegenObserver},
-    error::{ErrorStrategy, PipelineError, RecoveryAction},
+    observer::{StageObserver, ObserverRegistry, TokenizationObserver, ParsingObserver, SemanticObserver, CodegenObserver},
+    error::ErrorStrategy,
     result::CompilationResult,
     stages::{TokenizationStage, ParsingStage, SemanticAnalysisStage, CodeGenerationStage},
 };

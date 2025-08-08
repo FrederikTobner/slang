@@ -1,18 +1,28 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn true_literal() {
+    // Arrange
     let program = r#"
         print_value(true);
     "#;
-    execute_program_and_assert(program, "true");
+    
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("true");
 }
 
 #[test]
 fn false_literal() {
+    // Arrange
     let program = r#"
         print_value(false);
     "#;
-    execute_program_and_assert(program, "false");
+    
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("false");
 }
 

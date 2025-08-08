@@ -1,5 +1,5 @@
 use crate::ErrorCode;
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::test_utils::ProgramAssertion;
 use rstest::rstest;
 
 #[rstest]
@@ -8,6 +8,7 @@ use rstest::rstest;
 #[case("u32")]
 #[case("u64")]
 fn equal_integer(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
         let a: {type_name} = 5;
@@ -16,7 +17,9 @@ fn equal_integer(#[case] type_name: &str) {
         print_value(a != b);
     "#
     );
-    execute_program_and_assert(&program, "false");
+    
+    // Act & Assert
+    ProgramAssertion::new(&program).succeeds().stdout("false");
 }
 
 #[rstest]
@@ -25,6 +28,7 @@ fn equal_integer(#[case] type_name: &str) {
 #[case("u32")]
 #[case("u64")]
 fn not_equal_integer(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
         let a: {type_name} = 5;
@@ -33,13 +37,16 @@ fn not_equal_integer(#[case] type_name: &str) {
         print_value(a != b);
     "#
     );
-    execute_program_and_assert(&program, "true");
+    
+    // Act & Assert
+    ProgramAssertion::new(&program).succeeds().stdout("true");
 }
 
 #[rstest]
 #[case("f32")]
 #[case("f64")]
 fn equal_float(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
         let a: {type_name} = 5.5;
@@ -48,13 +55,16 @@ fn equal_float(#[case] type_name: &str) {
         print_value(a != b);
     "#
     );
-    execute_program_and_assert(&program, "false");
+    
+    // Act & Assert
+    ProgramAssertion::new(&program).succeeds().stdout("false");
 }
 
 #[rstest]
 #[case("f32")]
 #[case("f64")]
 fn not_equal_float(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
         let a: {type_name} = 5.5;
@@ -63,11 +73,14 @@ fn not_equal_float(#[case] type_name: &str) {
         print_value(a != b);
     "#
     );
-    execute_program_and_assert(&program, "true");
+    
+    // Act & Assert
+    ProgramAssertion::new(&program).succeeds().stdout("true");
 }
 
 #[test]
 fn with_booleans() {
+    // Arrange
     let program = r#"
         let result1 = true != true;
         let result2 = false != false;
@@ -77,11 +90,14 @@ fn with_booleans() {
         print_value(result2);
         print_value(result3);
     "#;
-    execute_program_and_assert(program, "false\nfalse\ntrue");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("false\nfalse\ntrue");
 }
 
 #[test]
 fn with_strings() {
+    // Arrange
     let program = r#"
         let result1 = "hello" != "hello";
         let result2 = "hello" != "world";
@@ -89,39 +105,49 @@ fn with_strings() {
         print_value(result1);
         print_value(result2);
     "#;
-    execute_program_and_assert(program, "false\ntrue");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("false\ntrue");
 }
 
 #[test]
 fn with_unit() {
+    // Arrange
     let program = r#"
         let x = ();
         let y = ();
         print_value(x != y);
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::OperationTypeMismatch,
-        "Type mismatch: cannot apply '!=' operator on () and ()",
-    );
+    
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::OperationTypeMismatch)
+        .stderr("Type mismatch: cannot apply '!=' operator on () and ()");
 }
 
 #[test]
 fn with_function() {
+    // Arrange
     let program = r#"
         fn my_function() {}
         let fun_1 = my_function;
         let fun_2 = my_function;
         print_value(fun_1 != fun_2);
     "#;
-    execute_program_and_assert(program, "false");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("false");
 }
 
 #[test]
 fn with_native_function() {
+    // Arrange
     let program = r#"
         print_value(print_value != print_value);
     "#;
-    execute_program_and_assert(program, "false");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("false");
 }
 

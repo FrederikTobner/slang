@@ -1,11 +1,8 @@
 use crate::format::TokenFormat;
-use crate::observer::TokenPrinterObserver;
+use crate::observer::TokenPrinter;
 use clap::Parser as ClapParser;
-use slang_compilation_pipeline::{
-    pipeline::{
-        typed_builder::ChainPipeline,
-    },
-};
+use slang_compilation_pipeline::chain_pipeline::ChainPipeline;
+use slang_compilation_pipeline::SlangSourceFile;
 use std::fs;
 
 /// Command line interface for the Slang token analyzer
@@ -32,23 +29,20 @@ pub fn tokenize_file(file_path: &str, format: TokenFormat) -> Result<(), Box<dyn
     let source = fs::read_to_string(file_path)?;
     let formatter = format.create_formatter();
     
-
-    let token_observer = TokenPrinterObserver::new(formatter, file_path.to_string());
-    let pipeline = ChainPipeline::tokenization_only(&source)  // ✅ Chain type is fixed at construction
-        .with_file_name(file_path.to_string())
-        .with_tokenization_observer(token_observer);  
-
-    let result = pipeline.tokenize(); 
+    let source_file = SlangSourceFile::for_tooling(file_path, source.clone());
     
-    match result {
-        slang_compilation_pipeline::pipeline::result::CompilationResult::Success { output: _tokens, diagnostics } => {
-            // Tokens are now formatted by the observer, not here
+    // Create a pipeline with only tokenization - no parsing or further stages
+    let pipeline = ChainPipeline::tokenization_only()  
+        .with_tokenization_observer(TokenPrinter::new(formatter, file_path.to_string()));
+
+    match pipeline.execute(source_file) {
+        slang_compilation_pipeline::result::CompilationResult::Success { output: _tokens, diagnostics } => {
             if diagnostics.has_errors() {
                 eprintln!("Warnings occurred during tokenization:");
                 diagnostics.report_all(&source);
             }
         }
-        slang_compilation_pipeline::pipeline::result::CompilationResult::Failed { diagnostics } => {
+        slang_compilation_pipeline::result::CompilationResult::Failed { diagnostics } => {
             eprintln!("Error tokenizing file:");
             diagnostics.report_all(&source);
             return Err("Tokenization failed".into());

@@ -1,6 +1,7 @@
 mod cli;
 mod format;
 mod formatter;
+mod observer;
 
 use cli::{Parser, parse_and_print_ast};
 use clap::Parser as ClapParser;

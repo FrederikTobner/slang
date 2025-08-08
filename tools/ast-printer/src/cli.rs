@@ -1,8 +1,10 @@
 use crate::format::AstFormat;
+use crate::observer::ASTPrinter;
 use clap::Parser as ClapParser;
 use colored::Colorize;
 use std::fs;
-use slang_compilation_pipeline::pipeline::{ChainPipeline, error::ErrorStrategy};
+use slang_compilation_pipeline::ChainPipeline;
+use slang_compilation_pipeline::SlangSourceFile;
 
 /// Command line interface for the Slang AST analyzer
 #[derive(ClapParser)]
@@ -48,25 +50,21 @@ pub fn parse_and_print_ast(
     file_path: &str, 
     format: AstFormat,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Validate input file
     validate_input_file(file_path)?;
     
-    // Read source file
     let source = read_source_file(file_path)?;
     
     if format == AstFormat::Pretty {
         println!("{}: Parsing {}", "Info".blue().bold(), file_path);
     }
+
+    let source_file = SlangSourceFile::for_tooling(file_path, source.clone());
     
-    // Create a pipeline that only runs tokenization and parsing stages - type-safe!
-    let pipeline = ChainPipeline::parsing_only(&source)
-        .with_file_name(file_path.to_string())
-        .with_error_strategy(ErrorStrategy::Recover { continue_on_non_critical: false });
-    
-    // Execute the pipeline to get AST - no downcasting needed!
-    match pipeline.execute() {
-        slang_compilation_pipeline::pipeline::result::CompilationResult::Success { output, diagnostics } => {
-            // Output is already Vec<Statement> - no downcasting required!
+    let pipeline = ChainPipeline::parsing_only()
+        .with_parsing_observer(ASTPrinter::new());
+
+    match pipeline.execute(source_file) {
+        slang_compilation_pipeline::result::CompilationResult::Success { output, diagnostics } => {
             let statements = output;
             
             if format == AstFormat::Pretty {
@@ -76,17 +74,15 @@ pub fn parse_and_print_ast(
                 );
             }
             
-            // Format and print the AST
             let formatter = format.create_formatter();
             let formatted_ast = formatter.format(&statements)?;
             println!("{}", formatted_ast);
             
-            // Print any warnings or notes
             if diagnostics.has_errors() && format == AstFormat::Pretty {
                 eprintln!("\n{}: Compilation completed with diagnostics", "Info".blue().bold());
             }
         }
-        slang_compilation_pipeline::pipeline::result::CompilationResult::Failed { diagnostics: _ } => {
+        slang_compilation_pipeline::result::CompilationResult::Failed { diagnostics: _ } => {
             return Err("Failed to parse source code. Check source file for syntax errors.".into());
         }
     }
@@ -106,7 +102,6 @@ fn validate_input_file(file_path: &str) -> Result<(), String> {
         return Err(format!("'{}' is not a regular file", file_path));
     }
     
-    // Check if file has .sl extension (optional warning)
     if let Some(extension) = path.extension() {
         if extension != "sl" {
             eprintln!(

@@ -3,7 +3,7 @@ use colored::Colorize;
 
 /// Represents a compiler error with a message, line number, column number, position, and token length
 #[derive(Debug, Clone)]
-pub struct CompilerError {
+pub struct CompilationError {
     /// The structured error code for this error
     pub error_code: ErrorCode,
     /// The error message
@@ -18,8 +18,8 @@ pub struct CompilerError {
     pub token_length: Option<usize>,
 }
 
-impl CompilerError {
-    /// Creates a new CompilerError with the given error code, message, line number, column number, position, and token length
+impl CompilationError {
+    /// Creates a new CompilationError with the given error code, message, line number, column number, position, and token length
     ///
     /// ### Arguments
     /// * `error_code` - The structured error code for this error
@@ -30,13 +30,13 @@ impl CompilerError {
     /// * `token_length` - The length of the token, if applicable
     ///
     /// ### Returns
-    /// A new CompilerError object
+    /// A new CompilationError object
     ///
     /// ### Example
     /// ```
-    /// use slang_error::{CompilerError, ErrorCode};
+    /// use slang_error::{CompilationError, ErrorCode};
     ///
-    /// let error = CompilerError::new(ErrorCode::ExpectedSemicolon, "Syntax error".to_string(), 10, 5, 0, Some(1));
+    /// let error = CompilationError::new(ErrorCode::ExpectedSemicolon, "Syntax error".to_string(), 10, 5, 0, Some(1));
     /// ```
     pub fn new(
         error_code: ErrorCode,
@@ -91,7 +91,7 @@ impl CompilerError {
             self.error_code.to_string().bold().red(),
             self.error_code.description(),
             arrow,
-            "main", // TODO: replace if actual filename is available
+            "main", // TODO: replace with actual filename
             line,
             col
         );
@@ -109,27 +109,27 @@ impl CompilerError {
     }
 }
 
-impl std::fmt::Display for CompilerError {
+impl std::fmt::Display for CompilationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: {}", self.error_code, self.message)
     }
 }
 
-impl std::error::Error for CompilerError {
+impl std::error::Error for CompilationError {
     fn description(&self) -> &str {
         &self.message
     }
 }
 
 /// A type alias for a result that can either be a value of type T or a list of compiler errors
-pub type CompileResult<T> = Result<T, Vec<CompilerError>>;
+pub type CompileResult<T> = Result<T, Vec<CompilationError>>;
 
 /// Reports a list of compiler errors to stderr
 ///
 /// ### Arguments
 /// * `errors` - A slice of CompilerError to report
 /// * `source` - The source code string, used for generating line information
-pub fn report_errors(errors: &[CompilerError], source: &str) {
+pub fn report_errors(errors: &[CompilationError], source: &str) {
     let line_info = LineInfo::new(source);
     for error in errors.iter() {
         eprintln!("{}", error.format_for_display(&line_info));
@@ -137,7 +137,7 @@ pub fn report_errors(errors: &[CompilerError], source: &str) {
 }
 
 pub struct ErrorCollector {
-    errors: Vec<CompilerError>,
+    errors: Vec<CompilationError>,
 }
 
 impl Default for ErrorCollector {
@@ -151,7 +151,7 @@ impl ErrorCollector {
         Self { errors: Vec::new() }
     }
 
-    pub fn add_error(&mut self, error: CompilerError) {
+    pub fn add_error(&mut self, error: CompilationError) {
         self.errors.push(error);
     }
 
@@ -169,7 +169,7 @@ impl ErrorCollector {
         self.errors.clear();
     }
 
-    pub fn take_errors(&mut self) -> Vec<CompilerError> {
+    pub fn take_errors(&mut self) -> Vec<CompilationError> {
         std::mem::take(&mut self.errors)
     }
 }

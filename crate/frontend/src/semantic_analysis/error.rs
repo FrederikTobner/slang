@@ -1,4 +1,4 @@
-use slang_error::{CompilerError, ErrorCode};
+use slang_error::{CompilationError, ErrorCode};
 use slang_error::Location;
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
@@ -449,10 +449,10 @@ impl SemanticAnalysisError {
     ///
     /// ### Returns
     /// A CompilerError with the appropriate message and location information.
-    pub fn to_compiler_error(&self, context: &CompilationContext) -> CompilerError {
+    pub fn to_compiler_error(&self, context: &CompilationContext) -> CompilationError {
         let location = self.get_location();
         let token_length = self.get_token_length();
-        CompilerError::new(
+        CompilationError::new(
             self.error_code(),
             self.format_message(context),
             location.line,

@@ -1,7 +1,8 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn without_return() {
+    // Arrange
     let program = r#"
         let result = {
             let x = 42;
@@ -9,5 +10,7 @@ fn without_return() {
         };
         print_value(result);
     "#;
-    execute_program_and_assert(program, "()");
+    
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("()");
 }

@@ -30,7 +30,7 @@ pub fn check_same_type_arithmetic(
         || context.is_function_type(type_id)
     {
         return Err(helpers::operation_type_mismatch_error(
-            &operator.to_string(),
+            operator,
             type_id,
             type_id,
             location,
@@ -39,7 +39,7 @@ pub fn check_same_type_arithmetic(
 
     if helpers::is_string_type(type_id) && operator != &BinaryOperator::Add {
         return Err(helpers::operation_type_mismatch_error(
-            &operator.to_string(),
+            operator,
             type_id,
             type_id,
             location,
@@ -97,7 +97,7 @@ pub fn check_mixed_arithmetic_operation(
     }
 
     Err(helpers::operation_type_mismatch_error(
-        &bin_expr.operator.to_string(),
+        &bin_expr.operator,
         left_type,
         right_type,
         &bin_expr.location,
