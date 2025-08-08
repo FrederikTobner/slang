@@ -4,6 +4,7 @@
 //! using a chain pattern that maintains logical execution order and type safety.
 
 use crate::{
+    error::StageError,
     hlist::{HCons, HList, HNil},
     stage::{CompilationStage, StageContext},
 };
@@ -72,7 +73,7 @@ pub trait ExecuteChain<Input> {
         input: Input,
         context: &mut StageContext,
         diagnostics: &mut DiagnosticEngine,
-    ) -> Result<Self::Output, ()>;
+    ) -> Result<Self::Output, StageError>;
 }
 
 impl<Input, Output> ExecuteChain<Input> for ExecutionChain<Input, Output, HNil> {
@@ -83,7 +84,7 @@ impl<Input, Output> ExecuteChain<Input> for ExecutionChain<Input, Output, HNil> 
         input: Input,
         _context: &mut StageContext,
         _diagnostics: &mut DiagnosticEngine,
-    ) -> Result<Self::Output, ()> {
+    ) -> Result<Self::Output, StageError> {
         Ok(input)
     }
 }
@@ -96,7 +97,7 @@ pub trait ExecuteTailFirst<Input> {
         input: Input,
         context: &mut StageContext,
         diagnostics: &mut DiagnosticEngine,
-    ) -> Result<Self::Output, ()>;
+    ) -> Result<Self::Output, StageError>;
 }
 
 impl<Input> ExecuteTailFirst<Input> for HNil {
@@ -107,7 +108,7 @@ impl<Input> ExecuteTailFirst<Input> for HNil {
         input: Input,
         _context: &mut StageContext,
         _diagnostics: &mut DiagnosticEngine,
-    ) -> Result<Self::Output, ()> {
+    ) -> Result<Self::Output, StageError> {
         Ok(input)
     }
 }
@@ -127,7 +128,7 @@ where
         input: Input,
         context: &mut StageContext,
         diagnostics: &mut DiagnosticEngine,
-    ) -> Result<Self::Output, ()> {
+    ) -> Result<Self::Output, StageError> {
         let intermediate = self.tail.execute_tail_first(input, context, diagnostics)?;
         self.head.execute(H::Input::from(intermediate), context, diagnostics)
     }
@@ -146,7 +147,7 @@ where
         input: Input,
         context: &mut StageContext,
         diagnostics: &mut DiagnosticEngine,
-    ) -> Result<Self::Output, ()> {
+    ) -> Result<Self::Output, StageError> {
         self.stages.execute_tail_first(input, context, diagnostics)
     }
 }

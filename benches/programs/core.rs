@@ -1,3 +1,5 @@
+#![allow(dead_code)]  // Benchmark programs may not all be actively used
+
 use super::BenchmarkProgram;
 
 /// Core benchmark programs - simple and commonly used

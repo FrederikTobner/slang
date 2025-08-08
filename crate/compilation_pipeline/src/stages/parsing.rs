@@ -1,4 +1,5 @@
 use crate::stage::{CompilationStage, StageContext};
+use crate::error::StageError;
 use slang_frontend::{Token, parser::Parser, LineInfo};
 use slang_ir::ast::Statement;
 use slang_shared::DiagnosticEngine;
@@ -10,7 +11,7 @@ impl CompilationStage for ParsingStage {
     type Input = Vec<Token>;
     type Output = Vec<Statement>;
 
-    fn execute(&self, input: Self::Input, context: &mut StageContext, diagnostics: &mut DiagnosticEngine) -> Result<Self::Output, ()> {
+    fn execute(&self, input: Self::Input, context: &mut StageContext, diagnostics: &mut DiagnosticEngine) -> Result<Self::Output, StageError> {
         // Notify observers about stage start
         context.observer_registry.notify_parsing_start(&input);
         
@@ -32,7 +33,7 @@ impl CompilationStage for ParsingStage {
                     context.observer_registry.notify_parsing_error(error);
                     diagnostics.emit_compiler_error(error.clone());
                 }
-                Err(())
+                Err(StageError::ExecutionFailed)
             }
         }
     }

@@ -1,1 +1,1 @@
-mod comments;
+mod tests;

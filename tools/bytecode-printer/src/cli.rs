@@ -74,8 +74,7 @@ pub fn analyze_bytecode(
         }
         Some(ext) => {
             return Err(format!(
-                "Unsupported file extension '.{}'. Expected '.sl' (source) or '.sip' (compiled bytecode)", 
-                ext
+                "Unsupported file extension '.{ext}'. Expected '.sl' (source) or '.sip' (compiled bytecode)"
             ).into());
         }
     };
@@ -95,7 +94,7 @@ pub fn analyze_bytecode(
     // Format and print the bytecode
     let formatter = format.create_formatter();
     let formatted_bytecode = formatter.format(&chunk, name)?;
-    println!("{}", formatted_bytecode);
+    println!("{formatted_bytecode}");
     
     Ok(())
 }
@@ -105,32 +104,32 @@ fn validate_input_file(file_path: &str) -> Result<(), Box<dyn std::error::Error>
     let path = std::path::Path::new(file_path);
     
     if !path.exists() {
-        return Err(format!("Input file '{}' does not exist", file_path).into());
+        return Err(format!("Input file '{file_path}' does not exist").into());
     }
     
     if !path.is_file() {
-        return Err(format!("Input path '{}' is not a file", file_path).into());
+        return Err(format!("Input path '{file_path}' is not a file").into());
     }
     
     match fs::File::open(path) {
         Ok(_) => Ok(()),
-        Err(e) => Err(format!("Cannot read input file '{}': {}", file_path, e).into()),
+        Err(e) => Err(format!("Cannot read input file '{file_path}': {e}").into()),
     }
 }
 
 /// Reads the source file content
 fn read_source_file(file_path: &str) -> Result<String, Box<dyn std::error::Error>> {
     fs::read_to_string(file_path)
-        .map_err(|e| format!("Failed to read source file '{}': {}", file_path, e).into())
+        .map_err(|e| format!("Failed to read source file '{file_path}': {e}").into())
 }
 
 /// Load bytecode from a compiled .sip file (ZIP archive containing bytecode.bin)
 fn load_bytecode_from_sip(file_path: &str) -> Result<Chunk, Box<dyn std::error::Error>> {
     let artifact = SlangArtifactFile::from_path(file_path)
-        .map_err(|e| format!("Failed to open .sip file '{}': {}", file_path, e))?;
+        .map_err(|e| format!("Failed to open .sip file '{file_path}': {e}"))?;
     
     artifact.read_chunk()
-        .map_err(|e| format!("Failed to read bytecode from .sip file '{}': {}", file_path, e).into())
+        .map_err(|e| format!("Failed to read bytecode from .sip file '{file_path}': {e}").into())
 }
 
 /// Compile source code to bytecode using the compilation pipeline

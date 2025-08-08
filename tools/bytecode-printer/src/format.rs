@@ -31,8 +31,7 @@ impl std::str::FromStr for BytecodeFormat {
             "debug" => Ok(BytecodeFormat::Debug),
             "json" => Ok(BytecodeFormat::Json),
             _ => Err(format!(
-                "Invalid format '{}'. Valid formats: pretty, debug, json", 
-                s
+                "Invalid format '{s}'. Valid formats: pretty, debug, json"
             )),
         }
     }

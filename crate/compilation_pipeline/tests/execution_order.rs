@@ -1,6 +1,7 @@
 //! Test to understand HList execution order
 
 use slang_compilation_pipeline::{
+    error::StageError,
     hlist::{HCons, HNil, Execute},
     stage::{CompilationStage, StageContext},
 };
@@ -14,7 +15,7 @@ impl CompilationStage for DebugStage {
     type Input = String;
     type Output = String;
 
-    fn execute(&self, input: String, _context: &mut StageContext, _diagnostics: &mut DiagnosticEngine) -> Result<String, ()> {
+    fn execute(&self, input: String, _context: &mut StageContext, _diagnostics: &mut DiagnosticEngine) -> Result<String, StageError> {
         println!("DebugStage '{}' executing with input: {}", self.name, input.len());
         Ok(format!("{}->{}", input, self.name))
     }

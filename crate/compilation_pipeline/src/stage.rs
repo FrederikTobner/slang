@@ -1,4 +1,5 @@
 use slang_shared::{DiagnosticEngine, CompilationContext};
+use crate::error::StageError;
 
 /// Core trait for compilation stages using associated types
 /// 
@@ -18,8 +19,8 @@ pub trait CompilationStage: Send + Sync + 'static {
     /// Execute the compilation stage
     /// 
     /// Takes a separate DiagnosticEngine to emit errors directly.
-    /// Returns Ok(output) on success, or Err(()) on failure (with errors emitted to diagnostics).
-    fn execute(&self, input: Self::Input, context: &mut StageContext, diagnostics: &mut DiagnosticEngine) -> Result<Self::Output, ()>;
+    /// Returns Ok(output) on success, or Err(StageError) on failure.
+    fn execute(&self, input: Self::Input, context: &mut StageContext, diagnostics: &mut DiagnosticEngine) -> Result<Self::Output, StageError>;
     
     /// Get the human-readable name of this stage
     fn name(&self) -> &'static str;

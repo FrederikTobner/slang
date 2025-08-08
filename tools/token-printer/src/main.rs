@@ -10,7 +10,7 @@ use std::process;
 /// Application entry point
 fn main() {
     if let Err(err) = run() {
-        eprintln!("{}: {}", "Error".red().bold(), err);
+        eprintln!("{}: {err}", "Error".red().bold());
         process::exit(1);
     }
 }

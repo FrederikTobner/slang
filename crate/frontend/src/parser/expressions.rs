@@ -218,9 +218,10 @@ impl<'a> ExpressionParsing for Parser<'a> {
             return Ok(Expression::Variable(ExprFactory::variable_expr_with_location(name_string, name_location)));
         }
 
+        let token = self.peek();
         Err(ParseErrorFactory::invalid_syntax(
             self.current_location(),
-            &format!("Expected expression, found {}", self.peek()),
+            &format!("Expected expression, found {token}"),
             None
         ))
     }

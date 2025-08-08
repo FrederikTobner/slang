@@ -13,7 +13,7 @@ impl ASTPrinter {
         Self {}
     }
 
-    fn print_ast(&self, statements: &Vec<Statement>) {
+    fn print_ast(&self, statements: &[Statement]) {
         println!("{}", "=== AST ===".bright_green().bold());
         println!("Found {} statements", statements.len());
         for (i, stmt) in statements.iter().enumerate() {

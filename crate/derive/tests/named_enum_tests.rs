@@ -184,6 +184,7 @@ fn test_roundtrip_conversion() {
 
 // Test enum mixing unit variants and variants with data
 #[derive(Debug, PartialEq, Clone, NamedEnum)]
+#[allow(clippy::enum_variant_names)]
 enum MixedEnum {
     #[name = "first_unit"]
     FirstUnit,

@@ -1,4 +1,5 @@
 use crate::stage::{CompilationStage, StageContext};
+use crate::error::StageError;
 use slang_backend::{bytecode::Chunk, codegen};
 use slang_ir::ast::Statement;
 use slang_shared::DiagnosticEngine;
@@ -10,7 +11,7 @@ impl CompilationStage for CodeGenerationStage {
     type Input = Vec<Statement>;
     type Output = Chunk;
 
-    fn execute(&self, input: Self::Input, context: &mut StageContext, diagnostics: &mut DiagnosticEngine) -> Result<Self::Output, ()> {
+    fn execute(&self, input: Self::Input, context: &mut StageContext, diagnostics: &mut DiagnosticEngine) -> Result<Self::Output, StageError> {
         // Notify observers about stage start
         context.observer_registry.notify_codegen_start(&input);
         
@@ -27,7 +28,7 @@ impl CompilationStage for CodeGenerationStage {
                     context.observer_registry.notify_codegen_error(error);
                     diagnostics.emit_compiler_error(error.clone());
                 }
-                Err(())
+                Err(StageError::ExecutionFailed)
             }
         }
     }

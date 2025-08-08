@@ -1,4 +1,5 @@
 use crate::stage::{CompilationStage, StageContext};
+use crate::error::StageError;
 use slang_frontend::{Lexer, Token};
 use slang_shared::DiagnosticEngine;
 use crate::source_file::SlangSourceFile;
@@ -10,7 +11,7 @@ impl CompilationStage for TokenizationStage {
     type Input = SlangSourceFile;
     type Output = Vec<Token>;
 
-    fn execute(&self, input: Self::Input, context: &mut StageContext, diagnostics: &mut DiagnosticEngine) -> Result<Self::Output, ()> {
+    fn execute(&self, input: Self::Input, context: &mut StageContext, diagnostics: &mut DiagnosticEngine) -> Result<Self::Output, StageError> {
         // Notify observers about stage start
         context.observer_registry.notify_tokenization_start(&input);
         
@@ -28,7 +29,7 @@ impl CompilationStage for TokenizationStage {
                     context.observer_registry.notify_tokenization_error(&error);
                     diagnostics.emit_compiler_error(error);
                 }
-                Err(())
+                Err(StageError::ExecutionFailed)
             }
         }
     }

@@ -34,7 +34,7 @@ impl super::super::BytecodeFormatter for JsonFormatter {
         let constants: Vec<JsonValue> = chunk.constants.iter().enumerate()
             .map(|(i, c)| json!({
                 "index": i,
-                "value": format!("{}", c),
+                "value": format!("{c}"),
                 "type": match c {
                     slang_backend::value::Value::I32(_) => "i32",
                     slang_backend::value::Value::I64(_) => "i64",
@@ -80,14 +80,14 @@ impl JsonFormatter {
         let base = json!({
             "offset": offset,
             "line": line,
-            "opcode": format!("{:?}", op).to_uppercase(),
+            "opcode": format!("{op:?}").to_uppercase(),
         });
 
         match op {
             OpCode::Constant => {
                 let constant_index = chunk.code[offset + 1] as usize;
                 let value = if constant_index < chunk.constants.len() {
-                    format!("{}", chunk.constants[constant_index])
+                    format!("{constant}", constant = chunk.constants[constant_index])
                 } else {
                     "<??>".to_string()
                 };
@@ -109,7 +109,7 @@ impl JsonFormatter {
                 (json!({
                     "offset": offset,
                     "line": line,
-                    "opcode": format!("{:?}", op).to_uppercase(),
+                    "opcode": format!("{op:?}").to_uppercase(),
                     "operand": var_index,
                     "identifier": name
                 }), offset + 2)
@@ -123,7 +123,7 @@ impl JsonFormatter {
                     "<?>"
                 };
                 let fn_info = if fn_constant_index < chunk.constants.len() {
-                    format!("{}", chunk.constants[fn_constant_index])
+                    format!("{fn_constant}", fn_constant = chunk.constants[fn_constant_index])
                 } else {
                     "<??>".to_string()
                 };
@@ -144,7 +144,7 @@ impl JsonFormatter {
                     "line": line,
                     "opcode": "CALL",
                     "operand": arg_count,
-                    "description": format!("{} arguments", arg_count)
+                    "description": format!("{arg_count} arguments")
                 }), offset + 2)
             }
             OpCode::JumpIfFalse | OpCode::Jump => {
@@ -153,7 +153,7 @@ impl JsonFormatter {
                 (json!({
                     "offset": offset,
                     "line": line,
-                    "opcode": format!("{:?}", op).to_uppercase(),
+                    "opcode": format!("{op:?}").to_uppercase(),
                     "operand": jump_offset,
                     "target": target
                 }), offset + 3)

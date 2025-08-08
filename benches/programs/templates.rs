@@ -1,8 +1,10 @@
-// Placeholder program builder - simplified for current benchmarks
+#![allow(dead_code)]  // Template functions may not all be actively used
 
 use std::fmt;
 
-#[derive(Debug, Clone)]
+/// Program builder - simplified for current benchmarks
+
+#[derive(Debug)]
 pub struct GeneratedProgram {
     pub source: String,
 }

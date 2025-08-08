@@ -1,8 +1,11 @@
+#![allow(dead_code)]  // Utility functions may not all be actively used
+
 use slang_compilation_pipeline::{
     ChainPipeline,
     result::CompilationResult as PipelineResult,
 };
 use slang_backend::VM;
+
 use slang_backend::bytecode::Chunk;
 use slang_ir::ast::Statement;
 use slang_compilation_pipeline::SlangSourceFile;

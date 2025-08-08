@@ -118,7 +118,7 @@ impl VM {
             if !self.stack.is_empty() {
                 println!("\n=== Values on stack at end of execution ===");
                 for value in &self.stack {
-                    println!("{}", value);
+                    println!("{value}");
                 }
             }
         }

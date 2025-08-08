@@ -73,7 +73,7 @@ pub fn run_file(input: &str) -> CliResult<()> {
 
     let chunk = read_bytecode_from_file(input)?;
     vm::execute_bytecode(&chunk).map_err(|e| CliError::Generic {
-        message: format!("{}: {} (in file '{}')", "Runtime Error".red(), e, input),
+        message: format!("{}: {e} (in file '{input}')", "Runtime Error".red()),
         exit_code: exit::Code::Software,
     })?;
 
@@ -126,7 +126,7 @@ fn process_source_file(input: &str, mode: ExecutionMode) -> CliResult<()> {
                 }
                 ExecutionMode::Execute => {
                     vm::execute_bytecode(&chunk).map_err(|e| CliError::Generic {
-                        message: format!("{}: {} (in file '{}')", "Runtime Error".red(), e, input),
+                        message: format!("{}: {e} (in file '{input}')", "Runtime Error".red()),
                         exit_code: exit::Code::Software,
                     })?;
                 }

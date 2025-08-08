@@ -5,6 +5,7 @@
 //! while maintaining complete type safety and enabling zero-cost abstractions.
 
 use crate::stage::{CompilationStage, StageContext};
+use crate::error::StageError;
 use slang_shared::DiagnosticEngine;
 
 /// Base trait for heterogeneous lists.
@@ -112,13 +113,13 @@ pub trait Execute<'a, Input> {
     ///
     /// # Returns
     /// * `Ok(Self::Output)` - The final output after all stages execute successfully
-    /// * `Err(())` - Compilation failed (details available in diagnostics)
+    /// * `Err(StageError)` - Compilation failed with specific error type
     fn execute(
         &self,
         input: Input,
         context: &mut StageContext,
         diagnostics: &mut DiagnosticEngine<'a>,
-    ) -> Result<Self::Output, ()>;
+    ) -> Result<Self::Output, StageError>;
 }
 
 /// Base case: empty HList passes input through unchanged.
@@ -134,7 +135,7 @@ impl<'a, T> Execute<'a, T> for HNil {
         input: T,
         _context: &mut StageContext,
         _diagnostics: &mut DiagnosticEngine<'a>,
-    ) -> Result<T, ()> {
+    ) -> Result<T, StageError> {
         Ok(input)
     }
 }
@@ -159,7 +160,7 @@ where
         input: Input,
         context: &mut StageContext,
         diagnostics: &mut DiagnosticEngine<'a>,
-    ) -> Result<Self::Output, ()> {
+    ) -> Result<Self::Output, StageError> {
         // Execute head stage - types are guaranteed to match by the compiler!
         let intermediate = self.head.execute(input, context, diagnostics)?;
 
