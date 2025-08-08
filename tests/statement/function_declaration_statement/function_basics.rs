@@ -10,7 +10,7 @@ fn with_multiple_params() {
         
         print_value(add(20, 22));
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -25,7 +25,7 @@ fn function_with_no_params() {
         
         print_value(get_magic_number());
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("420");
 }
@@ -41,7 +41,7 @@ fn empty_return() {
         void_function();
         print_value(42); // Just to verify program continues
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -57,7 +57,7 @@ fn with_no_return() {
         no_return_function();
         print_value(42); // Just to verify program continues
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -76,7 +76,7 @@ fn nested_function_calls() {
         
         print_value(add(multiply(3, 10), 12));
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -95,7 +95,7 @@ fn arguments_are_passed_by_value() {
         
         print_value(a); // Should print 5, not 15
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("5");
 }
@@ -114,7 +114,7 @@ fn factorial_recursive_function() {
         
         print_value(factorial(5));
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("120");
 }
@@ -132,7 +132,7 @@ fn fibonacci_recursive_function() {
         
         print_value(fibonacci(10)); // Should print 55
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("55");
 }
@@ -148,7 +148,7 @@ fn unit_function_parameter() {
         let result = test_fn(());
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("()");
 }
@@ -164,7 +164,7 @@ fn empty_return_statement() {
         let result = test_fn();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("()");
 }
@@ -180,7 +180,7 @@ fn returns_unit_explicitly() {
         let result = test_fn();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("()");
 }
@@ -196,7 +196,7 @@ fn returns_unit_implicitly() {
         let result = test_fn();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("()");
 }
@@ -210,9 +210,11 @@ fn print_function() {
         
         print_value(test_fn);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("<fn test_fn>");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("<fn test_fn>");
 }
 
 #[test]
@@ -222,7 +224,9 @@ fn print_native_function() {
         
         print_value(print_value);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("<native fn print_value>");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("<native fn print_value>");
 }

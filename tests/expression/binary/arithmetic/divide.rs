@@ -16,7 +16,7 @@ fn with_integer_variables(#[case] type_name: &str) {
         print_value(a / b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("42");
 }
@@ -33,7 +33,7 @@ fn with_float_variables(#[case] type_name: &str) {
         print_value(a / b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("42");
 }
@@ -51,7 +51,7 @@ fn with_integer_literals(#[case] type_name: &str) {
         print_value(126{type_name} / 3{type_name});
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("42");
 }
@@ -67,7 +67,7 @@ fn with_float_literals(#[case] type_name: &str) {
         print_value(126.0{type_name} / 3.0{type_name});
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("42");
 }
@@ -85,7 +85,7 @@ fn integer_division_ignores_remainder(#[case] type_name: &str) {
     print_value(3{type_name} / 2{type_name});
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("1");
 }
@@ -101,7 +101,7 @@ fn integer_division_uses_remainder(#[case] type_name: &str) {
     print_value(3.0{type_name} / 2.0{type_name});
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("1.5");
 }
@@ -151,9 +151,8 @@ fn with_incompatible_types() {
                 "#
             );
 
-            let expected_error = format!(
-                "Type mismatch: cannot apply '/' operator on {left_type} and {right_type}"
-            );
+            let expected_error =
+                format!("Type mismatch: cannot apply '/' operator on {left_type} and {right_type}");
 
             // Act & Assert
             ProgramAssertion::new(&program)
@@ -172,7 +171,7 @@ fn with_unit() {
         let y = ();
         print_value(x / y);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -187,7 +186,7 @@ fn with_function() {
         fn my_function() {}
         print_value(my_function / my_function);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -201,11 +200,12 @@ fn with_native_function() {
     let program = r#"
         print_value / print_value;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
         .error_code(ErrorCode::OperationTypeMismatch)
-        .stderr("Type mismatch: cannot apply '/' operator on fn(unknown) -> i32 and fn(unknown) -> i32");
+        .stderr(
+            "Type mismatch: cannot apply '/' operator on fn(unknown) -> i32 and fn(unknown) -> i32",
+        );
 }
-

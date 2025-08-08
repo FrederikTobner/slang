@@ -7,7 +7,7 @@ fn basic() {
     let program = r#"
         print_value(undefined_var);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -23,7 +23,7 @@ fn in_expression() {
         let result = x + undefined_var;
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -38,7 +38,7 @@ fn in_assignment() {
         let x = undefined_var;
         print_value(x);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -52,7 +52,7 @@ fn in_function_call() {
     let program = r#"
         print_value(undefined_var);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

@@ -46,11 +46,11 @@
 
 pub mod source_file;
 // Core traits and types for the new pipeline architecture
-pub mod stage;
 pub mod error;
-pub mod result;
-pub mod stages;
 pub mod observer;
+pub mod result;
+pub mod stage;
+pub mod stages;
 
 // Type-safe HList-based pipeline implementation
 pub mod hlist;
@@ -68,23 +68,25 @@ pub mod chain_pipeline;
 pub use hlist::{Execute, HCons, HList, HList1, HList2, HList3, HList4, HList5, HNil};
 
 // Re-export new hybrid pattern types
-pub use execution_chain::{ExecutionChain, ExecuteChain};
+pub use execution_chain::{ExecuteChain, ExecutionChain};
 
 // Re-export typed builder components
 pub use chain_pipeline::{
-    ChainPipeline, TokenizationPipeline, ParsingPipeline, ASTPipeline, FullCompilationPipeline,
+    ASTPipeline, ChainPipeline, FullCompilationPipeline, ParsingPipeline, TokenizationPipeline,
 };
-
 
 // Export the source file type
 pub use source_file::{SlangSourceFile, SourceFileError};
 
 // Supporting API
 pub use {
-    execution_chain::{TokenizationChain, ParsingChain, ASTChain, FullCompilationChain},
-    stage::{CompilationStage, StageContext},
-    observer::{StageObserver, ObserverRegistry, TokenizationObserver, ParsingObserver, SemanticObserver, CodegenObserver},
     error::ErrorStrategy,
+    execution_chain::{ASTChain, FullCompilationChain, ParsingChain, TokenizationChain},
+    observer::{
+        CodegenObserver, ObserverRegistry, ParsingObserver, SemanticObserver, StageObserver,
+        TokenizationObserver,
+    },
     result::CompilationResult,
-    stages::{TokenizationStage, ParsingStage, SemanticAnalysisStage, CodeGenerationStage},
+    stage::{CompilationStage, StageContext},
+    stages::{CodeGenerationStage, ParsingStage, SemanticAnalysisStage, TokenizationStage},
 };

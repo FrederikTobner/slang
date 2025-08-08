@@ -11,7 +11,7 @@ pub mod vm;
 
 #[derive(Debug, Clone)]
 pub struct BenchmarkProgram {
-    #[allow(dead_code)]  // Used in benchmarks which may not all be active
+    #[allow(dead_code)] // Used in benchmarks which may not all be active
     pub name: &'static str,
     pub source: &'static str,
 }

@@ -1,8 +1,8 @@
-pub mod pretty;
 pub mod debug;
+pub mod pretty;
 
-pub use pretty::PrettyFormatter;
 pub use debug::DebugFormatter;
+pub use pretty::PrettyFormatter;
 
 use slang_frontend::Token;
 

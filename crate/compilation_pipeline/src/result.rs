@@ -16,8 +16,6 @@ pub enum CompilationResult<'a, T> {
     },
 }
 
-
-
 impl<'a, T> CompilationResult<'a, T> {
     /// Check if the compilation succeeded
     pub fn is_success(&self) -> bool {
@@ -38,7 +36,7 @@ impl<'a, T> CompilationResult<'a, T> {
     }
 
     /// Extract the output data if compilation succeeded
-    /// 
+    ///
     /// Returns None if compilation failed
     pub fn output(self) -> Option<T> {
         match self {
@@ -55,5 +53,3 @@ impl<'a, T> CompilationResult<'a, T> {
         }
     }
 }
-
-

@@ -11,7 +11,7 @@ fn type_mismatch() {
         
         let func_var: fn(string) -> i32 = add; // Type mismatch
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -29,7 +29,7 @@ fn parameter_count_mismatch() {
         
         let func_var: fn(i32, i32) -> i32 = single_param; // Parameter count mismatch
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -47,7 +47,7 @@ fn return_mismatch() {
         
         let func_var: fn() -> i32 = returns_string; // Return type mismatch
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

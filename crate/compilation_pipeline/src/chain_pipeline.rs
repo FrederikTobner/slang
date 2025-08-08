@@ -1,19 +1,21 @@
- //! Simplified Chain-Aware Pipeline for Slang Compilation
+//! Simplified Chain-Aware Pipeline for Slang Compilation
 //!
 //! This module implements a straightforward pipeline that supports different
 //! execution chains with observer registration. Observers may be registered
 //! for any stage, but will only be called if that stage executes.
 
-use crate::stage::StageContext;
-use crate::observer::{StageObserver, ObserverRegistry};
-use crate::execution_chain::{TokenizationChain, ParsingChain, ASTChain, FullCompilationChain, ExecuteChain};
-use crate::result::CompilationResult;
 use crate::error::ErrorStrategy;
+use crate::execution_chain::{
+    ASTChain, ExecuteChain, FullCompilationChain, ParsingChain, TokenizationChain,
+};
+use crate::observer::{ObserverRegistry, StageObserver};
+use crate::result::CompilationResult;
 use crate::source_file::SlangSourceFile;
-use slang_shared::DiagnosticEngine;
-use slang_ir::ast::Statement;
-use slang_frontend::Token;
+use crate::stage::StageContext;
 use slang_backend::bytecode::Chunk;
+use slang_frontend::Token;
+use slang_ir::ast::Statement;
+use slang_shared::DiagnosticEngine;
 
 /// Simple pipeline that knows its execution chain.
 /// Observers can be registered for any stage, but will only be called
@@ -80,9 +82,9 @@ impl<Chain> ChainPipeline<Chain> {
 
     /// Add a tokenization observer to monitor tokenization stage.
     /// Note: Observer will only be called if the chain includes tokenization.
-    pub fn with_tokenization_observer<T>(mut self, observer: T) -> Self 
-    where 
-        T: StageObserver<SlangSourceFile, Vec<Token>> + 'static 
+    pub fn with_tokenization_observer<T>(mut self, observer: T) -> Self
+    where
+        T: StageObserver<SlangSourceFile, Vec<Token>> + 'static,
     {
         self.observer_registry.add_tokenization_observer(observer);
         self
@@ -90,9 +92,9 @@ impl<Chain> ChainPipeline<Chain> {
 
     /// Add a parsing observer to monitor parsing stage.
     /// Note: Observer will only be called if the chain includes parsing.
-    pub fn with_parsing_observer<T>(mut self, observer: T) -> Self 
-    where 
-        T: StageObserver<Vec<Token>, Vec<Statement>> + 'static 
+    pub fn with_parsing_observer<T>(mut self, observer: T) -> Self
+    where
+        T: StageObserver<Vec<Token>, Vec<Statement>> + 'static,
     {
         self.observer_registry.add_parsing_observer(observer);
         self
@@ -100,9 +102,9 @@ impl<Chain> ChainPipeline<Chain> {
 
     /// Add a semantic analysis observer to monitor semantic analysis stage.
     /// Note: Observer will only be called if the chain includes semantic analysis.
-    pub fn with_semantic_observer<T>(mut self, observer: T) -> Self 
-    where 
-        T: StageObserver<Vec<Statement>, Vec<Statement>> + 'static 
+    pub fn with_semantic_observer<T>(mut self, observer: T) -> Self
+    where
+        T: StageObserver<Vec<Statement>, Vec<Statement>> + 'static,
     {
         self.observer_registry.add_semantic_observer(observer);
         self
@@ -110,9 +112,9 @@ impl<Chain> ChainPipeline<Chain> {
 
     /// Add a code generation observer to monitor code generation stage.
     /// Note: Observer will only be called if the chain includes code generation.
-    pub fn with_codegen_observer<T>(mut self, observer: T) -> Self 
-    where 
-        T: StageObserver<Vec<Statement>, Chunk> + 'static 
+    pub fn with_codegen_observer<T>(mut self, observer: T) -> Self
+    where
+        T: StageObserver<Vec<Statement>, Chunk> + 'static,
     {
         self.observer_registry.add_codegen_observer(observer);
         self
@@ -125,7 +127,10 @@ where
     Chain: ExecuteChain<SlangSourceFile>,
 {
     /// Execute the configured pipeline and return the result.
-    pub fn execute(self, source_file: SlangSourceFile) -> CompilationResult<'static, Chain::Output> {
+    pub fn execute(
+        self,
+        source_file: SlangSourceFile,
+    ) -> CompilationResult<'static, Chain::Output> {
         let mut context = StageContext::with_observer_registry(
             source_file.content().to_string(),
             Some(source_file.file_name().to_string()),
@@ -133,14 +138,16 @@ where
         );
         let mut diagnostics = DiagnosticEngine::new();
 
-        match self.chain.execute_chain(source_file, &mut context, &mut diagnostics) {
+        match self
+            .chain
+            .execute_chain(source_file, &mut context, &mut diagnostics)
+        {
             Ok(output) => CompilationResult::Success {
                 output,
                 diagnostics,
             },
-            Err(_) => CompilationResult::Failed {
-                diagnostics,
-            },
+            Err(_) => CompilationResult::Failed { diagnostics },
         }
     }
 }
+

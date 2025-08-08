@@ -91,7 +91,7 @@ impl IntoLiteralValue for LiteralValue {
 }
 
 /// Extension trait for automatic type inference from literal values
-/// 
+///
 /// # Design Principles Applied:
 /// - **Single Responsibility**: Only handles type inference
 pub trait LiteralTypeInference {

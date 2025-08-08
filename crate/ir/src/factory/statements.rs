@@ -4,8 +4,8 @@
 //! with automatic type inference and location management.
 
 use crate::ast::{
-    AssignmentStatement, Expression, FunctionDeclarationStmt, IfStatement, LetStatement,
-    Parameter, ReturnStatement, TypeDefinitionStmt, BlockExpr,
+    AssignmentStatement, BlockExpr, Expression, FunctionDeclarationStmt, IfStatement, LetStatement,
+    Parameter, ReturnStatement, TypeDefinitionStmt,
 };
 use slang_error::location::Location;
 use slang_types::TypeId;
@@ -15,15 +15,15 @@ pub struct StmtFactory;
 
 impl StmtFactory {
     /// Create a mutable variable declaration statement struct with explicit location
-    /// 
+    ///
     /// Returns the specific `LetStatement` type instead of the generic `Statement` enum.
     /// Use this when you need the specific type for further manipulation.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// use slang_ir::{StmtFactory, ExprFactory, ast::Expression};
     /// use slang_error::location::Location;
-    /// 
+    ///
     /// let location = Location::new(0, 1, 1, 10);
     /// let loc = Location::new(0, 1, 1, 1);
     /// let literal = ExprFactory::literal_expr_with_location(0, loc);
@@ -37,7 +37,7 @@ impl StmtFactory {
         location: Location,
     ) -> LetStatement {
         let expr_type = value.expr_type();
-        
+
         LetStatement {
             name: name.into(),
             is_mutable: true,
@@ -46,17 +46,17 @@ impl StmtFactory {
             location,
         }
     }
-    
+
     /// Create a mutable typed variable declaration statement struct with explicit location
-    /// 
+    ///
     /// Returns the specific `LetStatement` type instead of the generic `Statement` enum.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// use slang_ir::{StmtFactory, ExprFactory, ast::Expression};
     /// use slang_error::location::Location;
     /// use slang_types::TypeId;
-    /// 
+    ///
     /// let location = Location::new(0, 1, 1, 15);
     /// let loc = Location::new(0, 1, 1, 1);
     /// let literal = ExprFactory::literal_expr_with_location(42, loc);
@@ -65,10 +65,10 @@ impl StmtFactory {
     /// ```
     #[inline(always)]
     pub fn let_mut_typed_stmt_with_location<S: Into<String>>(
-        name: S, 
-        var_type: TypeId, 
-        value: Expression, 
-        location: Location
+        name: S,
+        var_type: TypeId,
+        value: Expression,
+        location: Location,
     ) -> LetStatement {
         LetStatement {
             name: name.into(),
@@ -78,12 +78,12 @@ impl StmtFactory {
             location,
         }
     }
-    
+
     /// Create a variable declaration statement struct with explicit location
-    /// 
+    ///
     /// Returns the specific `LetStatement` type instead of the generic `Statement` enum.
     /// Use this when you need the specific type for further manipulation.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// use slang_ir::{StmtFactory, ExprFactory, ast::Expression};
@@ -102,7 +102,7 @@ impl StmtFactory {
         location: Location,
     ) -> LetStatement {
         let expr_type = value.expr_type();
-        
+
         LetStatement {
             name: name.into(),
             is_mutable: false,
@@ -111,34 +111,34 @@ impl StmtFactory {
             location,
         }
     }
-    
+
     /// Create a typed variable declaration statement struct with explicit type and location
-    /// 
+    ///
     /// Returns the specific `LetStatement` type instead of the generic `Statement` enum.
     /// Use this when you need the specific type for further manipulation.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// use slang_ir::{StmtFactory, ExprFactory, ast::Expression};
     /// use slang_error::location::Location;
     /// use slang_types::TypeId;
-    /// 
+    ///
     /// let location = Location::new(0, 1, 1, 15);
     /// let loc = Location::new(0, 1, 1, 1);
     /// let literal = ExprFactory::literal_expr_with_location(42, loc);
     /// let expr = Expression::Literal(literal);
     /// let typed_var = StmtFactory::let_typed_stmt_with_location("result", TypeId::i32(), expr, location);
     /// ```
-    /// 
+    ///
     /// # Design Principles Applied:
     /// - **Type Safety**: Explicit type specification with proper location tracking
     /// - **Location Accuracy**: Uses provided location for the entire statement
     #[inline(always)]
     pub fn let_typed_stmt_with_location<S: Into<String>>(
-        name: S, 
-        var_type: TypeId, 
+        name: S,
+        var_type: TypeId,
         value: Expression,
-        location: Location
+        location: Location,
     ) -> LetStatement {
         LetStatement {
             name: name.into(),
@@ -150,15 +150,15 @@ impl StmtFactory {
     }
 
     /// Create a variable assignment statement struct with explicit location
-    /// 
+    ///
     /// Returns the specific `AssignmentStatement` type instead of the generic `Statement` enum.
     /// Use this when you need the specific type for further manipulation.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// use slang_ir::{StmtFactory, ExprFactory, ast::Expression};
     /// use slang_error::location::Location;
-    /// 
+    ///
     /// let location = Location::new(0, 1, 1, 15);
     /// let loc = Location::new(0, 1, 1, 1);
     /// let literal = ExprFactory::literal_expr_with_location(100, loc);
@@ -177,12 +177,12 @@ impl StmtFactory {
             location,
         }
     }
-    
+
     /// Create a return statement struct with a value and explicit location
-    /// 
+    ///
     /// Returns the specific `ReturnStatement` type instead of the generic `Statement` enum.
     /// Use this when you need the specific type for further manipulation.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// use slang_ir::{StmtFactory, ExprFactory, ast::{Expression, BlockExpr}};
@@ -195,23 +195,26 @@ impl StmtFactory {
     /// let return_stmt = StmtFactory::return_value_stmt_with_location(expr, location);
     /// ```
     #[inline(always)]
-    pub fn return_value_stmt_with_location(value: Expression, location: Location) -> ReturnStatement {
+    pub fn return_value_stmt_with_location(
+        value: Expression,
+        location: Location,
+    ) -> ReturnStatement {
         ReturnStatement {
             value: Some(value),
             location,
         }
     }
-    
+
     /// Create a return statement struct without a value and explicit location
-    /// 
+    ///
     /// Returns the specific `ReturnStatement` type instead of the generic `Statement` enum.
     /// Use this when you need the specific type for further manipulation.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// use slang_ir::StmtFactory;
     /// use slang_error::location::Location;
-    /// 
+    ///
     /// let location = Location::new(0, 1, 1, 6);
     /// let return_stmt = StmtFactory::return_void_stmt_with_location(location);
     /// ```
@@ -222,22 +225,22 @@ impl StmtFactory {
             location,
         }
     }
-    
+
     /// Create a function declaration statement struct with explicit location
-    /// 
+    ///
     /// Returns the specific `FunctionDeclarationStmt` type instead of the generic `Statement` enum.
     /// Use this when you need the specific type for further manipulation.
-    /// 
+    ///
     /// # Type Safety
     /// This method accepts a `BlockExpr` directly instead of an `Expression`,
     /// eliminating the need for runtime panics and ensuring compile-time type safety.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// use slang_ir::{StmtFactory, ExprFactory, ast::{BlockExpr, Parameter}};
     /// use slang_types::TypeId;
     /// use slang_error::location::Location;
-    /// 
+    ///
     /// let location = Location::new(0, 1, 1, 20);
     /// let body = BlockExpr {
     ///     statements: vec![],
@@ -263,22 +266,22 @@ impl StmtFactory {
             location,
         }
     }
-    
+
     /// Create an if statement struct with explicit location
-    /// 
+    ///
     /// Returns the specific `IfStatement` type instead of the generic `Statement` enum.
     /// Use this when you need the specific type for further manipulation.
-    /// 
+    ///
     /// # Type Safety
     /// This method accepts `BlockExpr` directly for branches instead of `Expression`,
     /// eliminating the need for runtime panics and ensuring compile-time type safety.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// use slang_ir::{StmtFactory, ExprFactory, ast::{Expression, BlockExpr}};
     /// use slang_error::location::Location;
     /// use slang_types::TypeId;
-    /// 
+    ///
     /// let location = Location::new(0, 1, 1, 20);
     /// let literal = ExprFactory::literal_expr_with_location(true, Location::new(0, 1, 1, 1));
     /// let condition = Expression::Literal(literal);
@@ -304,18 +307,18 @@ impl StmtFactory {
             location,
         }
     }
-    
+
     /// Create a type definition statement struct with explicit location
-    /// 
+    ///
     /// Returns the specific `TypeDefinitionStmt` type instead of the generic `Statement` enum.
     /// Use this when you need the specific type for further manipulation.
-    /// 
+    ///
     /// # Examples
     /// ```rust
     /// use slang_ir::StmtFactory;
     /// use slang_error::location::Location;
     /// use slang_types::TypeId;
-    /// 
+    ///
     /// let location = Location::new(0, 1, 1, 10);
     /// let type_def = StmtFactory::type_definition_stmt_with_location("Person", vec![("name".to_string(), TypeId::string())], location);
     /// ```

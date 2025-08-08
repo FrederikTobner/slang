@@ -89,4 +89,3 @@ fn permission_denied_error() {
         .failure()
         .code(77); // NoPerm exit code
 }
-

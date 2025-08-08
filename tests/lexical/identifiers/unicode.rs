@@ -7,7 +7,7 @@ fn basic() {
         let héllo = "unicode";
         print_value(héllo);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("unicode");
 }
@@ -19,7 +19,7 @@ fn emoji_identifier() {
         let 😮 = "test";
         print_value(😮);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("test");
 }
@@ -31,7 +31,7 @@ fn greek_identifier() {
         let π = 3.14159;
         print_value(π);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("3.14159");
 }
@@ -43,7 +43,7 @@ fn mixed_unicode_ascii() {
         let user_名前 = "name";
         print_value(user_名前);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("name");
 }

@@ -1,12 +1,12 @@
-use slang_compilation_pipeline::{ChainPipeline, ErrorStrategy, SlangSourceFile};
-use slang_compilation_pipeline::result::CompilationResult;
 use crate::compile_options::CompileOptions;
 use crate::error::{CliError, CliResult};
 use crate::exit;
 use clap::{Parser as ClapParser, Subcommand};
 use colored::Colorize;
 use slang_backend::bytecode::Chunk;
-use slang_backend::{vm, SlangArtifactFile};
+use slang_backend::{SlangArtifactFile, vm};
+use slang_compilation_pipeline::result::CompilationResult;
+use slang_compilation_pipeline::{ChainPipeline, ErrorStrategy, SlangSourceFile};
 use std::fs;
 use std::path::Path;
 
@@ -92,27 +92,26 @@ fn process_source_file(input: &str, mode: ExecutionMode) -> CliResult<()> {
     let source = read_source_file(input)?;
     let recovery_mode = matches!(mode, ExecutionMode::Execute);
 
-    let compile_options = CompileOptions {
-        recovery_mode
-    };
+    let compile_options = CompileOptions { recovery_mode };
 
     let source_file = SlangSourceFile::new(input, source.clone())?;
-    
+
     let error_strategy = if compile_options.recovery_mode {
-        ErrorStrategy::Recover { continue_on_non_critical: true }
+        ErrorStrategy::Recover {
+            continue_on_non_critical: true,
+        }
     } else {
         ErrorStrategy::FailFast
     };
-    
 
-    let pipeline = ChainPipeline::full_compilation()
-        .with_error_strategy(error_strategy);
+    let pipeline = ChainPipeline::full_compilation().with_error_strategy(error_strategy);
 
     let result = pipeline.execute(source_file);
 
     match result {
         CompilationResult::Success {
-            output: chunk, diagnostics
+            output: chunk,
+            diagnostics,
         } => {
             let has_diagnostics = diagnostics.error_count() > 0 || diagnostics.warning_count() > 0;
             if has_diagnostics {
@@ -202,7 +201,7 @@ fn read_source_file(path: &str) -> CliResult<String> {
 /// Ok(()) if successful, or a CliError on failure
 fn write_bytecode(chunk: &Chunk, output_path: &str) -> CliResult<()> {
     let artifact = SlangArtifactFile::new(output_path);
-    
+
     artifact.write_chunk(chunk).map_err(|e| match e {
         slang_backend::SlangArtifactFileError::Io { source, .. } => {
             let exit_code = if source.kind() == std::io::ErrorKind::PermissionDenied {
@@ -215,12 +214,16 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> CliResult<()> {
                 path: output_path.to_string(),
                 exit_code,
             }
-        },
-        slang_backend::SlangArtifactFileError::Zip { source, context, .. } => CliError::Generic {
+        }
+        slang_backend::SlangArtifactFileError::Zip {
+            source, context, ..
+        } => CliError::Generic {
             message: format!("ZIP error: {context} - {source}"),
             exit_code: exit::Code::IoErr,
         },
-        slang_backend::SlangArtifactFileError::Serialization { source, context, .. } => CliError::Generic {
+        slang_backend::SlangArtifactFileError::Serialization {
+            source, context, ..
+        } => CliError::Generic {
             message: format!("Serialization error: {context} - {source}"),
             exit_code: exit::Code::Software,
         },
@@ -264,7 +267,9 @@ fn read_bytecode_from_file(input_path: &str) -> CliResult<Chunk> {
             path: input_path.to_string(),
             exit_code: exit::Code::IoErr,
         },
-        slang_backend::SlangArtifactFileError::Zip { source, context, .. } => CliError::Generic {
+        slang_backend::SlangArtifactFileError::Zip {
+            source, context, ..
+        } => CliError::Generic {
             message: format!("ZIP error: {context} - {source}"),
             exit_code: exit::Code::Dataerr,
         },
@@ -272,7 +277,9 @@ fn read_bytecode_from_file(input_path: &str) -> CliResult<Chunk> {
             message: "Invalid bytecode file format: missing bytecode.bin".to_string(),
             exit_code: exit::Code::Dataerr,
         },
-        slang_backend::SlangArtifactFileError::Serialization { source, context, .. } => CliError::Generic {
+        slang_backend::SlangArtifactFileError::Serialization {
+            source, context, ..
+        } => CliError::Generic {
             message: format!("Serialization error: {context} - {source}"),
             exit_code: exit::Code::Dataerr,
         },

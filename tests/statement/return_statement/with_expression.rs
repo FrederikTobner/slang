@@ -12,7 +12,7 @@ fn with_arithmetic_expression() {
         let result = test_function();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -29,7 +29,7 @@ fn with_variable_expression() {
         let result = test_function();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -49,7 +49,7 @@ fn with_function_call() {
         let result = outer_function();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -62,7 +62,7 @@ fn return_type_mismatch_error() {
             return "hello";
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

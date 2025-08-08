@@ -7,7 +7,7 @@ fn let_keyword() {
     let program = r#"
         let let = 42;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -21,7 +21,7 @@ fn fn_keyword() {
     let program = r#"
         let fn = 42;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -35,7 +35,7 @@ fn if_keyword() {
     let program = r#"
         let if = 42;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -49,7 +49,7 @@ fn else_keyword() {
     let program = r#"
         let else = 42;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -63,7 +63,7 @@ fn return_keyword() {
     let program = r#"
         let return = 42;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -77,7 +77,7 @@ fn struct_keyword() {
     let program = r#"
         let struct = 42;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

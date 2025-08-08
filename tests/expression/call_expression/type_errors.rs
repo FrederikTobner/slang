@@ -10,7 +10,7 @@ use rstest::rstest;
 fn with_integer_variable(#[case] type_name: &str, #[case] value: &str) {
     // Arrange
     let program = format!("let a: {type_name} = {value}; a();");
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -24,7 +24,7 @@ fn with_integer_variable(#[case] type_name: &str, #[case] value: &str) {
 fn with_float_variable(#[case] type_name: &str, #[case] value: &str) {
     // Arrange
     let program = format!("let a: {type_name} = {value}; a();");
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -39,7 +39,7 @@ fn with_string_variable() {
         let a: string = "Hello";
         a();
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -53,7 +53,7 @@ fn with_string_variable() {
 fn with_boolean_variable(#[case] value: &str) {
     // Arrange
     let program = format!("let a: bool = {value}; a();");
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -68,11 +68,10 @@ fn with_unit_variable() {
         let a = ();
         a();
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
         .error_code(ErrorCode::VariableNotCallable)
         .stderr("Cannot call () type 'a' as a function");
 }
-

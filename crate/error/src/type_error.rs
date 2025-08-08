@@ -1,8 +1,8 @@
 // Type system error types and implementations
+use crate::Location;
 use crate::compiler_error::CompilationError;
 use crate::domain_error::{DomainError, ErrorCategory};
 use crate::error_codes::ErrorCode;
-use crate::Location;
 
 /// Type system errors with detailed context
 #[derive(Debug, Clone)]
@@ -33,7 +33,9 @@ pub type TypeResult<T> = Result<T, TypeError>;
 impl DomainError for TypeError {
     fn to_compiler_error(&self) -> CompilationError {
         let (code, message) = match self {
-            TypeError::TypeNotFound { name, suggestions, .. } => {
+            TypeError::TypeNotFound {
+                name, suggestions, ..
+            } => {
                 let base_msg = format!("Type not found: {name}");
                 let msg = if suggestions.is_empty() {
                     base_msg
@@ -42,37 +44,51 @@ impl DomainError for TypeError {
                 };
                 (ErrorCode::UndefinedType, msg)
             }
-            TypeError::CircularDefinition { name, dependency_chain, .. } => {
-                (ErrorCode::CircularDependency, 
-                 format!("Circular type definition for '{}': {}", name, dependency_chain.join(" -> ")))
-            }
-            TypeError::InvalidTypeConstruction { attempted_type, reason, .. } => {
-                (ErrorCode::InvalidType, 
-                 format!("Invalid type construction for '{attempted_type}': {reason}"))
-            }
+            TypeError::CircularDefinition {
+                name,
+                dependency_chain,
+                ..
+            } => (
+                ErrorCode::CircularDependency,
+                format!(
+                    "Circular type definition for '{}': {}",
+                    name,
+                    dependency_chain.join(" -> ")
+                ),
+            ),
+            TypeError::InvalidTypeConstruction {
+                attempted_type,
+                reason,
+                ..
+            } => (
+                ErrorCode::InvalidType,
+                format!("Invalid type construction for '{attempted_type}': {reason}"),
+            ),
         };
-        
+
         let loc = self.location();
         CompilationError::new(code, message, loc.line, loc.column, loc.position, Some(1))
     }
-    
+
     fn location(&self) -> &Location {
         match self {
-            TypeError::TypeNotFound { location, .. } |
-            TypeError::CircularDefinition { location, .. } |
-            TypeError::InvalidTypeConstruction { location, .. } => location,
+            TypeError::TypeNotFound { location, .. }
+            | TypeError::CircularDefinition { location, .. }
+            | TypeError::InvalidTypeConstruction { location, .. } => location,
         }
     }
-    
+
     fn category(&self) -> ErrorCategory {
         ErrorCategory::Type
     }
-    
+
     fn short_description(&self) -> String {
         match self {
             TypeError::TypeNotFound { name, .. } => format!("Type not found: {name}"),
             TypeError::CircularDefinition { name, .. } => format!("Circular definition: {name}"),
-            TypeError::InvalidTypeConstruction { attempted_type, .. } => format!("Invalid type: {attempted_type}"),
+            TypeError::InvalidTypeConstruction { attempted_type, .. } => {
+                format!("Invalid type: {attempted_type}")
+            }
         }
     }
 }

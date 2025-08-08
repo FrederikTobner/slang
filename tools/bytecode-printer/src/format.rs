@@ -1,4 +1,4 @@
-use crate::formatter::{BytecodeFormatter, PrettyFormatter, DebugFormatter, JsonFormatter};
+use crate::formatter::{BytecodeFormatter, DebugFormatter, JsonFormatter, PrettyFormatter};
 
 /// Available output formats for bytecode display
 #[derive(Clone, Debug, PartialEq, Eq)]

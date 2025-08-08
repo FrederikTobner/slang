@@ -33,4 +33,3 @@ pub fn execute(statements: &[Statement], context: &mut CompilationContext) -> Co
         Ok(())
     }
 }
-

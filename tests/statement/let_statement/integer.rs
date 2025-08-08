@@ -16,7 +16,7 @@ fn from_literal(#[case] type_name: &str) {
         print_value(a);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("42");
 }
@@ -34,13 +34,13 @@ fn from_literal_with_type_suffix(#[case] type_name: &str) {
         print_value(a);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("42");
 }
 
 #[rstest]
-#[case("")] 
+#[case("")]
 #[case("i32")]
 #[case("i64")]
 #[case("u32")]
@@ -53,7 +53,7 @@ fn from_binary_expression(#[case] type_name: &str) {
         print_value(a);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("42");
 }
@@ -70,7 +70,7 @@ fn from_true_literal(#[case] type_name: &str) {
         let a: {type_name} = true;
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -92,7 +92,7 @@ fn from_false_literal(#[case] type_name: &str) {
         let a: {type_name} = false;
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -114,7 +114,7 @@ fn from_string_literal(#[case] type_name: &str) {
         let a: {type_name} = "hello";
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -136,7 +136,7 @@ fn from_float_literal(#[case] type_name: &str) {
         let a: {type_name} = 42.0;
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -158,7 +158,7 @@ fn from_float_literal_with_f32_suffix(#[case] type_name: &str) {
         let a: {type_name} = 42.0f32;
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -180,7 +180,7 @@ fn from_float_literal_with_f64_suffix(#[case] type_name: &str) {
         let a: {type_name} = 42.0f64;
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -196,7 +196,7 @@ fn int_type() {
     let program = r#"
         let a: int = 0; 
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -210,7 +210,7 @@ fn i32_value_out_of_range() {
     let program = r#"
         let a: i32 = 2147483648; 
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -224,7 +224,7 @@ fn u32_unsigned_negative_value_error() {
     let program = r#"
         let a: u32 = -1;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -244,7 +244,7 @@ fn using_type_as_variable_name(#[case] type_name: &str) {
         let {type_name} = 42.0;
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()

@@ -1,5 +1,5 @@
-use slang_error::{CompilationError, ErrorCode};
 use slang_error::Location;
+use slang_error::{CompilationError, ErrorCode};
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
 
@@ -205,16 +205,12 @@ impl SemanticAnalysisError {
             }
 
             SemanticAnalysisError::SymbolRedefinition { name, kind, .. } => match kind.as_str() {
-                "function" => format!(
-                    "Function '{name}' is already defined in the current scope."
-                ),
-                "variable" => format!(
-                    "Variable '{name}' is already defined in the current scope."
-                ),
+                "function" => format!("Function '{name}' is already defined in the current scope."),
+                "variable" => format!("Variable '{name}' is already defined in the current scope."),
                 "type" => format!("Type '{name}' is already defined in the current scope."),
-                "parameter" => format!(
-                    "Parameter '{name}' is already defined in the current scope."
-                ),
+                "parameter" => {
+                    format!("Parameter '{name}' is already defined in the current scope.")
+                }
                 "variable (conflicts with type)" => format!(
                     "Symbol '{name}' of kind 'variable (conflicts with type)' is already defined or conflicts with an existing symbol."
                 ),
@@ -315,9 +311,7 @@ impl SemanticAnalysisError {
                 actual,
                 ..
             } => {
-                format!(
-                    "Function '{function_name}' expects {expected} arguments, but got {actual}"
-                )
+                format!("Function '{function_name}' expects {expected} arguments, but got {actual}")
             }
 
             SemanticAnalysisError::ArgumentTypeMismatch {

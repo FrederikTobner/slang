@@ -9,7 +9,7 @@ fn mutable_with_type_annotation() {
         x = 50;
         print_value(x);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("50");
 }
@@ -22,7 +22,7 @@ fn mutable_with_type_inference() {
         x = 50;
         print_value(x);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("50");
 }
@@ -37,7 +37,7 @@ fn multiple_assignments_to_mutable() {
         x = x + 5;
         print_value(x);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("35");
 }
@@ -51,7 +51,7 @@ fn mixed_mutable_immutable() {
         y = y + x;       // OK: reading from immutable, writing to mutable
         print_value(y);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("30");
 }
@@ -66,7 +66,7 @@ fn block_scope_mutability() {
             print_value(x);
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("20");
 }
@@ -78,7 +78,7 @@ fn with_immutable_variable() {
         let x: i32 = 10;
         x = 20; // This should cause an error
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -94,7 +94,7 @@ fn with_immutable_in_expression() {
         let y = 20;
         x = y + 5; // Should fail
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

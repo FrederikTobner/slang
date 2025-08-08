@@ -1,8 +1,8 @@
 use crate::format::TokenFormat;
 use crate::observer::TokenPrinter;
 use clap::Parser as ClapParser;
-use slang_compilation_pipeline::chain_pipeline::ChainPipeline;
 use slang_compilation_pipeline::SlangSourceFile;
+use slang_compilation_pipeline::chain_pipeline::ChainPipeline;
 use std::fs;
 
 /// Command line interface for the Slang token analyzer
@@ -20,23 +20,34 @@ pub struct Parser {
     pub input: String,
 
     /// Output format for token display
-    #[arg(short, long, default_value = "pretty", help = "Output format: pretty, debug")]
+    #[arg(
+        short,
+        long,
+        default_value = "pretty",
+        help = "Output format: pretty, debug"
+    )]
     pub format: TokenFormat,
 }
 
 /// Main CLI command handler for tokenizing files using the new chain-aware pipeline
-pub fn tokenize_file(file_path: &str, format: TokenFormat) -> Result<(), Box<dyn std::error::Error>> {
+pub fn tokenize_file(
+    file_path: &str,
+    format: TokenFormat,
+) -> Result<(), Box<dyn std::error::Error>> {
     let source = fs::read_to_string(file_path)?;
     let formatter = format.create_formatter();
-    
+
     let source_file = SlangSourceFile::for_tooling(file_path, source.clone());
-    
+
     // Create a pipeline with only tokenization - no parsing or further stages
-    let pipeline = ChainPipeline::tokenization_only()  
+    let pipeline = ChainPipeline::tokenization_only()
         .with_tokenization_observer(TokenPrinter::new(formatter, file_path.to_string()));
 
     match pipeline.execute(source_file) {
-        slang_compilation_pipeline::result::CompilationResult::Success { output: _tokens, diagnostics } => {
+        slang_compilation_pipeline::result::CompilationResult::Success {
+            output: _tokens,
+            diagnostics,
+        } => {
             if diagnostics.has_errors() {
                 eprintln!("Warnings occurred during tokenization:");
                 diagnostics.report_all(&source);
@@ -48,6 +59,7 @@ pub fn tokenize_file(file_path: &str, format: TokenFormat) -> Result<(), Box<dyn
             return Err("Tokenization failed".into());
         }
     }
-    
+
     Ok(())
 }
+

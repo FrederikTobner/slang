@@ -1,10 +1,10 @@
-use std::collections::HashSet;
+use super::error::SemanticAnalysisError;
 use slang_error::{CompilationError, ErrorCode};
 use slang_shared::CompilationContext;
-use super::error::SemanticAnalysisError;
+use std::collections::HashSet;
 
 /// A centralized error collector that handles error creation, formatting, and deduplication
-/// 
+///
 /// This provides a single source of truth for error handling in the semantic analysis system,
 /// ensuring consistent error formatting and efficient deduplication.
 pub struct ErrorCollector {
@@ -31,23 +31,27 @@ impl ErrorCollector {
     }
 
     /// Add a semantic analysis error to the collection
-    /// 
+    ///
     /// # Arguments
     /// * `error` - The semantic analysis error to add
     /// * `context` - The compilation context for error conversion
-    /// 
+    ///
     /// # Returns
     /// `true` if the error was added (not a duplicate), `false` if it was deduplicated
-    pub fn add_semantic_error(&mut self, error: SemanticAnalysisError, context: &CompilationContext) -> bool {
+    pub fn add_semantic_error(
+        &mut self,
+        error: SemanticAnalysisError,
+        context: &CompilationContext,
+    ) -> bool {
         let compiler_error = error.to_compiler_error(context);
         self.add_compiler_error(compiler_error)
     }
 
     /// Add a compiler error directly to the collection
-    /// 
+    ///
     /// # Arguments
     /// * `error` - The compiler error to add
-    /// 
+    ///
     /// # Returns
     /// `true` if the error was added (not a duplicate), `false` if it was deduplicated
     pub fn add_compiler_error(&mut self, error: CompilationError) -> bool {
@@ -80,7 +84,6 @@ impl ErrorCollector {
     pub fn error_count(&self) -> usize {
         self.errors.len()
     }
-
 }
 
 impl Default for ErrorCollector {

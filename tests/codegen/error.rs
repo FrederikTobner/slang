@@ -8,7 +8,7 @@ fn too_many_constants() {
     for i in 0..300 {
         program.push_str(&format!("print_value({i});\n"));
     }
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()

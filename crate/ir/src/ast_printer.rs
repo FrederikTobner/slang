@@ -5,7 +5,7 @@ use crate::ast::{
     LiteralExpr, LiteralValue, ReturnStatement, Statement, TypeDefinitionStmt, UnaryExpr,
     UnaryOperator, VariableExpr,
 };
-use slang_error::{DomainResult, ParseError, ParseResult, Location, ErrorCode};
+use slang_error::{DomainResult, ErrorCode, Location, ParseError, ParseResult};
 use slang_types::{
     TYPE_NAME_BOOL, TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_FLOAT, TYPE_NAME_I32, TYPE_NAME_I64,
     TYPE_NAME_INT, TYPE_NAME_STRING, TYPE_NAME_U32, TYPE_NAME_U64, TYPE_NAME_UNIT,
@@ -51,7 +51,10 @@ impl ASTPrinter {
 }
 
 impl Visitor<()> for ASTPrinter {
-    fn visit_function_declaration_statement(&mut self, fn_decl: &FunctionDeclarationStmt) -> DomainResult<()> {
+    fn visit_function_declaration_statement(
+        &mut self,
+        fn_decl: &FunctionDeclarationStmt,
+    ) -> DomainResult<()> {
         println!(
             "{}Function: {} -> {:?}",
             self.indent(),
@@ -99,7 +102,10 @@ impl Visitor<()> for ASTPrinter {
         Ok(())
     }
 
-    fn visit_assignment_statement(&mut self, assign_stmt: &AssignmentStatement) -> DomainResult<()> {
+    fn visit_assignment_statement(
+        &mut self,
+        assign_stmt: &AssignmentStatement,
+    ) -> DomainResult<()> {
         let indent = self.indent();
         println!("{indent}Assignment: {} =", assign_stmt.name);
         self.indent_level += 1;
@@ -247,7 +253,10 @@ impl Visitor<()> for ASTPrinter {
         Ok(())
     }
 
-    fn visit_function_type_expression(&mut self, func_type_expr: &FunctionTypeExpr) -> DomainResult<()> {
+    fn visit_function_type_expression(
+        &mut self,
+        func_type_expr: &FunctionTypeExpr,
+    ) -> DomainResult<()> {
         print!("{}fn(", self.indent());
         for (i, _param_type) in func_type_expr.param_types.iter().enumerate() {
             if i > 0 {

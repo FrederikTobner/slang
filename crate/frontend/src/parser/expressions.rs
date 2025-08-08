@@ -2,13 +2,13 @@
 // Contains logic for parsing expressions with operator precedence
 
 use super::core::Parser;
-use slang_error::{ParseError, ParseErrorFactory};
 use crate::token::Tokentype;
-use slang_ir::ast::{BinaryOperator, Expression, UnaryOperator, BlockExpr};
-use slang_ir::ExprFactory; 
+use slang_error::{ParseError, ParseErrorFactory};
+use slang_ir::ExprFactory;
+use slang_ir::ast::{BinaryOperator, BlockExpr, Expression, UnaryOperator};
 
 /// Extension trait for expression parsing functionality
-/// 
+///
 /// This trait extends the Parser with expression parsing methods,
 /// using the precedence climbing method to parse expressions
 /// according to the language's operator precedence rules:
@@ -23,37 +23,41 @@ use slang_ir::ExprFactory;
 pub trait ExpressionParsing {
     /// Entry point for parsing expressions
     fn expression(&mut self) -> Result<Expression, ParseError>;
-    
+
     /// Parse logical OR expressions (lowest precedence)
     fn logical_or(&mut self) -> Result<Expression, ParseError>;
-    
+
     /// Parse logical AND expressions
     fn logical_and(&mut self) -> Result<Expression, ParseError>;
-    
+
     /// Parse equality expressions (==, !=)
     fn equality(&mut self) -> Result<Expression, ParseError>;
-    
+
     /// Parse comparison expressions (>, <, >=, <=)
     fn comparison(&mut self) -> Result<Expression, ParseError>;
-    
+
     /// Parse term expressions (+, -)
     fn term(&mut self) -> Result<Expression, ParseError>;
-    
+
     /// Parse factor expressions (*, /)
     fn factor(&mut self) -> Result<Expression, ParseError>;
-    
+
     /// Parse unary expressions (-, !)
     fn unary(&mut self) -> Result<Expression, ParseError>;
-    
+
     /// Parse primary expressions (literals, variables, grouped)
     fn primary(&mut self) -> Result<Expression, ParseError>;
-    
+
     /// Finish parsing a function call after name and '('
-    fn finish_call(&mut self, name: String, name_location: slang_error::location::Location) -> Result<Expression, ParseError>;
-    
+    fn finish_call(
+        &mut self,
+        name: String,
+        name_location: slang_error::location::Location,
+    ) -> Result<Expression, ParseError>;
+
     /// Parse conditional expressions (if/else)
     fn conditional_expression(&mut self) -> Result<Expression, ParseError>;
-    
+
     /// Parse block expressions
     fn parse_block_expression(&mut self) -> Result<BlockExpr, ParseError>;
 }
@@ -157,10 +161,9 @@ impl<'a> ExpressionParsing for Parser<'a> {
             let start_pos = position.pos;
             let end_pos = position.end_pos();
             let location = self.location_from_range(start_pos, end_pos);
-            return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
-                value_string,
-                location
-            )));
+            return Ok(Expression::Literal(
+                ExprFactory::literal_expr_with_location(value_string, location),
+            ));
         }
 
         if let Some((lexeme, position)) = self.match_boolean_literal_token() {
@@ -169,10 +172,9 @@ impl<'a> ExpressionParsing for Parser<'a> {
             let start_pos = position.pos;
             let end_pos = position.end_pos();
             let location = self.location_from_range(start_pos, end_pos);
-            return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
-                bool_value,
-                location
-            )));
+            return Ok(Expression::Literal(
+                ExprFactory::literal_expr_with_location(bool_value, location),
+            ));
         }
 
         if self.match_token(&Tokentype::If) {
@@ -190,12 +192,17 @@ impl<'a> ExpressionParsing for Parser<'a> {
                 let right_paren = self.advance();
                 let end_pos = right_paren.pos + right_paren.lexeme.len();
                 let location = self.location_from_range(start_pos, end_pos);
-                return Ok(Expression::Literal(ExprFactory::literal_expr_with_location((), location)));
+                return Ok(Expression::Literal(
+                    ExprFactory::literal_expr_with_location((), location),
+                ));
             }
 
             let expr = self.expression()?;
             if !self.match_token(&Tokentype::RightParen) {
-                return Err(ParseErrorFactory::expected_closing_paren(self.current_location(), Some("after expression")));
+                return Err(ParseErrorFactory::expected_closing_paren(
+                    self.current_location(),
+                    Some("after expression"),
+                ));
             }
             return Ok(expr);
         }
@@ -215,18 +222,24 @@ impl<'a> ExpressionParsing for Parser<'a> {
                 return self.finish_call(name_string, name_location);
             }
 
-            return Ok(Expression::Variable(ExprFactory::variable_expr_with_location(name_string, name_location)));
+            return Ok(Expression::Variable(
+                ExprFactory::variable_expr_with_location(name_string, name_location),
+            ));
         }
 
         let token = self.peek();
         Err(ParseErrorFactory::invalid_syntax(
             self.current_location(),
             &format!("Expected expression, found {token}"),
-            None
+            None,
         ))
     }
 
-    fn finish_call(&mut self, name: String, name_location: slang_error::location::Location) -> Result<Expression, ParseError> {
+    fn finish_call(
+        &mut self,
+        name: String,
+        name_location: slang_error::location::Location,
+    ) -> Result<Expression, ParseError> {
         let mut arguments = Vec::new();
 
         if !self.check(&Tokentype::RightParen) {
@@ -237,7 +250,7 @@ impl<'a> ExpressionParsing for Parser<'a> {
                     return Err(ParseErrorFactory::invalid_syntax(
                         self.current_location(),
                         "Cannot have more than 255 arguments",
-                        None
+                        None,
                     ));
                 }
                 arguments.push(self.expression()?);
@@ -245,31 +258,40 @@ impl<'a> ExpressionParsing for Parser<'a> {
         }
 
         if !self.match_token(&Tokentype::RightParen) {
-            return Err(ParseErrorFactory::expected_closing_paren(self.current_location(), Some("after function arguments")));
+            return Err(ParseErrorFactory::expected_closing_paren(
+                self.current_location(),
+                Some("after function arguments"),
+            ));
         }
 
-        Ok(Expression::Call(slang_ir::ExprFactory::call_expr_with_location(
-            name,
-            arguments,
-            name_location,
-        )))
+        Ok(Expression::Call(
+            slang_ir::ExprFactory::call_expr_with_location(name, arguments, name_location),
+        ))
     }
 
     fn conditional_expression(&mut self) -> Result<Expression, ParseError> {
         let condition = self.expression()?;
 
         if !self.match_token(&Tokentype::LeftBrace) {
-            return Err(ParseErrorFactory::expected_opening_brace(self.current_location(), Some("after if condition")));
+            return Err(ParseErrorFactory::expected_opening_brace(
+                self.current_location(),
+                Some("after if condition"),
+            ));
         }
 
         let then_branch = self.parse_block_expression()?;
 
         if !self.match_token(&Tokentype::Else) {
-            return Err(ParseErrorFactory::expected_else_after_if(self.current_location()));
+            return Err(ParseErrorFactory::expected_else_after_if(
+                self.current_location(),
+            ));
         }
 
         if !self.match_token(&Tokentype::LeftBrace) {
-            return Err(ParseErrorFactory::expected_opening_brace(self.current_location(), Some("after else")));
+            return Err(ParseErrorFactory::expected_opening_brace(
+                self.current_location(),
+                Some("after else"),
+            ));
         }
 
         let else_branch = self.parse_block_expression()?;
@@ -305,9 +327,12 @@ impl<'a> ExpressionParsing for Parser<'a> {
         }
 
         if !self.match_token(&Tokentype::RightBrace) {
-            return Err(ParseErrorFactory::expected_closing_brace(self.current_location(), Some("after block")));
+            return Err(ParseErrorFactory::expected_closing_brace(
+                self.current_location(),
+                Some("after block"),
+            ));
         }
-        
+
         Ok(ExprFactory::block_expr(statements, return_expr))
     }
 }

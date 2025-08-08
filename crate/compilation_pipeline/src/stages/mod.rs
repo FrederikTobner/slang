@@ -1,11 +1,11 @@
 // Concrete implementations of compilation stages
-pub mod tokenization;
+pub mod codegen;
 pub mod parsing;
 pub mod semantic;
-pub mod codegen;
+pub mod tokenization;
 
 // Re-export all stages for convenience
-pub use tokenization::TokenizationStage;
+pub use codegen::CodeGenerationStage;
 pub use parsing::ParsingStage;
 pub use semantic::SemanticAnalysisStage;
-pub use codegen::CodeGenerationStage;
+pub use tokenization::TokenizationStage;

@@ -59,7 +59,6 @@ pub enum OpCode {
     EndScope,
 }
 
-
 /// A chunk of bytecode representing a compiled program
 #[derive(Debug)]
 pub struct Chunk {

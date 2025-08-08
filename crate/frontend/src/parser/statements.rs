@@ -2,40 +2,38 @@
 // Contains logic for parsing all statement types
 
 use super::core::Parser;
-use slang_error::{ParseError, ParseErrorFactory};
 use crate::token::Tokentype;
-use slang_ir::ast::{
-    Expression, Parameter, Statement,
-};
+use slang_error::{ParseError, ParseErrorFactory};
 use slang_ir::StmtFactory;
+use slang_ir::ast::{Expression, Parameter, Statement};
 use slang_types::PrimitiveType;
 
 /// Extension trait for statement parsing functionality
-/// 
+///
 /// This trait extends the Parser with statement parsing methods,
 /// providing a clean interface for parsing all statement types.
 pub trait StatementParsing {
     /// Parse a single statement
     fn statement(&mut self) -> Result<Statement, ParseError>;
-    
+
     /// Parse let statement
     fn parse_let_statement(&mut self) -> Result<Statement, ParseError>;
-    
+
     /// Parse type definition
     fn parse_type_definition(&mut self) -> Result<Statement, ParseError>;
-    
+
     /// Parse function declaration
     fn parse_function_declaration(&mut self) -> Result<Statement, ParseError>;
-    
+
     /// Parse return statement
     fn parse_return_statement(&mut self) -> Result<Statement, ParseError>;
-    
+
     /// Parse if statement
     fn parse_if_statement(&mut self) -> Result<Statement, ParseError>;
-    
+
     /// Parse assignment statement
     fn parse_assignment_statement(&mut self) -> Result<Statement, ParseError>;
-    
+
     /// Parse expression statement
     fn parse_expression_statement(&mut self) -> Result<Statement, ParseError>;
 }
@@ -75,7 +73,10 @@ impl<'a> StatementParsing for Parser<'a> {
         let (name, position) = if let Some((name, position)) = self.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some("Expected identifier after 'let'")));
+            return Err(ParseErrorFactory::expected_identifier(
+                self.current_location(),
+                Some("Expected identifier after 'let'"),
+            ));
         };
 
         let location = self.location_from_range(position.pos, position.end_pos());
@@ -92,23 +93,34 @@ impl<'a> StatementParsing for Parser<'a> {
         let expr = self.expression()?;
 
         if !self.match_token(&Tokentype::Semicolon) {
-            return Err(ParseErrorFactory::expected_semicolon(self.current_location(), Some("after let statement")));
+            return Err(ParseErrorFactory::expected_semicolon(
+                self.current_location(),
+                Some("after let statement"),
+            ));
         }
 
         // Use factory based on whether we have explicit type annotation
         let stmt = if var_type != PrimitiveType::Unknown.into() {
-            // Explicit type annotation - use typed declaration  
+            // Explicit type annotation - use typed declaration
             if is_mutable {
-                Statement::Let(StmtFactory::let_mut_typed_stmt_with_location(name, var_type, expr, location))
+                Statement::Let(StmtFactory::let_mut_typed_stmt_with_location(
+                    name, var_type, expr, location,
+                ))
             } else {
-                Statement::Let(StmtFactory::let_typed_stmt_with_location(name, var_type, expr, location))
+                Statement::Let(StmtFactory::let_typed_stmt_with_location(
+                    name, var_type, expr, location,
+                ))
             }
         } else {
             // No explicit type - use type inference with proper location
             if is_mutable {
-                Statement::Let(StmtFactory::let_mut_stmt_with_location(name, expr, location))
+                Statement::Let(StmtFactory::let_mut_stmt_with_location(
+                    name, expr, location,
+                ))
             } else {
-                Statement::Let(StmtFactory::let_var_stmt_with_location(name, expr, location))
+                Statement::Let(StmtFactory::let_var_stmt_with_location(
+                    name, expr, location,
+                ))
             }
         };
 
@@ -120,13 +132,19 @@ impl<'a> StatementParsing for Parser<'a> {
         let (name, position) = if let Some((name, position)) = self.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some("struct name after 'struct' keyword")));
+            return Err(ParseErrorFactory::expected_identifier(
+                self.current_location(),
+                Some("struct name after 'struct' keyword"),
+            ));
         };
 
         let location = self.location_from_range(position.pos, position.end_pos());
 
         if !self.match_token(&Tokentype::LeftBrace) {
-            return Err(ParseErrorFactory::expected_opening_brace(self.current_location(), Some("after struct name")));
+            return Err(ParseErrorFactory::expected_opening_brace(
+                self.current_location(),
+                Some("after struct name"),
+            ));
         }
 
         let mut fields = Vec::new();
@@ -135,7 +153,10 @@ impl<'a> StatementParsing for Parser<'a> {
             let field_name = if let Some((name, _position)) = self.match_identifier_token() {
                 name.to_string()
             } else {
-                return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some("field name")));
+                return Err(ParseErrorFactory::expected_identifier(
+                    self.current_location(),
+                    Some("field name"),
+                ));
             };
 
             if !self.match_token(&Tokentype::Colon) {
@@ -146,19 +167,30 @@ impl<'a> StatementParsing for Parser<'a> {
             fields.push((field_name, field_type));
 
             if !self.match_token(&Tokentype::Comma) && !self.check(&Tokentype::RightBrace) {
-                return Err(ParseErrorFactory::expected_comma(self.current_location(), Some("after field or '}'")));
+                return Err(ParseErrorFactory::expected_comma(
+                    self.current_location(),
+                    Some("after field or '}'"),
+                ));
             }
         }
 
         if !self.match_token(&Tokentype::RightBrace) {
-            return Err(ParseErrorFactory::expected_closing_brace(self.current_location(), Some("after struct fields")));
+            return Err(ParseErrorFactory::expected_closing_brace(
+                self.current_location(),
+                Some("after struct fields"),
+            ));
         }
 
         if !self.match_token(&Tokentype::Semicolon) {
-            return Err(ParseErrorFactory::expected_semicolon(self.current_location(), Some("after struct definition")));
+            return Err(ParseErrorFactory::expected_semicolon(
+                self.current_location(),
+                Some("after struct definition"),
+            ));
         }
 
-        Ok(Statement::TypeDefinition(StmtFactory::type_definition_stmt_with_location(name, fields, location)))
+        Ok(Statement::TypeDefinition(
+            StmtFactory::type_definition_stmt_with_location(name, fields, location),
+        ))
     }
 
     /// Parse function declaration
@@ -166,19 +198,22 @@ impl<'a> StatementParsing for Parser<'a> {
         let (name, position) = if let Some((name, position)) = self.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some(&format!(
-                "function name found {}",
-                self.peek().token_type
-            ))));
+            return Err(ParseErrorFactory::expected_identifier(
+                self.current_location(),
+                Some(&format!("function name found {}", self.peek().token_type)),
+            ));
         };
 
         let name_location = self.location_from_range(position.pos, position.end_pos());
 
         if !self.match_token(&Tokentype::LeftParen) {
-            return Err(ParseErrorFactory::expected_opening_paren(self.current_location(), Some(&format!(
-                "after function name found {}",
-                self.peek().token_type
-            ))));
+            return Err(ParseErrorFactory::expected_opening_paren(
+                self.current_location(),
+                Some(&format!(
+                    "after function name found {}",
+                    self.peek().token_type
+                )),
+            ));
         }
 
         let mut parameters = Vec::new();
@@ -190,7 +225,7 @@ impl<'a> StatementParsing for Parser<'a> {
                     return Err(ParseErrorFactory::invalid_syntax(
                         self.current_location(),
                         "Cannot have more than 255 parameters",
-                        None
+                        None,
                     ));
                 }
                 parameters.push(self.parse_parameter()?);
@@ -198,10 +233,13 @@ impl<'a> StatementParsing for Parser<'a> {
         }
 
         if !self.match_token(&Tokentype::RightParen) {
-            return Err(ParseErrorFactory::expected_closing_paren(self.current_location(), Some(&format!(
-                "after parameters found {}",
-                self.peek().token_type
-            ))));
+            return Err(ParseErrorFactory::expected_closing_paren(
+                self.current_location(),
+                Some(&format!(
+                    "after parameters found {}",
+                    self.peek().token_type
+                )),
+            ));
         }
 
         let return_type = if self.match_token(&Tokentype::Arrow) {
@@ -211,12 +249,23 @@ impl<'a> StatementParsing for Parser<'a> {
         };
 
         if !self.match_token(&Tokentype::LeftBrace) {
-            return Err(ParseErrorFactory::expected_opening_brace(self.current_location(), Some("before function body")));
+            return Err(ParseErrorFactory::expected_opening_brace(
+                self.current_location(),
+                Some("before function body"),
+            ));
         }
 
         let body = self.parse_block_expression()?;
 
-        Ok(Statement::FunctionDeclaration(StmtFactory::function_stmt_with_location(name, parameters, return_type, body, name_location)))
+        Ok(Statement::FunctionDeclaration(
+            StmtFactory::function_stmt_with_location(
+                name,
+                parameters,
+                return_type,
+                body,
+                name_location,
+            ),
+        ))
     }
 
     /// Parse return statement
@@ -230,7 +279,10 @@ impl<'a> StatementParsing for Parser<'a> {
         };
 
         if !self.match_token(&Tokentype::Semicolon) {
-            return Err(ParseErrorFactory::expected_semicolon(self.current_location(), Some("after return statement")));
+            return Err(ParseErrorFactory::expected_semicolon(
+                self.current_location(),
+                Some("after return statement"),
+            ));
         }
 
         // Use utility function for cleaner location calculation
@@ -254,14 +306,20 @@ impl<'a> StatementParsing for Parser<'a> {
         let condition = self.expression()?;
 
         if !self.match_token(&Tokentype::LeftBrace) {
-            return Err(ParseErrorFactory::expected_opening_brace(self.current_location(), Some("after if condition")));
+            return Err(ParseErrorFactory::expected_opening_brace(
+                self.current_location(),
+                Some("after if condition"),
+            ));
         }
 
         let then_branch = self.parse_block_expression()?;
 
         let else_expr = if self.match_token(&Tokentype::Else) {
             if !self.match_token(&Tokentype::LeftBrace) {
-                return Err(ParseErrorFactory::expected_opening_brace(self.current_location(), Some("after else")));
+                return Err(ParseErrorFactory::expected_opening_brace(
+                    self.current_location(),
+                    Some("after else"),
+                ));
             }
             Some(self.parse_block_expression()?)
         } else {
@@ -271,7 +329,12 @@ impl<'a> StatementParsing for Parser<'a> {
         let end_pos = self.previous().pos + self.previous().lexeme.len();
         let location = self.location_from_range(if_token_pos, end_pos);
 
-        Ok(Statement::If(StmtFactory::if_stmt_with_location(condition, then_branch, else_expr, location)))
+        Ok(Statement::If(StmtFactory::if_stmt_with_location(
+            condition,
+            then_branch,
+            else_expr,
+            location,
+        )))
     }
 
     /// Parse assignment statement
@@ -279,7 +342,10 @@ impl<'a> StatementParsing for Parser<'a> {
         let (name, position) = if let Some((name, position)) = self.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some("for assignment")));
+            return Err(ParseErrorFactory::expected_identifier(
+                self.current_location(),
+                Some("for assignment"),
+            ));
         };
 
         let token_pos = position.pos;
@@ -291,14 +357,19 @@ impl<'a> StatementParsing for Parser<'a> {
         let value = self.expression()?;
 
         if !self.match_token(&Tokentype::Semicolon) {
-            return Err(ParseErrorFactory::expected_semicolon(self.current_location(), Some("after assignment")));
+            return Err(ParseErrorFactory::expected_semicolon(
+                self.current_location(),
+                Some("after assignment"),
+            ));
         }
 
         // Calculate proper location span using utility
         let end_pos = self.previous().pos + self.previous().lexeme.len();
         let location = self.location_from_range(token_pos, end_pos);
 
-        Ok(Statement::Assignment(StmtFactory::assign_stmt_with_location(name, value, location)))
+        Ok(Statement::Assignment(
+            StmtFactory::assign_stmt_with_location(name, value, location),
+        ))
     }
 
     /// Parse expression statement
@@ -312,7 +383,10 @@ impl<'a> StatementParsing for Parser<'a> {
             }
             _ => {
                 if !self.match_token(&Tokentype::Semicolon) {
-                    return Err(ParseErrorFactory::expected_semicolon(self.current_location(), Some("after expression")));
+                    return Err(ParseErrorFactory::expected_semicolon(
+                        self.current_location(),
+                        Some("after expression"),
+                    ));
                 }
             }
         }
@@ -331,7 +405,10 @@ impl<'a> Parser<'a> {
         let (name, position) = if let Some((name, position)) = self.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some("parameter name")));
+            return Err(ParseErrorFactory::expected_identifier(
+                self.current_location(),
+                Some("parameter name"),
+            ));
         };
 
         if !self.match_token(&Tokentype::Colon) {

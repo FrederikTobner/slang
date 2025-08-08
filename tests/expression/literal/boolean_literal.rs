@@ -6,11 +6,9 @@ fn true_literal() {
     let program = r#"
         print_value(true);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program)
-        .succeeds()
-        .stdout("true");
+    ProgramAssertion::new(program).succeeds().stdout("true");
 }
 
 #[test]
@@ -19,10 +17,7 @@ fn false_literal() {
     let program = r#"
         print_value(false);
     "#;
-    
-    // Act & Assert
-    ProgramAssertion::new(program)
-        .succeeds()
-        .stdout("false");
-}
 
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("false");
+}

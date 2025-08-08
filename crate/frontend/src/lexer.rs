@@ -1,6 +1,6 @@
 use crate::token::{Token, Tokentype};
-use slang_error::{CompileResult, CompilationError, ErrorCode, LineInfo};
-use unicode_ident::{is_xid_start, is_xid_continue};
+use slang_error::{CompilationError, CompileResult, ErrorCode, LineInfo};
+use unicode_ident::{is_xid_continue, is_xid_start};
 
 /// Check if a character can start an identifier (including emojis)
 fn is_identifier_start(c: char) -> bool {
@@ -122,8 +122,16 @@ impl<'a> Lexer<'a> {
     /// * `lexeme` - The string representation of the token
     /// * `start_pos` - The starting position of the token in the input
     /// * `suffix` - The optional suffix for numeric literals
-    fn add_token_with_suffix(&mut self, token_type: Tokentype, lexeme: String, start_pos: usize, suffix: Option<String>) {
-        self.tokens.push(Token::new_with_suffix(token_type, lexeme, start_pos, suffix));
+    fn add_token_with_suffix(
+        &mut self,
+        token_type: Tokentype,
+        lexeme: String,
+        start_pos: usize,
+        suffix: Option<String>,
+    ) {
+        self.tokens.push(Token::new_with_suffix(
+            token_type, lexeme, start_pos, suffix,
+        ));
         self.tokens_on_current_line += 1;
     }
 
@@ -313,7 +321,7 @@ fn handle_number(state: &mut Lexer, start_pos: usize) {
     if let Some(&c) = state.peek() {
         if c.is_ascii_alphabetic() {
             let mut potential_suffix = String::new();
-            
+
             // Collect potential suffix characters
             while let Some(&c) = state.peek() {
                 if c.is_ascii_alphanumeric() {
@@ -323,7 +331,7 @@ fn handle_number(state: &mut Lexer, start_pos: usize) {
                     break;
                 }
             }
-            
+
             // Validate the suffix - only allow known type suffixes
             match potential_suffix.as_str() {
                 "i32" | "i64" | "u32" | "u64" | "f32" | "f64" => {
@@ -400,12 +408,7 @@ fn handle_string(state: &mut Lexer) {
 /// * `token_type` - The type of token to add
 /// * `lexeme` - The string representation of the token
 /// * `start_pos` - The starting position of the token in the input
-fn handle_simple_token(
-    state: &mut Lexer,
-    token_type: Tokentype,
-    lexeme: &str,
-    start_pos: usize,
-) {
+fn handle_simple_token(state: &mut Lexer, token_type: Tokentype, lexeme: &str, start_pos: usize) {
     state.advance();
     state.add_token(token_type, lexeme.to_string(), start_pos);
 }

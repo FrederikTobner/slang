@@ -8,5 +8,6 @@ pub mod vm;
 
 // Re-export common types
 pub use artifact_file::{SlangArtifactFile, SlangArtifactFileError};
-pub use vm::VM;
 pub use codegen::CodeGenerator;
+pub use vm::VM;
+

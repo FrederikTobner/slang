@@ -18,10 +18,10 @@ fn main() {
 /// Main application logic separated from exit handling
 fn run() -> Result<(), String> {
     let args = cli::Parser::parse();
-    
+
     #[cfg(windows)]
     colored::control::set_virtual_terminal(true);
-    
-    cli::tokenize_file(&args.input, args.format)
-        .map_err(|e| e.to_string())
+
+    cli::tokenize_file(&args.input, args.format).map_err(|e| e.to_string())
 }
+

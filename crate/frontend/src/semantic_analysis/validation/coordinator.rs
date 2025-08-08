@@ -1,19 +1,16 @@
+use slang_ir::ast::{BinaryExpr, Expression, LetStatement};
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
-use slang_ir::ast::{BinaryExpr, Expression, LetStatement};
 
-use super::{
-    TypeChecker,
-    TypeCoercion,
-    TypeInference,
-    TypeValidation,
-    inference::{finalize_inferred_type, determine_let_statement_type},
-    coercion::{check_unspecified_int_for_type, check_unspecified_float_for_type},
-};
 use super::super::traits::SemanticResult;
+use super::{
+    TypeChecker, TypeCoercion, TypeInference, TypeValidation,
+    coercion::{check_unspecified_float_for_type, check_unspecified_int_for_type},
+    inference::{determine_let_statement_type, finalize_inferred_type},
+};
 
 /// Coordinates between specialized type checking modules
-/// 
+///
 /// This struct provides a unified interface for type checking operations
 /// while delegating to specialized modules for specific concerns like
 /// inference, coercion, and validation.
@@ -26,24 +23,24 @@ pub struct TypeCheckingCoordinator<'a> {
 
 impl<'a> TypeCheckingCoordinator<'a> {
     /// Create a new type checking coordinator
-    /// 
+    ///
     /// # Arguments
     /// * `context` - The compilation context for type information
     pub fn new(context: &'a CompilationContext) -> Self {
         Self {
             checker: TypeChecker::new(context),
             coercion: TypeCoercion::new(context),
-            _inference: TypeInference{},
+            _inference: TypeInference {},
             validation: TypeValidation::new(context),
         }
     }
 
     /// Check if two types are compatible for assignment with coercion
-    /// 
+    ///
     /// # Arguments
     /// * `target` - The target type (left side of assignment)
     /// * `source` - The source type (right side of assignment)
-    /// 
+    ///
     /// # Returns
     /// `true` if assignment is allowed, `false` otherwise
     pub fn check_assignment_compatibility(&self, target: &TypeId, source: &TypeId) -> bool {
@@ -51,11 +48,11 @@ impl<'a> TypeCheckingCoordinator<'a> {
     }
 
     /// Check if a function call is valid and return the result type
-    /// 
+    ///
     /// # Arguments
     /// * `function_type` - The function's type signature
     /// * `argument_types` - The types of the provided arguments
-    /// 
+    ///
     /// # Returns
     /// Result containing the return type or an error
     pub fn check_function_call(
@@ -63,16 +60,17 @@ impl<'a> TypeCheckingCoordinator<'a> {
         function_type: &TypeId,
         argument_types: &[TypeId],
     ) -> SemanticResult {
-        self.checker.check_function_call(function_type, argument_types)
+        self.checker
+            .check_function_call(function_type, argument_types)
     }
 
     /// Check if mixed-type arithmetic operations are allowed with coercion
-    /// 
+    ///
     /// # Arguments
     /// * `left_type` - The type of the left operand
     /// * `right_type` - The type of the right operand
     /// * `bin_expr` - The binary expression containing both operands and the operator
-    /// 
+    ///
     /// # Returns
     /// Result containing the operation result type or an error
     pub fn check_mixed_arithmetic_with_coercion(
@@ -81,15 +79,16 @@ impl<'a> TypeCheckingCoordinator<'a> {
         right_type: &TypeId,
         bin_expr: &BinaryExpr,
     ) -> SemanticResult {
-        self.coercion.check_mixed_arithmetic_operation(left_type, right_type, bin_expr)
+        self.coercion
+            .check_mixed_arithmetic_operation(left_type, right_type, bin_expr)
     }
 
     /// Determine the final type for a let statement with potential inference
-    /// 
+    ///
     /// # Arguments
     /// * `let_stmt` - The let statement being analyzed
     /// * `expr_type` - The type of the initialization expression
-    /// 
+    ///
     /// # Returns
     /// Result containing the final determined type
     pub fn determine_let_statement_type(
@@ -101,10 +100,10 @@ impl<'a> TypeCheckingCoordinator<'a> {
     }
 
     /// Finalize an inferred type (convert unspecified literals to concrete types)
-    /// 
+    ///
     /// # Arguments
     /// * `type_id` - The type to finalize
-    /// 
+    ///
     /// # Returns
     /// The concrete type (i64 for unspecified integers, f64 for unspecified floats)
     pub fn finalize_inferred_type(&self, type_id: TypeId) -> TypeId {
@@ -112,11 +111,11 @@ impl<'a> TypeCheckingCoordinator<'a> {
     }
 
     /// Validate that a literal value is within range for its target type
-    /// 
+    ///
     /// # Arguments
     /// * `expr` - The expression containing the literal
     /// * `target_type` - The target type to validate against
-    /// 
+    ///
     /// # Returns
     /// Result indicating if validation passed
     pub fn validate_literal_range(
@@ -135,10 +134,10 @@ impl<'a> TypeCheckingCoordinator<'a> {
     }
 
     /// Validate function declaration constraints
-    /// 
+    ///
     /// # Arguments
     /// * `func_decl` - The function declaration to validate
-    /// 
+    ///
     /// # Returns
     /// Result indicating if validation passed
     pub fn validate_function_declaration(

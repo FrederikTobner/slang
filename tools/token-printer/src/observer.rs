@@ -1,7 +1,7 @@
 use crate::formatters::TokenFormatter;
+use slang_compilation_pipeline::SlangSourceFile;
 use slang_compilation_pipeline::observer::StageObserver;
 use slang_frontend::Token;
-use slang_compilation_pipeline::SlangSourceFile;
 
 /// Type-safe token printer observer implementing StageObserver for the tokenization stage
 pub struct TokenPrinter {
@@ -11,7 +11,10 @@ pub struct TokenPrinter {
 
 impl TokenPrinter {
     pub fn new(formatter: Box<dyn TokenFormatter>, file_name: String) -> Self {
-        Self { formatter, file_name }
+        Self {
+            formatter,
+            file_name,
+        }
     }
 }
 

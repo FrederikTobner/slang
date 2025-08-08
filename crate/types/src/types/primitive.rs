@@ -3,8 +3,8 @@
 //! This module defines all primitive types supported by the language,
 //! including integers, floats, strings, booleans, and special types.
 
-use slang_derive::{IterableEnum, NamedEnum, NumericEnum};
 use super::kind::TypeKind;
+use slang_derive::{IterableEnum, NamedEnum, NumericEnum};
 
 // Type name constants for convenient access
 pub const TYPE_NAME_I32: &str = PrimitiveType::I32.name();
@@ -107,8 +107,8 @@ impl PrimitiveType {
     /// This method defines the actual type characteristics for each primitive type,
     /// separating type definition from type registration logic.
     pub fn to_type_kind(&self) -> TypeKind {
-        use super::kind::{IntegerType, FloatType};
-        
+        use super::kind::{FloatType, IntegerType};
+
         match self {
             PrimitiveType::I32 => TypeKind::Integer(IntegerType {
                 signed: true,

@@ -30,19 +30,13 @@ pub fn check_same_type_arithmetic(
         || context.is_function_type(type_id)
     {
         return Err(helpers::operation_type_mismatch_error(
-            operator,
-            type_id,
-            type_id,
-            location,
+            operator, type_id, type_id, location,
         ));
     }
 
     if helpers::is_string_type(type_id) && operator != &BinaryOperator::Add {
         return Err(helpers::operation_type_mismatch_error(
-            operator,
-            type_id,
-            type_id,
-            location,
+            operator, type_id, type_id, location,
         ));
     }
 

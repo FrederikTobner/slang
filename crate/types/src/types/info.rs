@@ -3,8 +3,8 @@
 //! This module defines the TypeInfo struct which combines a type's identifier,
 //! name, and kind information into a single container.
 
-use super::type_id::TypeId;
 use super::kind::TypeKind;
+use super::type_id::TypeId;
 
 /// Contains all information about a specific type
 #[derive(Debug)]

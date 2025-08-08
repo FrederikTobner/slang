@@ -10,9 +10,11 @@ fn simple_type() {
         };
         print_value("struct defined successfully");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("struct defined successfully");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("struct defined successfully");
 }
 
 #[test]
@@ -22,9 +24,11 @@ fn empty_type() {
         struct EmptyStruct {};
         print_value("empty struct defined");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("empty struct defined");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("empty struct defined");
 }
 
 #[test]
@@ -36,7 +40,9 @@ fn single_field_concept() {
         };
         print_value("single field struct defined");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("single field struct defined");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("single field struct defined");
 }

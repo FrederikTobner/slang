@@ -10,7 +10,7 @@ fn unit_assignment() {
         x = ();
         print_value(x);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("()");
 }
@@ -31,7 +31,7 @@ fn integer_assignment(#[case] value: &str, #[case] _type: &str) {
         print_value(x);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("12");
 }
@@ -50,7 +50,7 @@ fn float_assignment(#[case] value: &str, #[case] _type: &str) {
         print_value(x);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("2.71");
 }
@@ -64,7 +64,7 @@ fn string_assignment() {
         x = "World";
         print_value(x);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("World");
 }
@@ -77,7 +77,7 @@ fn boolean_assignment() {
         x = false;
         print_value(x);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("false");
 }
@@ -99,7 +99,7 @@ fn function_to_variable() {
         my_function = subtract;
         print_value(my_function(30, 10));
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("30\n20");
 }
@@ -111,9 +111,11 @@ fn native_function_to_variable() {
         let mut my_print = print_value;
         my_print("Hello from native function");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("Hello from native function");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("Hello from native function");
 }
 
 #[test]
@@ -123,11 +125,12 @@ fn with_another_type() {
         let mut x: i32 = 10;
         x = "Hello"; // This should cause a type mismatch error
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
         .error_code(ErrorCode::TypeMismatch)
-        .stderr("Type mismatch: variable assignment to variable \'x\' is i32 but expression is string");
+        .stderr(
+            "Type mismatch: variable assignment to variable \'x\' is i32 but expression is string",
+        );
 }
-

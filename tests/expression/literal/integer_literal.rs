@@ -8,11 +8,9 @@ fn basic() {
     let program = r#"
         print_value(42);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program)
-        .succeeds()
-        .stdout("42");
+    ProgramAssertion::new(program).succeeds().stdout("42");
 }
 
 #[rstest]
@@ -23,11 +21,9 @@ fn basic() {
 fn with_suffix(#[case] literal: &str) {
     // Arrange
     let program = format!(r#"print_value({literal});"#);
-    
+
     // Act & Assert
-    ProgramAssertion::new(&program)
-        .succeeds()
-        .stdout("42");
+    ProgramAssertion::new(&program).succeeds().stdout("42");
 }
 
 #[test]
@@ -36,11 +32,9 @@ fn negative() {
     let program = r#"
         print_value(-42);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program)
-        .succeeds()
-        .stdout("-42");
+    ProgramAssertion::new(program).succeeds().stdout("-42");
 }
 
 #[test]
@@ -49,7 +43,7 @@ fn integer_overflow_error() {
     let program = r#"
         print_value(999999999999999999999999999999);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

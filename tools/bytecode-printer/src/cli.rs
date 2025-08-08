@@ -2,11 +2,11 @@ use crate::format::BytecodeFormat;
 use crate::observer::BytecodePrinter;
 use clap::Parser as ClapParser;
 use colored::Colorize;
-use slang_compilation_pipeline::{ChainPipeline};
-use slang_compilation_pipeline::result::CompilationResult;
-use slang_backend::bytecode::Chunk;
 use slang_backend::SlangArtifactFile;
+use slang_backend::bytecode::Chunk;
+use slang_compilation_pipeline::ChainPipeline;
 use slang_compilation_pipeline::SlangSourceFile;
+use slang_compilation_pipeline::result::CompilationResult;
 use std::fs;
 
 /// Command line interface for the Slang bytecode analyzer
@@ -26,38 +26,35 @@ pub struct Parser {
 
     /// Output format for bytecode display
     #[arg(
-        short, 
-        long, 
-        default_value = "pretty", 
+        short,
+        long,
+        default_value = "pretty",
         help = "Output format: pretty, debug, json"
     )]
     pub format: BytecodeFormat,
 
     /// Enable verbose output showing compilation stages
-    #[arg(
-        short,
-        long,
-        help = "Show detailed compilation pipeline progress"
-    )]
+    #[arg(short, long, help = "Show detailed compilation pipeline progress")]
     pub verbose: bool,
 }
 
 /// Main CLI command handler for analyzing bytecode from source files or compiled files
 pub fn analyze_bytecode(
-    file_path: &str, 
+    file_path: &str,
     format: BytecodeFormat,
     verbose: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Validate input file exists
     validate_input_file(file_path)?;
-    
+
     // Determine file type and handle accordingly
     let path = std::path::Path::new(file_path);
     let chunk = match path.extension().and_then(|ext| ext.to_str()) {
         Some("sip") => {
             if verbose {
-                println!("{}: Loading compiled bytecode from {}", 
-                    "Info".blue().bold(), 
+                println!(
+                    "{}: Loading compiled bytecode from {}",
+                    "Info".blue().bold(),
                     file_path
                 );
             }
@@ -65,8 +62,9 @@ pub fn analyze_bytecode(
         }
         Some("sl") | None => {
             if verbose {
-                println!("{}: Compiling source file {}", 
-                    "Info".blue().bold(), 
+                println!(
+                    "{}: Compiling source file {}",
+                    "Info".blue().bold(),
                     file_path
                 );
             }
@@ -78,39 +76,38 @@ pub fn analyze_bytecode(
             ).into());
         }
     };
-    
+
     if verbose {
-        println!("{}: Analyzing bytecode ({} bytes)", 
-            "Success".green().bold(), 
+        println!(
+            "{}: Analyzing bytecode ({} bytes)",
+            "Success".green().bold(),
             chunk.code.len()
         );
     }
-    
+
     // Determine chunk name from file path
-    let name = path.file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("main");
-    
+    let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("main");
+
     // Format and print the bytecode
     let formatter = format.create_formatter();
     let formatted_bytecode = formatter.format(&chunk, name)?;
     println!("{formatted_bytecode}");
-    
+
     Ok(())
 }
 
 /// Validates that the input file exists and is readable
 fn validate_input_file(file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let path = std::path::Path::new(file_path);
-    
+
     if !path.exists() {
         return Err(format!("Input file '{file_path}' does not exist").into());
     }
-    
+
     if !path.is_file() {
         return Err(format!("Input path '{file_path}' is not a file").into());
     }
-    
+
     match fs::File::open(path) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Cannot read input file '{file_path}': {e}").into()),
@@ -127,43 +124,52 @@ fn read_source_file(file_path: &str) -> Result<String, Box<dyn std::error::Error
 fn load_bytecode_from_sip(file_path: &str) -> Result<Chunk, Box<dyn std::error::Error>> {
     let artifact = SlangArtifactFile::from_path(file_path)
         .map_err(|e| format!("Failed to open .sip file '{file_path}': {e}"))?;
-    
-    artifact.read_chunk()
+
+    artifact
+        .read_chunk()
         .map_err(|e| format!("Failed to read bytecode from .sip file '{file_path}': {e}").into())
 }
 
 /// Compile source code to bytecode using the compilation pipeline
-fn compile_source_to_bytecode(file_path: &str, verbose: bool) -> Result<Chunk, Box<dyn std::error::Error>> {
+fn compile_source_to_bytecode(
+    file_path: &str,
+    verbose: bool,
+) -> Result<Chunk, Box<dyn std::error::Error>> {
     let source = read_source_file(file_path)?;
-    
+
     let source_file = SlangSourceFile::for_tooling(file_path, source);
-    
-    let pipeline = ChainPipeline::full_compilation()
-        .with_codegen_observer(BytecodePrinter::new());
+
+    let pipeline = ChainPipeline::full_compilation().with_codegen_observer(BytecodePrinter::new());
 
     match pipeline.execute(source_file) {
-        CompilationResult::Success { output: chunk, diagnostics } => {
+        CompilationResult::Success {
+            output: chunk,
+            diagnostics,
+        } => {
             if verbose && diagnostics.has_errors() {
-                println!("{}: Compilation completed with diagnostics", 
+                println!(
+                    "{}: Compilation completed with diagnostics",
                     "Warning".yellow().bold()
                 );
             }
-            
+
             Ok(chunk)
         }
         CompilationResult::Failed { diagnostics } => {
             if verbose {
-                eprintln!("{}: Compilation failed", 
-                    "Error".red().bold()
-                );
+                eprintln!("{}: Compilation failed", "Error".red().bold());
             }
-            
-            eprintln!("{}: Failed to compile source code to bytecode", 
+
+            eprintln!(
+                "{}: Failed to compile source code to bytecode",
                 "Error".red().bold()
             );
-            
-            Err(format!("Failed to compile source code to bytecode. {} errors found.", 
-                diagnostics.error_count()).into())
+
+            Err(format!(
+                "Failed to compile source code to bytecode. {} errors found.",
+                diagnostics.error_count()
+            )
+            .into())
         }
     }
 }

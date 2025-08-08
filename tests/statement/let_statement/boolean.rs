@@ -13,7 +13,7 @@ fn from_boolean_literal(#[case] value: &str) {
         print_value(boolean_var);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout(value);
 }
@@ -25,7 +25,7 @@ fn boolean_type_inference() {
         let is_true = true;
         print_value(is_true);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("true");
 }
@@ -37,7 +37,7 @@ fn from_string_literal() {
         let a: bool = "Hello";
         print_value(a);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -46,7 +46,7 @@ fn from_string_literal() {
 }
 
 #[rstest]
-#[case("42", "int")] 
+#[case("42", "int")]
 #[case("42i32", "i32")]
 #[case("42i64", "i64")]
 #[case("42u32", "u32")]
@@ -59,7 +59,7 @@ fn from_integer_literal(#[case] value: &str, #[case] _type: &str) {
         print_value(a);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -71,8 +71,8 @@ fn from_integer_literal(#[case] value: &str, #[case] _type: &str) {
 
 #[rstest]
 #[case("3.14", "float")]
-#[case("3.14f32", "f32")] 
-#[case("3.14f64", "f64")] 
+#[case("3.14f32", "f32")]
+#[case("3.14f64", "f64")]
 fn from_float_literal(#[case] value: &str, #[case] _type: &str) {
     // Arrange
     let program = format!(
@@ -81,7 +81,7 @@ fn from_float_literal(#[case] value: &str, #[case] _type: &str) {
         print_value(a);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -97,7 +97,7 @@ fn using_boolean_type_as_name() {
     let program = r#"
         let bool: bool = true;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

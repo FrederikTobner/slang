@@ -7,7 +7,7 @@ fn parentheses() {
         let a = 3 * (1 + 2);
         print_value(a);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("9");
 }
@@ -19,7 +19,7 @@ fn precedence() {
         let a = 1 + 2 * 3;
         print_value(a);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("7");
 }
@@ -37,7 +37,7 @@ fn nested_blocks() {
             }
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("60");
 }
@@ -53,7 +53,7 @@ fn variable_shadowing() {
         }
         print_value(x); // Should print 5
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("10\n5");
 }
@@ -69,7 +69,7 @@ fn variable_shadowing_with_different_types() {
         }
         print_value(x); // Should print 5
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("foo\n5");
 }
@@ -87,7 +87,7 @@ fn variable_in_different_scopes() {
             print_value(y); // Should print 3
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("2\n3");
 }
@@ -107,7 +107,9 @@ fn variable_in_nested_scopes_with_different_types() {
         }
         print_value(x); // Should print 5
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("foo\n10\n5");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("foo\n10\n5");
 }

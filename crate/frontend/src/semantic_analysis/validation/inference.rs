@@ -1,28 +1,22 @@
 use slang_ir::ast::{LetStatement, LiteralValue};
 use slang_shared::CompilationContext;
-use slang_types::{TypeId, TYPE_NAME_U32, TYPE_NAME_U64};
+use slang_types::{TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
 
-use super::super::{
-    traits::SemanticResult,
-    error::SemanticAnalysisError,
-};
-use super::coercion::{check_unspecified_int_for_type, check_unspecified_float_for_type};
+use super::super::{error::SemanticAnalysisError, traits::SemanticResult};
+use super::coercion::{check_unspecified_float_for_type, check_unspecified_int_for_type};
 
 /// Handles type inference and finalization
-/// 
+///
 /// This module is responsible for inferring types when they are not explicitly
 /// specified and finalizing unspecified literal types to concrete types.
-pub struct TypeInference{
-}
+pub struct TypeInference {}
 
-impl TypeInference{
-
-
+impl TypeInference {
     /// Infers the type of a literal expression
-    /// 
+    ///
     /// # Arguments
     /// * `literal_value` - The literal value to infer type for
-    /// 
+    ///
     /// # Returns
     /// The inferred TypeId for the literal
     pub fn infer_literal_type(&self, literal_value: &LiteralValue) -> TypeId {
@@ -42,15 +36,14 @@ impl TypeInference{
     }
 
     /// Checks if a type requires special handling for unsigned integer assignment
-    /// 
+    ///
     /// # Arguments
     /// * `type_id` - The type to check
-    /// 
+    ///
     /// # Returns
     /// `true` if the type is unsigned integer, `false` otherwise
     pub fn is_unsigned_type(&self, type_id: &TypeId) -> bool {
-        type_id == &TypeId::u32() ||
-        type_id == &TypeId::u64()
+        type_id == &TypeId::u32() || type_id == &TypeId::u64()
     }
 }
 
@@ -106,8 +99,9 @@ pub fn determine_let_statement_type(
     }
 
     // Function type compatibility check
-    if context.get_function_type(&let_stmt.expr_type).is_some() && 
-       context.get_function_type(&expr_type).is_some() {
+    if context.get_function_type(&let_stmt.expr_type).is_some()
+        && context.get_function_type(&expr_type).is_some()
+    {
         if let_stmt.expr_type == expr_type {
             return Ok(let_stmt.expr_type);
         } else {

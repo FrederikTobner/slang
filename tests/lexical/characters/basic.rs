@@ -10,9 +10,11 @@ fn ascii_character_recognition() {
         let char_9 = "9";
         print_value("characters recognized");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("characters recognized");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("characters recognized");
 }
 
 #[test]
@@ -23,9 +25,11 @@ fn special_character_recognition() {
         let underscore = "_";
         print_value("special chars recognized");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("special chars recognized");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("special chars recognized");
 }
 
 #[test]
@@ -36,7 +40,9 @@ fn unicode_character_recognition() {
         let emoji_char = "🚀";
         print_value("unicode chars recognized");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("unicode chars recognized");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("unicode chars recognized");
 }

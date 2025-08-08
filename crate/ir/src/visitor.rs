@@ -38,7 +38,10 @@ pub trait Visitor<T> {
     fn visit_type_definition_statement(&mut self, stmt: &TypeDefinitionStmt) -> DomainResult<T>;
 
     /// Visit a function declaration statement
-    fn visit_function_declaration_statement(&mut self, stmt: &FunctionDeclarationStmt) -> DomainResult<T>;
+    fn visit_function_declaration_statement(
+        &mut self,
+        stmt: &FunctionDeclarationStmt,
+    ) -> DomainResult<T>;
 
     /// Visit a return statement
     fn visit_return_statement(&mut self, stmt: &ReturnStatement) -> DomainResult<T>;

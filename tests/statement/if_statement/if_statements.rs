@@ -10,9 +10,11 @@ fn basic_if_statement_true() {
             print_value("condition is true");
         }
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("condition is true");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("condition is true");
 }
 
 #[test]
@@ -25,7 +27,7 @@ fn basic_if_statement_false() {
         }
         print_value("after if");
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("after if");
 }
@@ -41,9 +43,11 @@ fn if_else_statement_true() {
             print_value("false branch");
         }
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("true branch");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("true branch");
 }
 
 #[test]
@@ -57,9 +61,11 @@ fn if_else_statement_false() {
             print_value("false branch");
         }
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("false branch");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("false branch");
 }
 
 #[test]
@@ -72,7 +78,7 @@ fn if_statement_multiple_statements() {
             print_value("second");
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("first");
 }
@@ -90,7 +96,7 @@ fn if_else_multiple_statements() {
             print_value("false2");
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("false1");
 }
@@ -109,9 +115,11 @@ fn nested_if_statements() {
             }
         }
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("nested true");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("nested true");
 }
 
 #[test]
@@ -123,7 +131,7 @@ fn if_with_non_boolean_condition() {
             print_value("should not work");
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -140,7 +148,7 @@ fn if_with_string_condition() {
             print_value("should not work");
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -158,7 +166,9 @@ fn if_statement_with_complex_condition() {
             print_value("complex condition works");
         }
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("complex condition works");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("complex condition works");
 }

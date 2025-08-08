@@ -1,14 +1,19 @@
+use super::TokenFormatter;
 use colored::Colorize;
 use slang_frontend::Token;
-use super::TokenFormatter;
 
 /// Pretty formatter with colored output
 pub struct PrettyFormatter;
 
 impl TokenFormatter for PrettyFormatter {
     fn format_tokens(&self, tokens: &[Token], file_name: &str) {
-        println!("{}", format!("=== Tokens for {file_name} ===").bright_cyan().bold());
-        
+        println!(
+            "{}",
+            format!("=== Tokens for {file_name} ===")
+                .bright_cyan()
+                .bold()
+        );
+
         for (i, token) in tokens.iter().enumerate() {
             let token_type_str = format!("{:15}", format!("{:?}", token.token_type));
             let lexeme_str = if token.lexeme.is_empty() {
@@ -26,7 +31,12 @@ impl TokenFormatter for PrettyFormatter {
                 position_str
             );
         }
-        
-        println!("{}", format!("=== {} tokens total ===", tokens.len()).bright_cyan().bold());
+
+        println!(
+            "{}",
+            format!("=== {} tokens total ===", tokens.len())
+                .bright_cyan()
+                .bold()
+        );
     }
 }

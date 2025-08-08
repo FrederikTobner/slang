@@ -34,7 +34,7 @@ impl AstLocation for Expression {
 }
 
 /// Enhanced location management following DRY principles
-/// 
+///
 /// # Design Principles Applied:
 /// - **DRY**: Centralized location calculation logic
 /// - **Single Responsibility**: Only handles location management
@@ -42,10 +42,10 @@ impl AstLocation for Expression {
 pub trait LocationExtensions {
     /// Create a span from this location to another location
     fn span_to(&self, other: &Self) -> Self;
-    
+
     /// Create a location that spans multiple expressions
     fn span_from_expressions(expressions: &[Expression]) -> Self;
-    
+
     /// Create a location that spans statements and optional expression
     fn span_from_statements_and_expr(statements: &[Statement], expr: Option<&Expression>) -> Self;
 }
@@ -67,18 +67,18 @@ impl LocationExtensions for Location {
             length: end_pos - start_pos,
         }
     }
-    
+
     #[inline(always)]
     fn span_from_expressions(expressions: &[Expression]) -> Self {
         if expressions.is_empty() {
             panic!("Cannot create span from empty expressions - this indicates improper usage");
         }
-        
+
         let first = expressions.first().unwrap().location();
         let last = expressions.last().unwrap().location();
         first.span_to(&last)
     }
-    
+
     #[inline(always)]
     fn span_from_statements_and_expr(statements: &[Statement], expr: Option<&Expression>) -> Self {
         match (statements.first(), statements.last(), expr) {
@@ -96,7 +96,7 @@ impl LocationExtensions for Location {
                 // This should ideally be provided by the caller, but for compatibility
                 // we create a default location that won't cause issues
                 Location::new_simple(0, 1, 1)
-            },
+            }
         }
     }
 }

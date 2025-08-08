@@ -7,11 +7,9 @@ fn basic() {
     let program = r#"
         print_value("hello");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program)
-        .succeeds()
-        .stdout("hello");
+    ProgramAssertion::new(program).succeeds().stdout("hello");
 }
 
 #[test]
@@ -20,11 +18,9 @@ fn empty() {
     let program = r#"
         print_value("");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program)
-        .succeeds()
-        .stdout("");
+    ProgramAssertion::new(program).succeeds().stdout("");
 }
 
 #[test]
@@ -33,7 +29,7 @@ fn with_spaces() {
     let program = r#"
         print_value("hello world");
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .succeeds()
@@ -46,7 +42,7 @@ fn with_escape_sequences() {
     let program = r#"
         print_value("hello\\nworld");
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .succeeds()
@@ -59,7 +55,7 @@ fn unterminated() {
     let program = r#"
         print_value("unterminated string
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

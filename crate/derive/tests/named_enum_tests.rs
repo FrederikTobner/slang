@@ -215,4 +215,3 @@ fn test_unit_variants_only() {
 
     assert_eq!(MixedEnum::from_str("invalid"), None);
 }
-

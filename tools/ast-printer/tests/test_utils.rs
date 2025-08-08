@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 use tempfile::TempDir;
 
 /// Create a temporary Slang source file for testing

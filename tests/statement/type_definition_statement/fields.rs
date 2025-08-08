@@ -9,7 +9,9 @@ fn function_type_field() {
         };
         print_value("struct with function type field defined");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("struct with function type field defined");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("struct with function type field defined");
 }

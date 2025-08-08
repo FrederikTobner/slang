@@ -8,7 +8,7 @@ fn missing_semicolon() {
         let a = 42
         print_value(a);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -22,7 +22,7 @@ fn mismatched_brackets() {
     let program = r#"
         fn test() {
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -37,7 +37,7 @@ fn mismatch_quotes() {
         let message = "Hello, world!;
         print_value(message);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -52,7 +52,7 @@ fn mismatched_parentheses() {
         let a = 42;
         print_value(a;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -67,7 +67,7 @@ fn invalid_assignment() {
         let a = 42;
         42 = a;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -82,7 +82,7 @@ fn invalid_variable_declaration() {
         let 123abc = 42;
         print_value(123abc);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -98,7 +98,7 @@ fn invalid_function_declaration() {
             print_value(42);
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -114,7 +114,7 @@ fn redefined_variable() {
         let a = 43;
         print_value(a);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

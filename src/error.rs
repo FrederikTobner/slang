@@ -1,8 +1,8 @@
+use slang_backend::SlangArtifactFileError;
+use slang_compilation_pipeline::SourceFileError;
 use std::error::Error;
 use std::fmt;
 use std::io;
-use slang_backend::SlangArtifactFileError;
-use slang_compilation_pipeline::SourceFileError;
 
 use crate::exit;
 
@@ -109,31 +109,35 @@ impl From<SourceFileError> for CliError {
 
 impl From<SlangArtifactFileError> for CliError {
     fn from(err: SlangArtifactFileError) -> Self {
-         match err {
-        slang_backend::SlangArtifactFileError::Io { source, path } => {
-            let exit_code = if source.kind() == std::io::ErrorKind::PermissionDenied {
-                exit::Code::NoPerm
-            } else {
-                exit::Code::CantCreat
-            };
-            CliError::Io {
-                source,
-                path: path.as_path().to_str().unwrap_or("unknown").to_string(),
-                exit_code,
+        match err {
+            slang_backend::SlangArtifactFileError::Io { source, path } => {
+                let exit_code = if source.kind() == std::io::ErrorKind::PermissionDenied {
+                    exit::Code::NoPerm
+                } else {
+                    exit::Code::CantCreat
+                };
+                CliError::Io {
+                    source,
+                    path: path.as_path().to_str().unwrap_or("unknown").to_string(),
+                    exit_code,
+                }
             }
-        },
-        slang_backend::SlangArtifactFileError::Zip { source, context, .. } => CliError::Generic {
-            message: format!("ZIP error: {context} - {source}"),
-            exit_code: exit::Code::IoErr,
-        },
-        slang_backend::SlangArtifactFileError::Serialization { source, context, .. } => CliError::Generic {
-            message: format!("Serialization error: {context} - {source}"),
-            exit_code: exit::Code::Software,
-        },
-        other => CliError::Generic {
-            message: format!("Failed to write bytecode: {other}"),
-            exit_code: exit::Code::Software,
-        },
+            slang_backend::SlangArtifactFileError::Zip {
+                source, context, ..
+            } => CliError::Generic {
+                message: format!("ZIP error: {context} - {source}"),
+                exit_code: exit::Code::IoErr,
+            },
+            slang_backend::SlangArtifactFileError::Serialization {
+                source, context, ..
+            } => CliError::Generic {
+                message: format!("Serialization error: {context} - {source}"),
+                exit_code: exit::Code::Software,
+            },
+            other => CliError::Generic {
+                message: format!("Failed to write bytecode: {other}"),
+                exit_code: exit::Code::Software,
+            },
+        }
     }
-}
 }

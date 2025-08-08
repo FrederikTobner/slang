@@ -8,7 +8,7 @@ fn valid_identifier() {
         let valid_name = 42;
         print_value(valid_name);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -22,9 +22,11 @@ fn identifier_with_underscore() {
         print_value(private_var);
         print_value(my_var_name);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("hidden\nvisible");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("hidden\nvisible");
 }
 
 #[test]
@@ -38,9 +40,11 @@ fn identifier_with_numbers() {
         print_value(var2name);
         print_value(name3var);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("10\n20\n30");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("10\n20\n30");
 }
 
 #[test]
@@ -49,7 +53,7 @@ fn starting_with_number_error() {
     let program = r#"
         let 1invalid = 42;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -63,7 +67,7 @@ fn with_special_characters_error() {
     let program = r#"
         let invalid-name = 42;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

@@ -9,12 +9,14 @@ fn type_mismatch_in_function_argument() {
         
         expect_int("not an integer");
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
         .error_code(ErrorCode::ArgumentTypeMismatch)
-        .stderr("Type mismatch: function \'expect_int\' expects argument 1 to be i32, but got string");
+        .stderr(
+            "Type mismatch: function \'expect_int\' expects argument 1 to be i32, but got string",
+        );
 }
 
 #[test]
@@ -27,7 +29,7 @@ fn wrong_parameter_count() {
         
         print_value(add(5));
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -45,7 +47,7 @@ fn wrong_parameter_types() {
         
         print_value(add("hello", 5));
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -63,7 +65,7 @@ fn return_type_mismatch() {
         
         print_value(get_number());
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

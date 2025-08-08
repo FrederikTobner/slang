@@ -1,14 +1,14 @@
 // Core parser infrastructure module
 // Contains the main Parser struct and fundamental parsing methods
 
-use slang_error::ParseError;
 use super::expressions::ExpressionParsing;
 use super::literals::LiteralParsing;
 use super::statements::StatementParsing;
 use super::types::TypeParsing;
 use crate::token::{Token, Tokentype};
-use slang_error::{CompileResult, CompilationError, LineInfo, DomainError};
-use slang_ir::ast::{BlockExpr, Expression, Statement, BinaryOperator};
+use slang_error::ParseError;
+use slang_error::{CompilationError, CompileResult, DomainError, LineInfo};
+use slang_ir::ast::{BinaryOperator, BlockExpr, Expression, Statement};
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
 
@@ -26,20 +26,18 @@ impl TokenPosition {
     pub fn new(pos: usize, len: usize) -> Self {
         TokenPosition { pos, len }
     }
-    
+
     /// Convert to a source location using line info
     pub fn to_location(self, line_info: &LineInfo) -> slang_error::location::Location {
         let (line, column) = line_info.get_line_col(self.pos);
         slang_error::location::Location::new(self.pos, line, column, self.len)
     }
-    
+
     /// Calculate end position
     pub fn end_pos(self) -> usize {
         self.pos + self.len
     }
 }
-
-
 
 /// Parser that converts tokens into an abstract syntax tree
 pub struct Parser<'a> {
@@ -207,7 +205,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Skip tokens until a safe synchronization point for error recovery
-    /// 
+    ///
     /// This function helps the parser recover from errors by advancing to the next
     /// statement boundary, allowing parsing to continue after an error.
     pub(super) fn synchronize(&mut self) {
@@ -230,30 +228,37 @@ impl<'a> Parser<'a> {
     }
 
     /// Creates a SourceLocation from a token's position and line information
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `token` - The token to create location information for
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// A Location struct with line, column, position and length information
-    pub(super) fn source_location_from_token(&self, token: &Token) -> slang_error::location::Location {
+    pub(super) fn source_location_from_token(
+        &self,
+        token: &Token,
+    ) -> slang_error::location::Location {
         let (line, column) = self.line_info.get_line_col(token.pos);
         slang_error::location::Location::new(token.pos, line, column, token.lexeme.len())
     }
 
     /// Creates a Location spanning from one position to another
-    /// 
+    ///
     /// ### Arguments
-    /// 
+    ///
     /// * `start_pos` - The starting position
     /// * `end_pos` - The ending position (exclusive)
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// A Location struct covering the range from start_pos to end_pos
-    pub(super) fn location_from_range(&self, start_pos: usize, end_pos: usize) -> slang_error::location::Location {
+    pub(super) fn location_from_range(
+        &self,
+        start_pos: usize,
+        end_pos: usize,
+    ) -> slang_error::location::Location {
         let (start_line, start_column) = self.line_info.get_line_col(start_pos);
         let length = end_pos - start_pos;
         slang_error::location::Location::new(start_pos, start_line, start_column, length)
@@ -285,7 +290,11 @@ impl<'a> Parser<'a> {
         LiteralParsing::parse_float(self)
     }
 
-    pub(super) fn finish_call(&mut self, name: String, name_location: slang_error::location::Location) -> Result<Expression, ParseError> {
+    pub(super) fn finish_call(
+        &mut self,
+        name: String,
+        name_location: slang_error::location::Location,
+    ) -> Result<Expression, ParseError> {
         ExpressionParsing::finish_call(self, name, name_location)
     }
 
@@ -302,10 +311,10 @@ impl<'a> Parser<'a> {
     }
 
     /// Enhanced token matching that returns a reference to the matched token
-    /// 
+    ///
     /// ### Arguments
     /// * `token_type` - The token type to match against
-    /// 
+    ///
     /// ### Returns
     /// * `Some(&Token)` - Reference to the consumed token if match succeeded
     /// * `None` - If the current token doesn't match the expected type
@@ -319,10 +328,10 @@ impl<'a> Parser<'a> {
     }
 
     /// Enhanced multi-token matching with captured token reference
-    /// 
+    ///
     /// ### Arguments
     /// * `types` - Array of token types to match against
-    /// 
+    ///
     /// ### Returns
     /// * `Some(&Token)` - Reference to the matched token
     /// * `None` - If no token types matched
@@ -346,7 +355,10 @@ impl<'a> Parser<'a> {
         if let Some(token) = self.match_token_ref(&Tokentype::Identifier) {
             Some((
                 &token.lexeme,
-                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+                TokenPosition {
+                    pos: token.pos,
+                    len: token.lexeme.len(),
+                },
             ))
         } else {
             None
@@ -358,7 +370,10 @@ impl<'a> Parser<'a> {
         if let Some(token) = self.match_token_ref(&Tokentype::StringLiteral) {
             Some((
                 &token.lexeme,
-                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+                TokenPosition {
+                    pos: token.pos,
+                    len: token.lexeme.len(),
+                },
             ))
         } else {
             None
@@ -370,7 +385,10 @@ impl<'a> Parser<'a> {
         if let Some(token) = self.match_token_ref(&Tokentype::BooleanLiteral) {
             Some((
                 &token.lexeme,
-                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+                TokenPosition {
+                    pos: token.pos,
+                    len: token.lexeme.len(),
+                },
             ))
         } else {
             None
@@ -387,7 +405,10 @@ impl<'a> Parser<'a> {
             };
             Some((
                 operator,
-                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+                TokenPosition {
+                    pos: token.pos,
+                    len: token.lexeme.len(),
+                },
             ))
         } else {
             None
@@ -397,8 +418,10 @@ impl<'a> Parser<'a> {
     /// Match comparison operators (>, <, >=, <=) specifically
     pub(super) fn match_comparison_operator(&mut self) -> Option<(BinaryOperator, TokenPosition)> {
         if let Some(token) = self.match_any_ref(&[
-            Tokentype::Greater, Tokentype::GreaterEqual,
-            Tokentype::Less, Tokentype::LessEqual,
+            Tokentype::Greater,
+            Tokentype::GreaterEqual,
+            Tokentype::Less,
+            Tokentype::LessEqual,
         ]) {
             let operator = match token.token_type {
                 Tokentype::Greater => BinaryOperator::GreaterThan,
@@ -409,7 +432,10 @@ impl<'a> Parser<'a> {
             };
             Some((
                 operator,
-                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+                TokenPosition {
+                    pos: token.pos,
+                    len: token.lexeme.len(),
+                },
             ))
         } else {
             None
@@ -426,7 +452,10 @@ impl<'a> Parser<'a> {
             };
             Some((
                 operator,
-                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+                TokenPosition {
+                    pos: token.pos,
+                    len: token.lexeme.len(),
+                },
             ))
         } else {
             None
@@ -443,7 +472,10 @@ impl<'a> Parser<'a> {
             };
             Some((
                 operator,
-                TokenPosition { pos: token.pos, len: token.lexeme.len() }
+                TokenPosition {
+                    pos: token.pos,
+                    len: token.lexeme.len(),
+                },
             ))
         } else {
             None

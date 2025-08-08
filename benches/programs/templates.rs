@@ -1,4 +1,4 @@
-#![allow(dead_code)]  // Template functions may not all be actively used
+#![allow(dead_code)] // Template functions may not all be actively used
 
 use std::fmt;
 

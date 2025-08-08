@@ -2,8 +2,8 @@
 // Contains logic for parsing type expressions and type resolution
 
 use super::core::Parser;
-use slang_error::{ParseError, ParseErrorFactory};
 use crate::token::Tokentype;
+use slang_error::{ParseError, ParseErrorFactory};
 use slang_ir::ast::Expression;
 use slang_shared::SymbolKind;
 use slang_types::{
@@ -12,13 +12,13 @@ use slang_types::{
 };
 
 /// Extension trait for type parsing functionality
-/// 
+///
 /// This trait extends the Parser with type parsing methods,
 /// providing a clean interface for parsing all type expressions.
 pub trait TypeParsing {
     /// Parse a type
     fn parse_type(&mut self) -> Result<TypeId, ParseError>;
-    
+
     /// Parse function type expression
     fn parse_function_type_expression(&mut self) -> Result<Expression, ParseError>;
 }
@@ -35,9 +35,10 @@ impl<'a> TypeParsing for Parser<'a> {
             self.advance(); // consume 'fn'
 
             if !self.match_token(&Tokentype::LeftParen) {
-                return Err(
-                    ParseErrorFactory::expected_opening_paren(self.current_location(), Some("after 'fn'"))
-                );
+                return Err(ParseErrorFactory::expected_opening_paren(
+                    self.current_location(),
+                    Some("after 'fn'"),
+                ));
             }
 
             let mut param_types = Vec::new();
@@ -86,7 +87,10 @@ impl<'a> TypeParsing for Parser<'a> {
         let (type_name, _position) = if let Some((name, position)) = self.match_identifier_token() {
             (name.to_string(), position)
         } else {
-            return Err(ParseErrorFactory::expected_identifier(self.current_location(), Some("type identifier")));
+            return Err(ParseErrorFactory::expected_identifier(
+                self.current_location(),
+                Some("type identifier"),
+            ));
         };
 
         if type_name == TYPE_NAME_INT {
@@ -135,7 +139,10 @@ impl<'a> TypeParsing for Parser<'a> {
         let fn_token_pos = self.previous().pos;
 
         if !self.match_token(&Tokentype::LeftParen) {
-            return Err(ParseErrorFactory::expected_opening_paren(self.current_location(), Some("'(' after 'fn'")));
+            return Err(ParseErrorFactory::expected_opening_paren(
+                self.current_location(),
+                Some("'(' after 'fn'"),
+            ));
         }
 
         let mut param_types = Vec::new();

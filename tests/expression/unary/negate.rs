@@ -8,7 +8,7 @@ fn with_integer_variable() {
         let a: i32 = 42;
         print_value(-a);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("-42");
 }
@@ -17,7 +17,7 @@ fn with_integer_variable() {
 fn with_int_literal() {
     // Arrange
     let program = "print_value(-42);";
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("-42");
 }
@@ -29,7 +29,7 @@ fn with_float_variable() {
         let a: f64 = 42.5;
         print_value(-a);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("-42.5");
 }
@@ -38,7 +38,7 @@ fn with_float_variable() {
 fn with_float_literal() {
     // Arrange
     let program = "print_value(-42.5);";
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("-42.5");
 }
@@ -50,7 +50,7 @@ fn with_string() {
         let a: string = "Hello";
         print_value(-a);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -64,7 +64,7 @@ fn with_string_literal() {
     let program = r#"
         print_value(-"Hello");
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -79,7 +79,7 @@ fn with_unsigned_integer() {
         let a: u32 = 42;
         print_value(-a);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -94,7 +94,7 @@ fn double_negation() {
         let a: i32 = 42;
         print_value(-(-a));
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -106,7 +106,7 @@ fn with_unit() {
         let x = ();
         print_value(-x);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -123,7 +123,7 @@ fn with_function() {
         }
         print_value(-my_function);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -137,7 +137,7 @@ fn with_native_function() {
     let program = r#"
         print_value(-print_value);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -152,7 +152,7 @@ fn with_boolean() {
         let a: bool = true;
         print_value(-a);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -166,11 +166,10 @@ fn with_boolean_literal() {
     let program = r#"
         print_value(-true);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
         .error_code(ErrorCode::InvalidUnaryOperation)
         .stderr("Cannot negate non-numeric type 'bool'");
 }
-

@@ -17,7 +17,7 @@ fn equal_integer(#[case] type_name: &str) {
         print_value(a != b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("false");
 }
@@ -37,7 +37,7 @@ fn not_equal_integer(#[case] type_name: &str) {
         print_value(a != b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("true");
 }
@@ -55,7 +55,7 @@ fn equal_float(#[case] type_name: &str) {
         print_value(a != b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("false");
 }
@@ -73,7 +73,7 @@ fn not_equal_float(#[case] type_name: &str) {
         print_value(a != b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("true");
 }
@@ -90,9 +90,11 @@ fn with_booleans() {
         print_value(result2);
         print_value(result3);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("false\nfalse\ntrue");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("false\nfalse\ntrue");
 }
 
 #[test]
@@ -105,9 +107,11 @@ fn with_strings() {
         print_value(result1);
         print_value(result2);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("false\ntrue");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("false\ntrue");
 }
 
 #[test]
@@ -118,7 +122,7 @@ fn with_unit() {
         let y = ();
         print_value(x != y);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -135,7 +139,7 @@ fn with_function() {
         let fun_2 = my_function;
         print_value(fun_1 != fun_2);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("false");
 }
@@ -146,8 +150,7 @@ fn with_native_function() {
     let program = r#"
         print_value(print_value != print_value);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("false");
 }
-

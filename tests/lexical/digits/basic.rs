@@ -16,9 +16,11 @@ fn test_digit_recognition_0_to_9() {
         let d9 = 9;
         print_value("all digits recognized");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("all digits recognized");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("all digits recognized");
 }
 
 #[test]
@@ -30,9 +32,11 @@ fn test_digit_in_identifiers() {
         let name3 = "three";
         print_value("digits in identifiers");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("digits in identifiers");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("digits in identifiers");
 }
 
 #[test]
@@ -42,9 +46,11 @@ fn test_digit_sequences() {
         let num = 123456789;
         print_value(num);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("123456789");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("123456789");
 }
 
 #[test]
@@ -54,7 +60,7 @@ fn test_digit_with_underscores() {
         let big_num = 1000000;
         print_value(big_num);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("1000000");
 }

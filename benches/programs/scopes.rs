@@ -1,4 +1,4 @@
-#![allow(dead_code)]  // Benchmark programs may not all be actively used
+#![allow(dead_code)] // Benchmark programs may not all be actively used
 
 use super::BenchmarkProgram;
 
@@ -34,4 +34,3 @@ let global_var = 1;
 }
 "#,
 );
-

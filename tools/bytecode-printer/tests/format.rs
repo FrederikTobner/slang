@@ -14,7 +14,7 @@ fn from_str() {
         "json".parse::<BytecodeFormat>().unwrap(),
         BytecodeFormat::Json
     ));
-    
+
     assert!("invalid".parse::<BytecodeFormat>().is_err());
 }
 

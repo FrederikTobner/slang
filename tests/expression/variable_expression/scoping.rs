@@ -12,7 +12,7 @@ fn test_variable_scoping_in_blocks() {
         }
         print_value(x);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("20\n10");
 }
@@ -32,9 +32,11 @@ fn test_variable_scoping_in_functions() {
         test_function();
         print_value(global_var);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("100\n200\n100");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("100\n200\n100");
 }
 
 #[test]
@@ -51,7 +53,7 @@ fn test_variable_shadowing() {
         
         print_value(value);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("1\n3\n1");
 }
@@ -65,7 +67,7 @@ fn test_variable_out_of_scope_error() {
         }
         print_value(local_var); // Should be out of scope
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

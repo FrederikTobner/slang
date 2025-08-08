@@ -16,7 +16,7 @@ fn early_return_in_if_statement() {
         print_value(result1);
         print_value(result2);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("10\n0");
 }
@@ -44,9 +44,11 @@ fn multiple_return_paths() {
         print_value(result2);
         print_value(result3);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("large\nsmall\nzero or negative");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("large\nsmall\nzero or negative");
 }
 
 #[test]
@@ -62,7 +64,7 @@ fn unreachable_code_after_return() {
         let result = test_function();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     // This might be a warning rather than an error, depending on implementation
     ProgramAssertion::new(program).succeeds().stdout("42");

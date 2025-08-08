@@ -13,7 +13,7 @@ fn with_boolean_variable(#[case] input: &str, #[case] expected: &str) {
         print_value(!a);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout(expected);
 }
@@ -24,7 +24,7 @@ fn with_boolean_variable(#[case] input: &str, #[case] expected: &str) {
 fn with_boolean_literal(#[case] input: &str, #[case] expected: &str) {
     // Arrange
     let program = format!("print_value(!{input});");
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout(expected);
 }
@@ -40,7 +40,7 @@ fn double_not_with_boolean_variable(#[case] input: &str) {
         print_value(!(!a));
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout(input);
 }
@@ -51,7 +51,7 @@ fn double_not_with_boolean_variable(#[case] input: &str) {
 fn double_not_with_boolean_literal(#[case] input: &str) {
     // Arrange
     let program = format!("print_value(!(!{input}));");
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout(input);
 }
@@ -69,7 +69,7 @@ fn with_integer(#[case] type_name: &str) {
         print_value(!a);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -90,7 +90,7 @@ fn with_float(#[case] type_name: &str) {
         print_value(!a);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -107,7 +107,7 @@ fn with_unit() {
         let x = ();
         print_value(!x);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -122,12 +122,14 @@ fn with_function() {
         fn my_function() {}
         print_value(!my_function);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
         .error_code(ErrorCode::InvalidUnaryOperation)
-        .stderr("Boolean not operator '!' can only be applied to boolean types, but got fn() -> ()");
+        .stderr(
+            "Boolean not operator '!' can only be applied to boolean types, but got fn() -> ()",
+        );
 }
 
 #[test]
@@ -136,7 +138,7 @@ fn with_native_function() {
     let program: &'static str = r#"
         print_value(!print_value);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -151,7 +153,7 @@ fn with_string() {
         let a: string = "Hello";
         print_value(!a);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -165,11 +167,10 @@ fn with_string_literal() {
     let program = r#"
         print_value(!"Hello");
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
         .error_code(ErrorCode::InvalidUnaryOperation)
         .stderr("Boolean not operator '!' can only be applied to boolean types, but got string");
 }
-

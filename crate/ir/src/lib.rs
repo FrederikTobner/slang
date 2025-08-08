@@ -5,4 +5,4 @@ pub mod visitor;
 pub use visitor::Visitor;
 
 // Re-export factory system
-pub use factory::{ExprFactory, StmtFactory, IntoLiteralValue, TypeInference, LocationExtensions};
+pub use factory::{ExprFactory, IntoLiteralValue, LocationExtensions, StmtFactory, TypeInference};

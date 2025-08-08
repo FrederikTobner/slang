@@ -9,7 +9,7 @@ fn unit_literal() {
         let x = ();
         print_value(x);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("()");
 }
@@ -21,7 +21,7 @@ fn unit_type_annotation() {
         let x: () = ();
         print_value(x);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("()");
 }
@@ -31,10 +31,12 @@ fn unit_type_annotation() {
 #[case("false")]
 fn boolean_literal(#[case] value: &str) {
     // Arrange
-    let program = format!(r#"
+    let program = format!(
+        r#"
         let x : () = {value};
-    "#);
-    
+    "#
+    );
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -50,15 +52,19 @@ fn boolean_literal(#[case] value: &str) {
 #[case("42u64", "u64")]
 fn integer_literal(#[case] value: &str, #[case] used_type: &str) {
     // Arrange
-    let program = format!(r#"
+    let program = format!(
+        r#"
         let x : () = {value};
-    "#);
-    
+    "#
+    );
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
         .error_code(ErrorCode::TypeMismatch)
-        .stderr(&format!(" Type mismatch: variable x is () but expression is {used_type}"));
+        .stderr(&format!(
+            " Type mismatch: variable x is () but expression is {used_type}"
+        ));
 }
 
 #[rstest]
@@ -67,15 +73,19 @@ fn integer_literal(#[case] value: &str, #[case] used_type: &str) {
 #[case("3.14f64", "f64")]
 fn float_literal(#[case] value: &str, #[case] used_type: &str) {
     // Arrange
-    let program = format!(r#"
+    let program = format!(
+        r#"
         let x : () = {value};
-    "#);
-    
+    "#
+    );
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
         .error_code(ErrorCode::TypeMismatch)
-        .stderr(&format!(" Type mismatch: variable x is () but expression is {used_type}"));
+        .stderr(&format!(
+            " Type mismatch: variable x is () but expression is {used_type}"
+        ));
 }
 
 #[test]
@@ -84,10 +94,11 @@ fn string_literal() {
     let program = r#"
         let x : () = "Hello, world!";
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
         .error_code(ErrorCode::TypeMismatch)
         .stderr(" Type mismatch: variable x is () but expression is string");
 }
+

@@ -4,7 +4,7 @@ use std::fmt;
 use std::io::Read;
 
 // Re-export the traits and combined trait for convenience
-pub use operations::{ArithmeticOps, LogicalOps, ComparisonOps, ValueOperation};
+pub use operations::{ArithmeticOps, ComparisonOps, LogicalOps, ValueOperation};
 
 /// Trait for types that can deserialize themselves from a reader
 pub trait DeserializeFromReader: Sized {
@@ -134,14 +134,14 @@ impl DeserializeFromReader for Box<Function> {
 impl DeserializeFromReader for Box<NativeFunction> {
     fn deserialize(reader: &mut dyn Read) -> std::io::Result<Self> {
         let name_string = Box::<String>::deserialize(reader)?;
-        
+
         let mut arity_bytes = [0u8; 1];
         reader.read_exact(&mut arity_bytes)?;
         let arity = arity_bytes[0];
 
-        let placeholder_fn: fn(&[crate::value::Value]) -> Result<crate::value::Value, String> = 
+        let placeholder_fn: fn(&[crate::value::Value]) -> Result<crate::value::Value, String> =
             |_args| Err("Placeholder native function".to_string());
-            
+
         Ok(Box::new(NativeFunction {
             name: *name_string,
             arity,
@@ -340,12 +340,23 @@ define_value_enum! {
 impl Value {
     /// Check if the value is numeric (integer or float)
     pub fn is_numeric(&self) -> bool {
-        matches!(self, Value::I32(_) | Value::I64(_) | Value::U32(_) | Value::U64(_) | Value::F32(_) | Value::F64(_))
+        matches!(
+            self,
+            Value::I32(_)
+                | Value::I64(_)
+                | Value::U32(_)
+                | Value::U64(_)
+                | Value::F32(_)
+                | Value::F64(_)
+        )
     }
 
     /// Check if the value is an integer type
     pub fn is_integer(&self) -> bool {
-        matches!(self, Value::I32(_) | Value::I64(_) | Value::U32(_) | Value::U64(_))
+        matches!(
+            self,
+            Value::I32(_) | Value::I64(_) | Value::U32(_) | Value::U64(_)
+        )
     }
 
     /// Check if the value is a float type

@@ -192,12 +192,12 @@ impl SymbolTable {
                     (SymbolData::Type, _) => {
                         format!("Type '{name}' is already defined in the current scope.")
                     }
-                    (SymbolData::Function, _) => format!(
-                        "Function '{name}' is already defined in the current scope."
-                    ),
-                    (SymbolData::Variable { .. }, _) => format!(
-                        "Variable '{name}' is already defined in the current scope."
-                    ),
+                    (SymbolData::Function, _) => {
+                        format!("Function '{name}' is already defined in the current scope.")
+                    }
+                    (SymbolData::Variable { .. }, _) => {
+                        format!("Variable '{name}' is already defined in the current scope.")
+                    }
                 };
                 return Err(error_message);
             }

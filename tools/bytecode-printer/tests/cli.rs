@@ -1,10 +1,10 @@
-use clap::{Parser, CommandFactory};
 use bytecode_printer_lib::cli::Parser as CliParser;
 use bytecode_printer_lib::format::BytecodeFormat;
+use clap::{CommandFactory, Parser};
 
 const EXECUTABLE_NAME: &str = "bytecode-printer";
 
-#[test] 
+#[test]
 fn help() {
     // Test that help can be accessed without panicking
     let parser = CliParser::command();
@@ -17,7 +17,7 @@ fn with_file() {
     let args = vec![EXECUTABLE_NAME, "test.sl"];
     let result = CliParser::try_parse_from(args);
     assert!(result.is_ok());
-    
+
     let parser = result.unwrap();
     assert_eq!(parser.input, "test.sl");
     assert_eq!(parser.format, BytecodeFormat::Pretty); // default format
@@ -29,7 +29,7 @@ fn with_format() {
     let args = vec![EXECUTABLE_NAME, "--format", "json", "test.sl"];
     let result = CliParser::try_parse_from(args);
     assert!(result.is_ok());
-    
+
     let parser = result.unwrap();
     assert_eq!(parser.input, "test.sl");
     assert_eq!(parser.format, BytecodeFormat::Json);
@@ -41,7 +41,7 @@ fn with_short_format() {
     let args = vec![EXECUTABLE_NAME, "-f", "debug", "test.sl"];
     let result = CliParser::try_parse_from(args);
     assert!(result.is_ok());
-    
+
     let parser = result.unwrap();
     assert_eq!(parser.input, "test.sl");
     assert_eq!(parser.format, BytecodeFormat::Debug);

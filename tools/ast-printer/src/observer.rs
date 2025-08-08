@@ -1,12 +1,11 @@
-use slang_compilation_pipeline::observer::StageObserver;
-use slang_ir::ast::Statement;
-use slang_frontend::Token;
 use colored::Colorize;
+use slang_compilation_pipeline::observer::StageObserver;
+use slang_frontend::Token;
+use slang_ir::ast::Statement;
 
 /// Observer that prints AST when parsing or semantic analysis completes
 /// This observer is primarily used for debugging and development purposes
-pub struct ASTPrinter {
-}
+pub struct ASTPrinter {}
 
 impl ASTPrinter {
     pub fn new() -> Self {

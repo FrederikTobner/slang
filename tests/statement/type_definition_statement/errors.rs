@@ -10,7 +10,7 @@ fn missing_name() {
             y: i32,
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -27,7 +27,7 @@ fn missing_opening_brace() {
             y: i32
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -44,7 +44,7 @@ fn missing_closing_brace() {
             y: i32
         // Missing closing brace
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -61,7 +61,7 @@ fn field_missing_type() {
             y: 
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -78,7 +78,7 @@ fn missing_colon() {
             y: i32
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -99,7 +99,7 @@ fn duplicate_definition() {
             y: i32,
         };
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

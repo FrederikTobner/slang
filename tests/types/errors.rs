@@ -21,7 +21,7 @@ fn unknown_type() {
     let program = r#"
         let a: unknown = 0; 
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

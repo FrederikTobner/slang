@@ -16,7 +16,7 @@ fn with_boolean_types(#[case] first: &str, #[case] second: &str, #[case] expecte
         print_value(a && b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout(expected);
 }
@@ -42,7 +42,7 @@ fn with_non_boolean_types() {
         let b: bool = true;
         print_value(a && b);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -59,7 +59,7 @@ fn short_circuit() {
         let result = false && (1 / 0 > 0);
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("false");
 }
@@ -71,7 +71,7 @@ fn with_function() {
         fn my_function() {}
         print_value(my_function && my_function);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -85,11 +85,10 @@ fn with_native_function() {
     let program = r#"
         print_value && print_value;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
         .error_code(ErrorCode::LogicalOperatorTypeMismatch)
         .stderr("Logical operator \'&&\' requires boolean operands, got fn(unknown) -> i32 and fn(unknown) -> i32");
 }
-

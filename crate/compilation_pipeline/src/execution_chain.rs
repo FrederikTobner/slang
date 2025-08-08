@@ -3,26 +3,23 @@
 //! This module provides a clean API for constructing compilation pipelines
 //! using a chain pattern that maintains logical execution order and type safety.
 
+use crate::source_file::SlangSourceFile;
+use crate::stages::{CodeGenerationStage, ParsingStage, SemanticAnalysisStage, TokenizationStage};
 use crate::{
     error::StageError,
     hlist::{HCons, HList, HNil},
     stage::{CompilationStage, StageContext},
 };
-use slang_shared::DiagnosticEngine;
-use crate::source_file::SlangSourceFile;
-use slang_ir::ast::Statement; 
-use slang_frontend::Token;
 use slang_backend::bytecode::Chunk;
-use crate::stages::{
-    TokenizationStage, ParsingStage, SemanticAnalysisStage, CodeGenerationStage
-};
+use slang_frontend::Token;
+use slang_ir::ast::Statement;
+use slang_shared::DiagnosticEngine;
 
 // Import the macros from the chain_macros module
-use crate::{define_chain_types, define_chain_constructors};
-
+use crate::{define_chain_constructors, define_chain_types};
 
 /// A type-safe execution chain that maintains stages in their logical execution order.
-/// 
+///
 /// The ExecutionChain pattern allows users to construct pipelines by chaining stages
 /// in the order they should execute, which is more intuitive than the HList approach.
 /// Internally, it uses HList for type safety and zero-cost execution.
@@ -30,7 +27,6 @@ pub struct ExecutionChain<Input, Output, Stages: HList> {
     stages: Stages,
     _phantom: std::marker::PhantomData<(Input, Output)>,
 }
-
 
 impl ExecutionChain<(), (), HNil> {
     /// Create a new execution chain with the first stage.
@@ -62,12 +58,12 @@ where
 }
 
 /// Trait for executing an execution chain.
-/// 
+///
 /// This trait is implemented for ExecutionChain types that can be executed
 /// with a given input type.
 pub trait ExecuteChain<Input> {
     type Output;
-    
+
     fn execute_chain(
         self,
         input: Input,
@@ -78,7 +74,7 @@ pub trait ExecuteChain<Input> {
 
 impl<Input, Output> ExecuteChain<Input> for ExecutionChain<Input, Output, HNil> {
     type Output = Input;
-    
+
     fn execute_chain(
         self,
         input: Input,
@@ -91,7 +87,7 @@ impl<Input, Output> ExecuteChain<Input> for ExecutionChain<Input, Output, HNil> 
 
 pub trait ExecuteTailFirst<Input> {
     type Output;
-    
+
     fn execute_tail_first(
         &self,
         input: Input,
@@ -102,7 +98,7 @@ pub trait ExecuteTailFirst<Input> {
 
 impl<Input> ExecuteTailFirst<Input> for HNil {
     type Output = Input;
-    
+
     fn execute_tail_first(
         &self,
         input: Input,
@@ -122,7 +118,7 @@ where
     H::Output: 'static,
 {
     type Output = H::Output;
-    
+
     fn execute_tail_first(
         &self,
         input: Input,
@@ -130,7 +126,8 @@ where
         diagnostics: &mut DiagnosticEngine,
     ) -> Result<Self::Output, StageError> {
         let intermediate = self.tail.execute_tail_first(input, context, diagnostics)?;
-        self.head.execute(H::Input::from(intermediate), context, diagnostics)
+        self.head
+            .execute(H::Input::from(intermediate), context, diagnostics)
     }
 }
 
@@ -141,7 +138,7 @@ where
     HCons<H, T>: ExecuteTailFirst<Input, Output = Output> + 'static,
 {
     type Output = Output;
-    
+
     fn execute_chain(
         self,
         input: Input,
@@ -185,7 +182,7 @@ define_chain_types! {
     TokenBytecodeChain(Vec<Token>, Chunk): [CodeGenerationStage, SemanticAnalysisStage, ParsingStage];
 }
 
-// Define convenience constructors for all chain types  
+// Define convenience constructors for all chain types
 define_chain_constructors! {
     TokenizationChain => tokenization: [TokenizationStage];
     ParsingChain => parsing: [TokenizationStage, ParsingStage];

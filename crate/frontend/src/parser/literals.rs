@@ -3,21 +3,20 @@
 
 use super::core::Parser;
 use slang_error::{ParseError, ParseErrorFactory};
-use slang_ir::ast::Expression;
 use slang_ir::ExprFactory; // Import factory system
+use slang_ir::ast::Expression;
 use slang_types::{
-    TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32,
-    TYPE_NAME_U64,
+    TYPE_NAME_F32, TYPE_NAME_F64, TYPE_NAME_I32, TYPE_NAME_I64, TYPE_NAME_U32, TYPE_NAME_U64,
 };
 
 /// Extension trait for literal parsing functionality
-/// 
+///
 /// This trait extends the Parser with literal parsing methods,
 /// providing type-safe parsing of different literal types.
 pub trait LiteralParsing {
     /// Parse an integer literal with optional type suffix
     fn parse_integer(&mut self) -> Result<Expression, ParseError>;
-    
+
     /// Parse a float literal with optional type suffix
     fn parse_float(&mut self) -> Result<Expression, ParseError>;
 }
@@ -46,16 +45,14 @@ impl<'a> LiteralParsing for Parser<'a> {
                             &format!("Value {base_value} is out of range for {TYPE_NAME_I32}"),
                         ));
                     }
-                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
-                        base_value as i32,
-                        location
-                    )));
+                    return Ok(Expression::Literal(
+                        ExprFactory::literal_expr_with_location(base_value as i32, location),
+                    ));
                 }
                 TYPE_NAME_I64 => {
-                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
-                        base_value,
-                        location
-                    )));
+                    return Ok(Expression::Literal(
+                        ExprFactory::literal_expr_with_location(base_value, location),
+                    ));
                 }
                 TYPE_NAME_U32 => {
                     if base_value < 0 || base_value > u32::MAX as i64 {
@@ -65,10 +62,9 @@ impl<'a> LiteralParsing for Parser<'a> {
                             &format!("Value {base_value} is out of range for {TYPE_NAME_U32}"),
                         ));
                     }
-                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
-                        base_value as u32,
-                        location
-                    )));
+                    return Ok(Expression::Literal(
+                        ExprFactory::literal_expr_with_location(base_value as u32, location),
+                    ));
                 }
                 TYPE_NAME_U64 => {
                     if base_value < 0 {
@@ -78,10 +74,9 @@ impl<'a> LiteralParsing for Parser<'a> {
                             &format!("Value {base_value} is out of range for {TYPE_NAME_U64}"),
                         ));
                     }
-                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
-                        base_value as u64,
-                        location
-                    )));
+                    return Ok(Expression::Literal(
+                        ExprFactory::literal_expr_with_location(base_value as u64, location),
+                    ));
                 }
                 _ => {
                     return Err(ParseErrorFactory::unknown_type(
@@ -93,10 +88,12 @@ impl<'a> LiteralParsing for Parser<'a> {
         }
 
         // No suffix - create unspecified integer
-        Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
-            slang_ir::ast::LiteralValue::UnspecifiedInteger(base_value),
-            location
-        )))
+        Ok(Expression::Literal(
+            ExprFactory::literal_expr_with_location(
+                slang_ir::ast::LiteralValue::UnspecifiedInteger(base_value),
+                location,
+            ),
+        ))
     }
 
     fn parse_float(&mut self) -> Result<Expression, ParseError> {
@@ -122,16 +119,14 @@ impl<'a> LiteralParsing for Parser<'a> {
                             &format!("Value {base_value} is out of range for {TYPE_NAME_F32}"),
                         ));
                     }
-                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
-                        base_value as f32,
-                        location
-                    )));
+                    return Ok(Expression::Literal(
+                        ExprFactory::literal_expr_with_location(base_value as f32, location),
+                    ));
                 }
                 TYPE_NAME_F64 => {
-                    return Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
-                        base_value,
-                        location
-                    )));
+                    return Ok(Expression::Literal(
+                        ExprFactory::literal_expr_with_location(base_value, location),
+                    ));
                 }
                 _ => {
                     return Err(ParseErrorFactory::unknown_type(
@@ -143,9 +138,11 @@ impl<'a> LiteralParsing for Parser<'a> {
         }
 
         // No suffix - create unspecified float
-        Ok(Expression::Literal(ExprFactory::literal_expr_with_location(
-            slang_ir::ast::LiteralValue::UnspecifiedFloat(base_value),
-            location
-        )))
+        Ok(Expression::Literal(
+            ExprFactory::literal_expr_with_location(
+                slang_ir::ast::LiteralValue::UnspecifiedFloat(base_value),
+                location,
+            ),
+        ))
     }
 }

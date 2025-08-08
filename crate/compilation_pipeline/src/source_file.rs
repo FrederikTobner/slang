@@ -1,9 +1,9 @@
 //! Slang source file (.sl) type definition.
 
-use std::path::{Path, PathBuf};
+use std::fmt;
 use std::fs;
 use std::io;
-use std::fmt;
+use std::path::{Path, PathBuf};
 
 /// Error type for source file validation and creation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,12 +20,10 @@ pub enum SourceFileError {
 impl fmt::Display for SourceFileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SourceFileError::InvalidExtension { expected, found } => {
-                match found {
-                    Some(ext) => write!(f, "Invalid file extension '{ext}'. Expected '.{expected}'"),
-                    None => write!(f, "Missing file extension. Expected '.{expected}'"),
-                }
-            }
+            SourceFileError::InvalidExtension { expected, found } => match found {
+                Some(ext) => write!(f, "Invalid file extension '{ext}'. Expected '.{expected}'"),
+                None => write!(f, "Missing file extension. Expected '.{expected}'"),
+            },
             SourceFileError::Io(msg) => write!(f, "IO error: {msg}"),
         }
     }
@@ -47,10 +45,10 @@ impl From<io::Error> for SourceFileError {
 /// # Examples
 /// ```rust
 /// use slang_compilation_pipeline::SlangSourceFile;
-/// 
+///
 /// // Create from content and path
 /// let source_file = SlangSourceFile::new("hello.sl", "let x = 42;".to_string()).unwrap();
-/// 
+///
 /// // Access the content and metadata
 /// println!("File: {}", source_file.file_name());
 /// println!("Content: {}", source_file.content());
@@ -67,7 +65,7 @@ pub struct SlangSourceFile {
 impl SlangSourceFile {
     /// The expected file extension for Slang source files
     pub const EXTENSION: &'static str = "sl";
-    
+
     /// Create a new SlangSourceFile with the given path and content.
     ///
     /// # Arguments
@@ -82,16 +80,16 @@ impl SlangSourceFile {
     pub fn new<P: AsRef<Path>>(path: P, content: String) -> Result<Self, SourceFileError> {
         let path = path.as_ref().to_path_buf();
         Self::validate_extension(&path)?;
-        
+
         Ok(Self { path, content })
     }
-    
+
     /// Create a SlangSourceFile for development tools and utilities.
-    /// 
+    ///
     /// This constructor is intended for use by development tools (like AST printers,
     /// token printers, etc.) that need to process Slang source code from files that
     /// may not have the standard .sl extension (temporary files, stdin, etc.).
-    /// 
+    ///
     /// For production compilation, use `new()` or `from_path()` instead.
     ///
     /// # Arguments
@@ -104,7 +102,7 @@ impl SlangSourceFile {
         let path = path.as_ref().to_path_buf();
         Self { path, content }
     }
-    
+
     /// Create a SlangSourceFile by reading from a file path.
     ///
     /// # Arguments
@@ -115,11 +113,11 @@ impl SlangSourceFile {
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, SourceFileError> {
         let path = path.as_ref().to_path_buf();
         Self::validate_extension(&path)?;
-        
+
         let content = fs::read_to_string(&path)?;
         Ok(Self { path, content })
     }
-    
+
     /// Get the file path as a string.
     ///
     /// # Returns
@@ -127,17 +125,18 @@ impl SlangSourceFile {
     pub fn file_path(&self) -> &str {
         self.path.to_str().unwrap_or("")
     }
-    
+
     /// Get the file name (including extension).
     ///
     /// # Returns
     /// The file name as a string slice
     pub fn file_name(&self) -> &str {
-        self.path.file_name()
+        self.path
+            .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("")
     }
-    
+
     /// Get the source code content.
     ///
     /// # Returns
@@ -145,7 +144,7 @@ impl SlangSourceFile {
     pub fn content(&self) -> &str {
         &self.content
     }
-    
+
     /// Get the source code content as a mutable reference.
     ///
     /// # Returns
@@ -153,7 +152,7 @@ impl SlangSourceFile {
     pub fn content_mut(&mut self) -> &mut String {
         &mut self.content
     }
-    
+
     /// Save the source file to disk.
     ///
     /// # Returns
@@ -164,7 +163,7 @@ impl SlangSourceFile {
         }
         fs::write(&self.path, &self.content)
     }
-    
+
     /// Validate that the given path has the correct .sl extension.
     ///
     /// # Arguments

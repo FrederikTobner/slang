@@ -1,8 +1,8 @@
 // Parse error types and implementations
+use crate::Location;
 use crate::compiler_error::CompilationError;
 use crate::domain_error::{DomainError, ErrorCategory};
 use crate::error_codes::ErrorCode;
-use crate::Location;
 
 /// Enhanced parsing errors with richer context than current ParseError
 #[derive(Debug, Clone)]
@@ -12,7 +12,7 @@ pub enum ParseError {
         expected: String,
         found: String,
         location: Location,
-        context: String, // e.g., "in function parameter list"
+        context: String,               // e.g., "in function parameter list"
         error_code: Option<ErrorCode>, // Optional specific error code for backward compatibility
     },
     /// Unexpected end of file
@@ -53,59 +53,113 @@ pub type ParseResult<T> = Result<T, ParseError>;
 impl DomainError for ParseError {
     fn to_compiler_error(&self) -> CompilationError {
         let (code, message) = match self {
-            ParseError::ExpectedToken { expected, found, context, error_code, .. } => {
+            ParseError::ExpectedToken {
+                expected,
+                found,
+                context,
+                error_code,
+                ..
+            } => {
                 let final_code = error_code.unwrap_or(ErrorCode::ExpectedToken);
-                (final_code, 
-                 format!("Expected {}, found {} {}", expected, found, 
-                        if context.is_empty() { String::new() } else { format!("({context})") }))
+                (
+                    final_code,
+                    format!(
+                        "Expected {}, found {} {}",
+                        expected,
+                        found,
+                        if context.is_empty() {
+                            String::new()
+                        } else {
+                            format!("({context})")
+                        }
+                    ),
+                )
             }
-            ParseError::UnexpectedEof { expected, context, error_code, .. } => {
+            ParseError::UnexpectedEof {
+                expected,
+                context,
+                error_code,
+                ..
+            } => {
                 let final_code = error_code.unwrap_or(ErrorCode::UnexpectedEof);
-                (final_code,
-                 format!("Unexpected end of file, expected {} {}", expected,
-                        if context.is_empty() { String::new() } else { format!("({context})") }))
+                (
+                    final_code,
+                    format!(
+                        "Unexpected end of file, expected {} {}",
+                        expected,
+                        if context.is_empty() {
+                            String::new()
+                        } else {
+                            format!("({context})")
+                        }
+                    ),
+                )
             }
-            ParseError::InvalidNumber { value, reason, error_code, .. } => {
+            ParseError::InvalidNumber {
+                value,
+                reason,
+                error_code,
+                ..
+            } => {
                 let final_code = error_code.unwrap_or(ErrorCode::InvalidNumber);
                 (final_code, format!("Invalid number '{value}': {reason}"))
             }
-            ParseError::InvalidSyntax { message, suggestion, error_code, .. } => {
+            ParseError::InvalidSyntax {
+                message,
+                suggestion,
+                error_code,
+                ..
+            } => {
                 let final_code = error_code.unwrap_or(ErrorCode::SyntaxError);
-                (final_code, 
-                 if let Some(suggestion) = suggestion {
-                     format!("{message}. {suggestion}")
-                 } else {
-                     message.clone()
-                 })
+                (
+                    final_code,
+                    if let Some(suggestion) = suggestion {
+                        format!("{message}. {suggestion}")
+                    } else {
+                        message.clone()
+                    },
+                )
             }
-            ParseError::MismatchedDelimiters { opening, expected_closing, found_closing, error_code, .. } => {
+            ParseError::MismatchedDelimiters {
+                opening,
+                expected_closing,
+                found_closing,
+                error_code,
+                ..
+            } => {
                 let final_code = error_code.unwrap_or(ErrorCode::MismatchedDelimiters);
-                (final_code,
-                 match found_closing {
-                     Some(found) => format!("Mismatched delimiters: opened with '{opening}', expected '{expected_closing}', found '{found}'"),
-                     None => format!("Unclosed delimiter: '{opening}', expected '{expected_closing}'"),
-                 })
+                (
+                    final_code,
+                    match found_closing {
+                        Some(found) => format!(
+                            "Mismatched delimiters: opened with '{opening}', expected '{expected_closing}', found '{found}'"
+                        ),
+                        None => format!(
+                            "Unclosed delimiter: '{opening}', expected '{expected_closing}'"
+                        ),
+                    },
+                )
             }
         };
-        
+
         let loc = self.location();
         CompilationError::new(code, message, loc.line, loc.column, loc.position, Some(1))
     }
-    
+
     fn location(&self) -> &Location {
         match self {
-            ParseError::ExpectedToken { location, .. } |
-            ParseError::UnexpectedEof { location, .. } |
-            ParseError::InvalidNumber { location, .. } |
-            ParseError::InvalidSyntax { location, .. } |
-            ParseError::MismatchedDelimiters { location, .. } => location,
+            ParseError::ExpectedToken { location, .. }
+            | ParseError::UnexpectedEof { location, .. }
+            | ParseError::InvalidNumber { location, .. }
+            | ParseError::InvalidSyntax { location, .. }
+            | ParseError::MismatchedDelimiters { location, .. } => location,
         }
     }
-    
+
     fn category(&self) -> ErrorCategory {
         ErrorCategory::Syntax
     }
-    
+
     fn short_description(&self) -> String {
         match self {
             ParseError::ExpectedToken { expected, .. } => format!("Expected {expected}"),

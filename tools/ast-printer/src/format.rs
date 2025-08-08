@@ -1,4 +1,4 @@
-use crate::formatter::{AstFormatter, PrettyFormatter, JsonFormatter, CompactFormatter};
+use crate::formatter::{AstFormatter, CompactFormatter, JsonFormatter, PrettyFormatter};
 
 /// Available output formats for AST display
 #[derive(Debug, Clone, PartialEq)]

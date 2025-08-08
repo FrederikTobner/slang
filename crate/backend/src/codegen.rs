@@ -1,12 +1,15 @@
 use crate::bytecode::{Chunk, OpCode};
-use crate::value::{Value, Function};
-use slang_error::{CompileResult, CompilationError, CodegenError, CodegenResult, DomainResult, ResourceType};
+use crate::value::{Function, Value};
+use slang_error::location::Location;
+use slang_error::{
+    CodegenError, CodegenResult, CompilationError, CompileResult, DomainResult, ResourceType,
+};
 use slang_ir::Visitor;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
-    FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt,
-    UnaryExpr, UnaryOperator, ReturnStatement};
-use slang_error::location::Location;
+    FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr,
+    ReturnStatement, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
+};
 
 /// Maximum jump distance for bytecode instructions
 /// Uses 16-bit offset, so maximum value is 2^16 - 1
@@ -60,9 +63,9 @@ impl CodeGenerator {
     /// Check if we've exceeded the maximum function recursion depth
     fn check_stack_depth(&self, location: slang_error::Location) -> CodegenResult<()> {
         const MAX_FUNCTION_DEPTH: usize = 1000;
-        
+
         if self.functions.len() > MAX_FUNCTION_DEPTH {
-            Err(CodegenError::StackOverflow { 
+            Err(CodegenError::StackOverflow {
                 current_depth: self.functions.len(),
                 max_depth: MAX_FUNCTION_DEPTH,
                 location,
@@ -118,7 +121,7 @@ impl CodeGenerator {
                 break; // Stop compilation on first error
             }
         }
-        
+
         if self.errors.is_empty() {
             Ok(())
         } else {
@@ -147,7 +150,8 @@ impl CodeGenerator {
     /// * `op` - The opcode to emit
     fn emit_op(&mut self, op: OpCode) {
         self.chunk.write_op(op, self.line);
-    }    /// Adds a constant value to the chunk and emits code to load it
+    }
+    /// Adds a constant value to the chunk and emits code to load it
     ///
     /// ### Arguments
     ///
@@ -232,13 +236,13 @@ impl Visitor<()> for CodeGenerator {
             Statement::If(if_stmt) => if_stmt.location,
         };
         self.set_current_location(&location);
-        
+
         // Use proper domain error handling
         let result: CodegenResult<()> = self.check_stack_depth(location);
         if let Err(error) = result {
             return Err(Box::new(error));
         }
-        
+
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
             Statement::Assignment(assign_stmt) => self.visit_assignment_statement(assign_stmt),
@@ -255,7 +259,7 @@ impl Visitor<()> for CodeGenerator {
     fn visit_expression(&mut self, expr: &Expression) -> DomainResult<()> {
         // Update current line from the expression's location
         self.set_current_location(&expr.location());
-        
+
         match expr {
             Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
@@ -264,7 +268,9 @@ impl Visitor<()> for CodeGenerator {
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
             Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
             Expression::Block(block_expr) => self.visit_block_expression(block_expr),
-            Expression::FunctionType(func_type_expr) => self.visit_function_type_expression(func_type_expr),
+            Expression::FunctionType(func_type_expr) => {
+                self.visit_function_type_expression(func_type_expr)
+            }
         }
     }
 
@@ -301,9 +307,10 @@ impl Visitor<()> for CodeGenerator {
         self.emit_op(OpCode::Return);
 
         self.end_scope();
-        
+
         // Convert CodegenError to DomainError for propagation
-        self.patch_jump(jump_over).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
+        self.patch_jump(jump_over)
+            .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
 
         let function = Value::Function(Box::new(Function {
             name: fn_decl.name.clone(),
@@ -458,7 +465,8 @@ impl Visitor<()> for CodeGenerator {
                 let jump_if_false = self.emit_jump(OpCode::JumpIfFalse);
                 self.emit_op(OpCode::Pop);
                 self.visit_expression(&bin_expr.right)?;
-                self.patch_jump(jump_if_false).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
+                self.patch_jump(jump_if_false)
+                    .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
                 return Ok(());
             }
 
@@ -466,10 +474,12 @@ impl Visitor<()> for CodeGenerator {
                 self.visit_expression(&bin_expr.left)?;
                 let jump_if_true = self.emit_jump(OpCode::JumpIfFalse);
                 let jump_to_end = self.emit_jump(OpCode::Jump);
-                self.patch_jump(jump_if_true).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
+                self.patch_jump(jump_if_true)
+                    .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
                 self.emit_op(OpCode::Pop);
                 self.visit_expression(&bin_expr.right)?;
-                self.patch_jump(jump_to_end).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
+                self.patch_jump(jump_to_end)
+                    .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
                 return Ok(());
             }
 
@@ -542,10 +552,7 @@ impl Visitor<()> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_type_definition_statement(
-        &mut self,
-        _stmt: &TypeDefinitionStmt,
-    ) -> DomainResult<()> {
+    fn visit_type_definition_statement(&mut self, _stmt: &TypeDefinitionStmt) -> DomainResult<()> {
         // Type definitions don't generate code at runtime
         // They're just used by the semantic analyzer
         Ok(())
@@ -559,11 +566,13 @@ impl Visitor<()> for CodeGenerator {
         self.visit_expression(&cond_expr.then_branch)?;
 
         let jump_over_else = self.emit_jump(OpCode::Jump);
-        self.patch_jump(jump_to_else).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
+        self.patch_jump(jump_to_else)
+            .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
         self.emit_op(OpCode::Pop);
         self.visit_expression(&cond_expr.else_branch)?;
 
-        self.patch_jump(jump_over_else).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
+        self.patch_jump(jump_over_else)
+            .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
 
         Ok(())
     }
@@ -579,14 +588,17 @@ impl Visitor<()> for CodeGenerator {
         if let Some(else_branch) = &if_stmt.else_branch {
             let jump_over_else = self.emit_jump(OpCode::Jump);
 
-            self.patch_jump(jump_to_else).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
+            self.patch_jump(jump_to_else)
+                .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
             self.emit_op(OpCode::Pop);
 
             self.visit_block_expression(else_branch)?;
 
-            self.patch_jump(jump_over_else).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
+            self.patch_jump(jump_over_else)
+                .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
         } else {
-            self.patch_jump(jump_to_else).map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
+            self.patch_jump(jump_to_else)
+                .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
             self.emit_op(OpCode::Pop);
         }
 
@@ -611,7 +623,10 @@ impl Visitor<()> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_function_type_expression(&mut self, _func_type_expr: &FunctionTypeExpr) -> DomainResult<()> {
+    fn visit_function_type_expression(
+        &mut self,
+        _func_type_expr: &FunctionTypeExpr,
+    ) -> DomainResult<()> {
         // Function type expressions are compile-time constructs that don't generate runtime bytecode
         // They are used for type checking and don't produce any values at runtime
         Ok(())

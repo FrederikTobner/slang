@@ -15,7 +15,7 @@ fn nested_function_calls() {
         let result = outer_function(20);
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("41");
 }
@@ -35,7 +35,7 @@ fn returning_function_call() {
         let result = get_factory_result();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }

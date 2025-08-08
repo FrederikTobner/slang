@@ -13,4 +13,3 @@ pub use error::SemanticAnalysisError;
 pub use error_collector::ErrorCollector;
 pub use semantic_analyzer::execute;
 pub use traits::SemanticResult;
-

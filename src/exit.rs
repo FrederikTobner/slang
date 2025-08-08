@@ -36,4 +36,3 @@ impl From<Code> for i32 {
         code as i32
     }
 }
-

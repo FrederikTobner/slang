@@ -6,10 +6,7 @@ fn basic() {
     let program = r#"
         print_value(());
     "#;
-    
-    // Act & Assert
-    ProgramAssertion::new(program)
-        .succeeds()
-        .stdout("()");
-}
 
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("()");
+}

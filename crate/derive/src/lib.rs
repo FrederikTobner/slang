@@ -1,6 +1,8 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput, Expr, ExprLit, Lit, Meta, MetaNameValue, Variant, parse_macro_input, Error};
+use syn::{
+    Data, DeriveInput, Error, Expr, ExprLit, Lit, Meta, MetaNameValue, Variant, parse_macro_input,
+};
 
 /// Derive macro that generates `name()` and `from_str()` methods for enums
 /// based on `#[type_name = "..."]` attributes on the variants.
@@ -26,10 +28,9 @@ pub fn derive_named_enum(input: TokenStream) -> TokenStream {
     let variants = if let Data::Enum(data_enum) = &input.data {
         &data_enum.variants
     } else {
-        return Error::new_spanned(
-            &input.ident,
-            "NamedEnum can only be derived for enums"
-        ).to_compile_error().into();
+        return Error::new_spanned(&input.ident, "NamedEnum can only be derived for enums")
+            .to_compile_error()
+            .into();
     };
     let variant_mappings = variants
         .iter()
@@ -100,13 +101,13 @@ fn extract_name_attribute(variant: &Variant) -> Result<Option<String>, Error> {
                 } else {
                     Err(Error::new_spanned(
                         value,
-                        "name attribute must have a string literal value"
+                        "name attribute must have a string literal value",
                     ))
                 }
             }
             _ => Err(Error::new_spanned(
                 attr,
-                "name attribute must be in the form #[name = \"value\"]"
+                "name attribute must be in the form #[name = \"value\"]",
             )),
         }
     } else {
@@ -164,10 +165,9 @@ pub fn derive_numeric_enum(input: TokenStream) -> TokenStream {
     let variants = if let Data::Enum(data_enum) = &input.data {
         &data_enum.variants
     } else {
-        return Error::new_spanned(
-            &input.ident,
-            "NumericEnum can only be derived for enums"
-        ).to_compile_error().into();
+        return Error::new_spanned(&input.ident, "NumericEnum can only be derived for enums")
+            .to_compile_error()
+            .into();
     };
 
     let mut next_discriminant = 0usize;
@@ -191,15 +191,19 @@ pub fn derive_numeric_enum(input: TokenStream) -> TokenStream {
                     Err(_) => {
                         return Error::new_spanned(
                             lit_int,
-                            "Enum discriminant must be a valid integer"
-                        ).to_compile_error().into();
+                            "Enum discriminant must be a valid integer",
+                        )
+                        .to_compile_error()
+                        .into();
                     }
                 }
             } else {
                 return Error::new_spanned(
                     expr,
-                    "NumericEnum requires integer literals as enum discriminants"
-                ).to_compile_error().into();
+                    "NumericEnum requires integer literals as enum discriminants",
+                )
+                .to_compile_error()
+                .into();
             }
         } else {
             let value = next_discriminant;
@@ -260,10 +264,9 @@ pub fn derive_iterable_enum(input: TokenStream) -> TokenStream {
     let variants = if let Data::Enum(data_enum) = &input.data {
         &data_enum.variants
     } else {
-        return Error::new_spanned(
-            &input.ident,
-            "IterableEnum can only be derived for enums"
-        ).to_compile_error().into();
+        return Error::new_spanned(&input.ident, "IterableEnum can only be derived for enums")
+            .to_compile_error()
+            .into();
     };
 
     for variant in variants.iter() {

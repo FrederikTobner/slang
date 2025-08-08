@@ -4,7 +4,7 @@
 //! when defining ExecutionChain type aliases and their convenience constructors.
 
 /// Macro to define execution chain type aliases with their stage combinations.
-/// 
+///
 /// This macro eliminates the repetitive boilerplate of defining ExecutionChain type aliases
 /// by automatically generating the appropriate HCons chain for the specified stages.
 ///
@@ -61,7 +61,7 @@ macro_rules! define_chain_types {
             >;
         )*
     };
-    
+
     // Helper to build nested HCons types from a list of stages
     (@build_hcons [$stage:ty]) => {
         $crate::hlist::HCons<$stage, $crate::hlist::HNil>
@@ -72,7 +72,7 @@ macro_rules! define_chain_types {
 }
 
 /// Macro to define convenience constructors for chain types.
-/// 
+///
 /// This macro eliminates the repetitive impl blocks for chain constructors
 /// by automatically generating the appropriate constructor methods.
 ///
@@ -80,7 +80,7 @@ macro_rules! define_chain_types {
 /// ```ignore
 /// use slang_compilation_pipeline::define_chain_constructors;
 /// use slang_compilation_pipeline::{ExecutionChain, define_chain_types};
-/// 
+///
 /// define_chain_constructors! {
 ///     ChainName => method_name: [MyStage1, MyStage2];
 /// }
@@ -128,7 +128,7 @@ macro_rules! define_chain_constructors {
             }
         )*
     };
-    
+
     // Helper to build the execution chain from stages (in logical order)
     (@build_chain [$stage:ident]) => {
         $crate::execution_chain::ExecutionChain::starting_with($stage)

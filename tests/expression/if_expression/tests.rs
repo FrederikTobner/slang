@@ -16,7 +16,7 @@ fn with_integer_types(#[case] type_name: &str) {
         print_value(if a > b {{ a - b }} else {{ b - a }});
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("42");
 }
@@ -33,7 +33,7 @@ fn with_float_types(#[case] type_name: &str) {
         print_value(if a > b {{ a - b }} else {{ b - a }});
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("42");
 }
@@ -46,7 +46,7 @@ fn with_strings() {
         let result: string = if x > 3 { "greater" } else { "lesser" };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("greater");
 }
@@ -59,7 +59,7 @@ fn with_booleans() {
         let result: bool = if x > 3 { true } else { false };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("true");
 }
@@ -77,7 +77,7 @@ fn nested() {
         };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("50");
 }
@@ -103,7 +103,7 @@ fn complex_nested() {
         };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("45");
 }
@@ -122,7 +122,7 @@ fn block_with_multiple_statements() {
         };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("14");
 }
@@ -134,7 +134,7 @@ fn in_function_call() {
         let x: i32 = 5;
         print_value(if x > 3 { "true" } else { "false" });
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("true");
 }
@@ -148,7 +148,7 @@ fn with_complex_condition() {
         let result: string = if x > y && x < 10 { "in range" } else { "out of range" };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("in range");
 }
@@ -161,7 +161,7 @@ fn type_mismatch() {
         let result: i32 = if x > 3 { 10 } else { "string" };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -177,7 +177,7 @@ fn non_boolean_condition() {
         let result: i32 = if x { 10 } else { 20 };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -194,7 +194,7 @@ fn with_arithmetic() {
         let result: i32 = if x > y { x + y } else { x - y };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("8");
 }
@@ -208,7 +208,7 @@ fn chained() {
         let b: i32 = if a > 7 { 20 } else { 15 };
         print_value(b);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("20");
 }
@@ -221,7 +221,7 @@ fn must_have_same_type() {
         let result: i32 = if x > 3 { 10 } else { "string" };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -237,7 +237,7 @@ fn must_have_else_branch() {
         let result: i32 = if x > 3 { 10 };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -253,7 +253,7 @@ fn with_unit_branches() {
         let result = if x { () } else { () };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("()");
 }
@@ -273,7 +273,7 @@ fn with_function_branches() {
         let result: fn() -> i32 = if x { my_function } else { another_function };
         print_value(result());
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -286,8 +286,7 @@ fn with_native_function_branches() {
         let result = if x { print_value } else { print_value };
         print_value(result(100));
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("100");
 }
-

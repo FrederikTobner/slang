@@ -12,9 +12,11 @@ fn returns_unit_implicitly() {
         test_function();
         print_value("completed");
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("completed");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("completed");
 }
 
 #[test]
@@ -25,7 +27,7 @@ fn without_expression_in_non_unit_function_error() {
             return;
         }
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

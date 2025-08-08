@@ -113,7 +113,12 @@ impl Token {
     }
 
     /// Creates a new token with the given type, lexeme, position, and suffix
-    pub fn new_with_suffix(token_type: Tokentype, lexeme: String, pos: usize, suffix: Option<String>) -> Token {
+    pub fn new_with_suffix(
+        token_type: Tokentype,
+        lexeme: String,
+        pos: usize,
+        suffix: Option<String>,
+    ) -> Token {
         Token {
             token_type,
             lexeme,

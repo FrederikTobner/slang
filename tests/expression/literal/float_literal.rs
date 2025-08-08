@@ -7,11 +7,9 @@ fn basic() {
     let program = r#"
         print_value(3.14);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program)
-        .succeeds()
-        .stdout("3.14");
+    ProgramAssertion::new(program).succeeds().stdout("3.14");
 }
 
 #[rstest]
@@ -21,11 +19,9 @@ fn with_suffix(#[case] literal: &str) {
     // Arrange
     let expected = literal.replace("f32", "").replace("f64", "");
     let program = format!(r#"print_value({literal});"#);
-    
+
     // Act & Assert
-    ProgramAssertion::new(&program)
-        .succeeds()
-        .stdout(&expected);
+    ProgramAssertion::new(&program).succeeds().stdout(&expected);
 }
 
 #[test]
@@ -34,11 +30,9 @@ fn scientific_notation() {
     let program = r#"
         print_value(1.23e4);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program)
-        .succeeds()
-        .stdout("12300");
+    ProgramAssertion::new(program).succeeds().stdout("12300");
 }
 
 #[test]
@@ -47,9 +41,7 @@ fn negative() {
     let program = r#"
         print_value(-3.14);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program)
-        .succeeds()
-        .stdout("-3.14");
+    ProgramAssertion::new(program).succeeds().stdout("-3.14");
 }

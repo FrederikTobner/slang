@@ -1,7 +1,7 @@
 use crate::semantic_analysis::traits::SemanticResult;
+use slang_ir::ast::{FunctionDeclarationStmt, LiteralValue, Statement};
 use slang_shared::compilation_context::CompilationContext;
 use slang_types::TypeId;
-use slang_ir::ast::{LiteralValue, Statement, FunctionDeclarationStmt};
 
 /// Type validation handles validation rules and constraints for types
 pub struct TypeValidation<'a> {
@@ -15,14 +15,18 @@ impl<'a> TypeValidation<'a> {
     }
 
     /// Validates that a literal value is within the valid range for its type
-    pub fn validate_literal_range(&self, literal: &LiteralValue, target_type: TypeId) -> SemanticResult {
+    pub fn validate_literal_range(
+        &self,
+        literal: &LiteralValue,
+        target_type: TypeId,
+    ) -> SemanticResult {
         match literal {
             LiteralValue::UnspecifiedInteger(_value) => {
                 // For now, assume range validation is handled elsewhere
                 Ok(target_type)
             }
             LiteralValue::UnspecifiedFloat(_value) => {
-                // For now, assume range validation is handled elsewhere  
+                // For now, assume range validation is handled elsewhere
                 Ok(target_type)
             }
             LiteralValue::I32(_) => Ok(target_type),
@@ -38,7 +42,10 @@ impl<'a> TypeValidation<'a> {
     }
 
     /// Validates function declaration constraints
-    pub fn validate_function_declaration(&self, func_decl: &FunctionDeclarationStmt) -> SemanticResult {
+    pub fn validate_function_declaration(
+        &self,
+        func_decl: &FunctionDeclarationStmt,
+    ) -> SemanticResult {
         // Validate parameter types exist
         for param in &func_decl.parameters {
             self.validate_type_exists(param.param_type)?;
@@ -59,7 +66,11 @@ impl<'a> TypeValidation<'a> {
     }
 
     /// Validates type constraints for variable declarations
-    pub fn validate_variable_type_constraints(&self, var_type: TypeId, _value_type: TypeId) -> SemanticResult {
+    pub fn validate_variable_type_constraints(
+        &self,
+        var_type: TypeId,
+        _value_type: TypeId,
+    ) -> SemanticResult {
         // For now, assume compatibility checking is done elsewhere
         Ok(var_type)
     }

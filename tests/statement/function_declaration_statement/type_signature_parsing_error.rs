@@ -7,7 +7,7 @@ fn missing_opening_parenthesize() {
     let program = r#"
         let my_function2 : fn i32 -> () = my_function;
         "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -21,7 +21,7 @@ fn missing_closing_parentesize() {
     let program = r#"
         let my_function2 : fn(i32 -> = my_function;
         "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -35,7 +35,7 @@ fn missing_type_identifier() {
     let program = r#"
         let my_function2 : fn(i32) -> = my_function;
         "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -49,7 +49,7 @@ fn expect_arrow() {
     let program = r#"
         let my_function2 : fn(i32) = my_function;
         "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

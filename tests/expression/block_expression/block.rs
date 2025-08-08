@@ -10,7 +10,7 @@ fn without_return() {
         };
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("()");
 }

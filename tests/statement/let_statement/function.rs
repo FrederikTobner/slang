@@ -11,7 +11,7 @@ fn with_explicit_function_type_mismatch() {
         
         let my_function : fn(i32) -> () = my_print;
         "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -29,9 +29,11 @@ fn with_explicit_function_type() {
         let my_function : fn(string) -> () = my_print;
         my_function("Hello from native function");
         "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("Hello from native function");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("Hello from native function");
 }
 
 #[test]
@@ -44,9 +46,11 @@ fn assign_native_to_function_with_explicit_function_type() {
         let my_function : fn(string) -> () = my_print;
         my_function("Hello from native function");
         "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("Hello from native function");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("Hello from native function");
 }
 
 #[test]
@@ -60,7 +64,7 @@ fn with_explicit_unit_return_type() {
         let result = return_unit();
         print_value(result); // Should print nothing or "()" depending on implementation
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("()");
 }
@@ -85,7 +89,9 @@ fn with_different_return_types() {
         print_value(get_int());
         print_value(get_float());
     "#;
-    
-    // Act & Assert  
-    ProgramAssertion::new(program).succeeds().stdout("Hello world\n42\n42.5");
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("Hello world\n42\n42.5");
 }

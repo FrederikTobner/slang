@@ -1,6 +1,6 @@
 use colored::Colorize;
-use slang_error::{CompilationError, ErrorCode, LineInfo};
 use slang_error::location::Location;
+use slang_error::{CompilationError, ErrorCode, LineInfo};
 
 /// Represents the severity level of a diagnostic message
 #[derive(Debug, Clone)]

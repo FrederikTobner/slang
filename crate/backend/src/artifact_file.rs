@@ -1,10 +1,10 @@
 //! Slang artifact file (.sip) type definition.
 
-use std::path::{Path, PathBuf};
+use crate::bytecode::Chunk;
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
+use std::path::{Path, PathBuf};
 use zip::{ZipArchive, ZipWriter, write::FileOptions};
-use crate::bytecode::Chunk;
 
 /// Represents a Slang compiled artifact file (.sip) with type safety and validation.
 ///
@@ -14,7 +14,7 @@ use crate::bytecode::Chunk;
 /// # Examples
 /// ```rust
 /// use slang_backend::SlangArtifactFile;
-/// 
+///
 /// // Create for output
 /// let output_path = SlangArtifactFile::create_output_path("hello.sl");
 /// assert_eq!(output_path.to_str().unwrap(), "hello.sip");
@@ -29,7 +29,7 @@ pub struct SlangArtifactFile {
 impl SlangArtifactFile {
     /// The expected file extension for Slang artifact files
     pub const EXTENSION: &'static str = "sip";
-    
+
     /// Create a new SlangArtifactFile with the given path.
     ///
     /// # Arguments
@@ -43,10 +43,10 @@ impl SlangArtifactFile {
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
         let path = path.as_ref().to_path_buf();
         Self::validate_extension(&path).expect("Invalid file extension");
-        
+
         Self { path }
     }
-    
+
     /// Create a SlangArtifactFile by validating an existing file path.
     ///
     /// # Arguments
@@ -61,16 +61,14 @@ impl SlangArtifactFile {
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, SlangArtifactFileError> {
         let path = path.as_ref().to_path_buf();
         Self::validate_extension(&path)?;
-        
+
         if !path.exists() {
-            return Err(SlangArtifactFileError::FileNotFound {
-                path: path.clone(),
-            });
+            return Err(SlangArtifactFileError::FileNotFound { path: path.clone() });
         }
-        
+
         Ok(Self { path })
     }
-    
+
     /// Create an output path for a compiled artifact based on a source file path.
     ///
     /// This takes a source file path (e.g., "hello.sl") and returns the corresponding
@@ -85,12 +83,12 @@ impl SlangArtifactFile {
         let source_path = source_path.as_ref();
         source_path.with_extension(Self::EXTENSION)
     }
-    
+
     /// Get the file path.
     pub fn path(&self) -> &Path {
         &self.path
     }
-    
+
     /// Get the file name (without directory path).
     pub fn file_name(&self) -> &str {
         self.path
@@ -98,23 +96,22 @@ impl SlangArtifactFile {
             .and_then(|name| name.to_str())
             .unwrap_or("unknown.sip")
     }
-    
+
     /// Check if the artifact file exists on disk.
     pub fn exists(&self) -> bool {
         self.path.exists()
     }
-    
+
     /// Get the file size in bytes, if the file exists.
     pub fn size(&self) -> Result<u64, SlangArtifactFileError> {
-        let metadata = fs::metadata(&self.path)
-            .map_err(|e| SlangArtifactFileError::Io {
-                source: e,
-                path: self.path.clone(),
-            })?;
-        
+        let metadata = fs::metadata(&self.path).map_err(|e| SlangArtifactFileError::Io {
+            source: e,
+            path: self.path.clone(),
+        })?;
+
         Ok(metadata.len())
     }
-    
+
     /// Read the raw bytes from the artifact file.
     ///
     /// # Returns
@@ -123,13 +120,12 @@ impl SlangArtifactFile {
     /// # Errors
     /// Returns IO errors if the file cannot be read
     pub fn read_bytes(&self) -> Result<Vec<u8>, SlangArtifactFileError> {
-        fs::read(&self.path)
-            .map_err(|e| SlangArtifactFileError::Io {
-                source: e,
-                path: self.path.clone(),
-            })
+        fs::read(&self.path).map_err(|e| SlangArtifactFileError::Io {
+            source: e,
+            path: self.path.clone(),
+        })
     }
-    
+
     /// Write bytes to the artifact file.
     ///
     /// # Arguments
@@ -138,25 +134,23 @@ impl SlangArtifactFile {
     /// # Errors
     /// Returns IO errors if the file cannot be written
     pub fn write_bytes(&self, data: &[u8]) -> Result<(), SlangArtifactFileError> {
-        fs::write(&self.path, data)
-            .map_err(|e| SlangArtifactFileError::Io {
-                source: e,
-                path: self.path.clone(),
-            })
+        fs::write(&self.path, data).map_err(|e| SlangArtifactFileError::Io {
+            source: e,
+            path: self.path.clone(),
+        })
     }
-    
+
     /// Delete the artifact file from disk.
     ///
     /// # Errors
     /// Returns IO errors if the file cannot be deleted
     pub fn delete(&self) -> Result<(), SlangArtifactFileError> {
-        fs::remove_file(&self.path)
-            .map_err(|e| SlangArtifactFileError::Io {
-                source: e,
-                path: self.path.clone(),
-            })
+        fs::remove_file(&self.path).map_err(|e| SlangArtifactFileError::Io {
+            source: e,
+            path: self.path.clone(),
+        })
     }
-    
+
     /// Write a bytecode chunk to the artifact file as a compressed ZIP archive.
     ///
     /// The chunk will be serialized and stored as "bytecode.bin" within the ZIP archive
@@ -173,11 +167,10 @@ impl SlangArtifactFile {
     /// * Returns Zip errors if the archive creation fails
     /// * Returns Serialization errors if the chunk cannot be serialized
     pub fn write_chunk(&self, chunk: &Chunk) -> Result<(), SlangArtifactFileError> {
-        let file = File::create(&self.path)
-            .map_err(|e| SlangArtifactFileError::Io {
-                source: e,
-                path: self.path.clone(),
-            })?;
+        let file = File::create(&self.path).map_err(|e| SlangArtifactFileError::Io {
+            source: e,
+            path: self.path.clone(),
+        })?;
 
         let mut zip = ZipWriter::new(file);
         let options = FileOptions::<()>::default()
@@ -209,16 +202,15 @@ impl SlangArtifactFile {
             })?;
 
         // Finalize the zip file
-        zip.finish()
-            .map_err(|e| SlangArtifactFileError::Zip {
-                source: e,
-                context: "Failed to finalize zip file".to_string(),
-                path: self.path.clone(),
-            })?;
+        zip.finish().map_err(|e| SlangArtifactFileError::Zip {
+            source: e,
+            context: "Failed to finalize zip file".to_string(),
+            path: self.path.clone(),
+        })?;
 
         Ok(())
     }
-    
+
     /// Read a bytecode chunk from the artifact file's ZIP archive.
     ///
     /// This method opens the .sip file as a ZIP archive and extracts the "bytecode.bin"
@@ -233,36 +225,32 @@ impl SlangArtifactFile {
     /// * Returns FileNotFound if "bytecode.bin" is missing from the archive
     /// * Returns Serialization errors if the chunk cannot be deserialized
     pub fn read_chunk(&self) -> Result<Chunk, SlangArtifactFileError> {
-        let file = File::open(&self.path)
-            .map_err(|e| SlangArtifactFileError::Io {
-                source: e,
-                path: self.path.clone(),
-            })?;
+        let file = File::open(&self.path).map_err(|e| SlangArtifactFileError::Io {
+            source: e,
+            path: self.path.clone(),
+        })?;
 
-        let mut archive = ZipArchive::new(file)
-            .map_err(|e| SlangArtifactFileError::Zip {
-                source: e,
-                context: "Failed to read zip archive".to_string(),
-                path: self.path.clone(),
-            })?;
+        let mut archive = ZipArchive::new(file).map_err(|e| SlangArtifactFileError::Zip {
+            source: e,
+            context: "Failed to read zip archive".to_string(),
+            path: self.path.clone(),
+        })?;
 
-        let mut bytecode_file = archive.by_name("bytecode.bin")
-            .map_err(|e| match e {
-                zip::result::ZipError::FileNotFound => {
-                    SlangArtifactFileError::MissingBytecode {
-                        path: self.path.clone(),
-                    }
-                }
-                other => SlangArtifactFileError::Zip {
-                    source: other,
-                    context: "Failed to access bytecode.bin from archive".to_string(),
-                    path: self.path.clone(),
-                }
-            })?;
+        let mut bytecode_file = archive.by_name("bytecode.bin").map_err(|e| match e {
+            zip::result::ZipError::FileNotFound => SlangArtifactFileError::MissingBytecode {
+                path: self.path.clone(),
+            },
+            other => SlangArtifactFileError::Zip {
+                source: other,
+                context: "Failed to access bytecode.bin from archive".to_string(),
+                path: self.path.clone(),
+            },
+        })?;
 
         // Read the bytecode data
         let mut buffer = Vec::new();
-        bytecode_file.read_to_end(&mut buffer)
+        bytecode_file
+            .read_to_end(&mut buffer)
             .map_err(|e| SlangArtifactFileError::Io {
                 source: e,
                 path: self.path.clone(),
@@ -270,8 +258,8 @@ impl SlangArtifactFile {
 
         // Deserialize the chunk
         let mut cursor = std::io::Cursor::new(buffer);
-        let chunk = Chunk::deserialize(&mut cursor)
-            .map_err(|e| SlangArtifactFileError::Serialization {
+        let chunk =
+            Chunk::deserialize(&mut cursor).map_err(|e| SlangArtifactFileError::Serialization {
                 source: Box::new(e),
                 context: "Failed to deserialize bytecode chunk".to_string(),
                 path: self.path.clone(),
@@ -279,7 +267,7 @@ impl SlangArtifactFile {
 
         Ok(chunk)
     }
-    
+
     /// List all entries in the ZIP archive.
     ///
     /// This method provides introspection into the contents of the .sip file,
@@ -292,22 +280,21 @@ impl SlangArtifactFile {
     /// * Returns IO errors if the file cannot be read
     /// * Returns Zip errors if the archive is invalid
     pub fn list_entries(&self) -> Result<Vec<String>, SlangArtifactFileError> {
-        let file = File::open(&self.path)
-            .map_err(|e| SlangArtifactFileError::Io {
-                source: e,
-                path: self.path.clone(),
-            })?;
+        let file = File::open(&self.path).map_err(|e| SlangArtifactFileError::Io {
+            source: e,
+            path: self.path.clone(),
+        })?;
 
-        let mut archive = ZipArchive::new(file)
-            .map_err(|e| SlangArtifactFileError::Zip {
-                source: e,
-                context: "Failed to read zip archive".to_string(),
-                path: self.path.clone(),
-            })?;
+        let mut archive = ZipArchive::new(file).map_err(|e| SlangArtifactFileError::Zip {
+            source: e,
+            context: "Failed to read zip archive".to_string(),
+            path: self.path.clone(),
+        })?;
 
         let mut entries = Vec::new();
         for i in 0..archive.len() {
-            let file = archive.by_index(i)
+            let file = archive
+                .by_index(i)
                 .map_err(|e| SlangArtifactFileError::Zip {
                     source: e,
                     context: format!("Failed to access entry at index {i}"),
@@ -318,7 +305,7 @@ impl SlangArtifactFile {
 
         Ok(entries)
     }
-    
+
     /// Validate that a path has the correct .sip extension.
     fn validate_extension(path: &Path) -> Result<(), SlangArtifactFileError> {
         match path.extension().and_then(|ext| ext.to_str()) {
@@ -346,7 +333,7 @@ pub enum SlangArtifactFileError {
         source: io::Error,
         path: PathBuf,
     },
-    
+
     /// Invalid file extension
     #[error("Invalid file extension for '{path}': expected '.{expected}', found '.{found}'")]
     InvalidExtension {
@@ -354,20 +341,15 @@ pub enum SlangArtifactFileError {
         found: String,
         path: PathBuf,
     },
-    
+
     /// Missing file extension
     #[error("Missing file extension for '{path}': expected '.{expected}'")]
-    MissingExtension {
-        expected: String,
-        path: PathBuf,
-    },
-    
+    MissingExtension { expected: String, path: PathBuf },
+
     /// File not found
     #[error("Artifact file not found: '{path}'")]
-    FileNotFound {
-        path: PathBuf,
-    },
-    
+    FileNotFound { path: PathBuf },
+
     /// ZIP archive related errors
     #[error("ZIP error for file '{path}': {context} - {source}")]
     Zip {
@@ -376,7 +358,7 @@ pub enum SlangArtifactFileError {
         context: String,
         path: PathBuf,
     },
-    
+
     /// Serialization/deserialization errors
     #[error("Serialization error for file '{path}': {context} - {source}")]
     Serialization {
@@ -385,10 +367,8 @@ pub enum SlangArtifactFileError {
         context: String,
         path: PathBuf,
     },
-    
+
     /// Missing bytecode.bin entry in ZIP archive
     #[error("Missing bytecode.bin entry in artifact file: '{path}'")]
-    MissingBytecode {
-        path: PathBuf,
-    },
+    MissingBytecode { path: PathBuf },
 }

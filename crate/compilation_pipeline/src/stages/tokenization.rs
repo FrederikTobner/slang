@@ -1,8 +1,8 @@
-use crate::stage::{CompilationStage, StageContext};
 use crate::error::StageError;
+use crate::source_file::SlangSourceFile;
+use crate::stage::{CompilationStage, StageContext};
 use slang_frontend::{Lexer, Token};
 use slang_shared::DiagnosticEngine;
-use crate::source_file::SlangSourceFile;
 
 /// Tokenization stage that converts source code to tokens
 pub struct TokenizationStage;
@@ -11,18 +11,25 @@ impl CompilationStage for TokenizationStage {
     type Input = SlangSourceFile;
     type Output = Vec<Token>;
 
-    fn execute(&self, input: Self::Input, context: &mut StageContext, diagnostics: &mut DiagnosticEngine) -> Result<Self::Output, StageError> {
+    fn execute(
+        &self,
+        input: Self::Input,
+        context: &mut StageContext,
+        diagnostics: &mut DiagnosticEngine,
+    ) -> Result<Self::Output, StageError> {
         // Notify observers about stage start
         context.observer_registry.notify_tokenization_start(&input);
-        
+
         let lexer = Lexer::new(input.content());
-        
+
         match lexer.tokenize() {
             Ok(result) => {
                 // Notify observers about successful completion
-                context.observer_registry.notify_tokenization_success(&result.tokens);
+                context
+                    .observer_registry
+                    .notify_tokenization_success(&result.tokens);
                 Ok(result.tokens)
-            },
+            }
             Err(errors) => {
                 for error in errors {
                     // Notify observers about errors

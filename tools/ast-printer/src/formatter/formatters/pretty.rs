@@ -1,9 +1,9 @@
-use slang_ir::ast::*;
-use slang_ir::Visitor;
+use super::{AstFormatter, FormatError};
 use colored::Colorize;
 use slang_error::DomainResult;
+use slang_ir::Visitor;
+use slang_ir::ast::*;
 use std::fmt::Write;
-use super::{AstFormatter, FormatError};
 
 /// Pretty formatter with colors and hierarchical structure
 pub struct PrettyFormatter;
@@ -29,16 +29,31 @@ impl PrettyAstPrinter {
         }
     }
 
-    fn print_statements(&mut self, statements: &[Statement]) -> Result<String, Box<dyn std::error::Error>> {
-        writeln!(self.output, "{}({} statements)", "AST".blue().bold(), statements.len())?;
-        
+    fn print_statements(
+        &mut self,
+        statements: &[Statement],
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        writeln!(
+            self.output,
+            "{}({} statements)",
+            "AST".blue().bold(),
+            statements.len()
+        )?;
+
         for (i, statement) in statements.iter().enumerate() {
             self.indent_level = 1;
-            writeln!(self.output, "{}{}:", format!("Statement {i}").green().bold(), self.indent())?;
+            writeln!(
+                self.output,
+                "{}{}:",
+                format!("Statement {i}").green().bold(),
+                self.indent()
+            )?;
             self.indent_level = 2;
-            statement.accept(self).map_err(|e| Box::new(FormatError::new(format!("Visitor error: {e}"))))?;
+            statement
+                .accept(self)
+                .map_err(|e| Box::new(FormatError::new(format!("Visitor error: {e}"))))?;
         }
-        
+
         Ok(self.output.clone())
     }
 
@@ -62,7 +77,7 @@ impl Visitor<()> for PrettyAstPrinter {
             stmt.is_mutable,
             stmt.expr_type
         ))?;
-        
+
         self.indent_level += 1;
         self.writeln_indented("Value:")?;
         self.indent_level += 1;
@@ -78,7 +93,7 @@ impl Visitor<()> for PrettyAstPrinter {
             "Statement".yellow(),
             stmt.name.green()
         ))?;
-        
+
         self.indent_level += 1;
         self.writeln_indented("Value:")?;
         self.indent_level += 1;
@@ -93,7 +108,7 @@ impl Visitor<()> for PrettyAstPrinter {
             "Expression".yellow().bold(),
             "Statement".yellow()
         ))?;
-        
+
         self.indent_level += 1;
         expr.accept(self)?;
         self.indent_level -= 1;
@@ -106,7 +121,7 @@ impl Visitor<()> for PrettyAstPrinter {
             "Return".yellow().bold(),
             "Statement".yellow()
         ))?;
-        
+
         if let Some(ref expr) = stmt.value {
             self.indent_level += 1;
             self.writeln_indented("Value:")?;
@@ -117,7 +132,10 @@ impl Visitor<()> for PrettyAstPrinter {
         Ok(())
     }
 
-    fn visit_function_declaration_statement(&mut self, stmt: &FunctionDeclarationStmt) -> DomainResult<()> {
+    fn visit_function_declaration_statement(
+        &mut self,
+        stmt: &FunctionDeclarationStmt,
+    ) -> DomainResult<()> {
         self.writeln_indented(&format!(
             "{}{}(name: {}, params: {}, return_type: {:?})",
             "FunctionDeclaration".yellow().bold(),
@@ -126,7 +144,7 @@ impl Visitor<()> for PrettyAstPrinter {
             stmt.parameters.len(),
             stmt.return_type
         ))?;
-        
+
         self.indent_level += 1;
         if !stmt.parameters.is_empty() {
             self.writeln_indented("Parameters:")?;
@@ -136,7 +154,7 @@ impl Visitor<()> for PrettyAstPrinter {
             }
             self.indent_level -= 1;
         }
-        
+
         self.writeln_indented("Body:")?;
         self.indent_level += 1;
         self.visit_block_expression(&stmt.body)?;
@@ -152,7 +170,7 @@ impl Visitor<()> for PrettyAstPrinter {
             stmt.name.green(),
             stmt.fields.len()
         ))?;
-        
+
         if !stmt.fields.is_empty() {
             self.indent_level += 1;
             self.writeln_indented("Fields:")?;
@@ -166,23 +184,19 @@ impl Visitor<()> for PrettyAstPrinter {
     }
 
     fn visit_if_statement(&mut self, stmt: &IfStatement) -> DomainResult<()> {
-        self.writeln_indented(&format!(
-            "{}{}",
-            "If".yellow().bold(),
-            "Statement".yellow()
-        ))?;
-        
+        self.writeln_indented(&format!("{}{}", "If".yellow().bold(), "Statement".yellow()))?;
+
         self.indent_level += 1;
         self.writeln_indented("Condition:")?;
         self.indent_level += 1;
         stmt.condition.accept(self)?;
         self.indent_level -= 1;
-        
+
         self.writeln_indented("Then:")?;
         self.indent_level += 1;
         self.visit_block_expression(&stmt.then_branch)?;
         self.indent_level -= 1;
-        
+
         if let Some(ref else_branch) = stmt.else_branch {
             self.writeln_indented("Else:")?;
             self.indent_level += 1;
@@ -217,13 +231,13 @@ impl Visitor<()> for PrettyAstPrinter {
             "Binary".cyan().bold(),
             format!("{:?}", expr.operator).red()
         ))?;
-        
+
         self.indent_level += 1;
         self.writeln_indented("Left:")?;
         self.indent_level += 1;
         expr.left.accept(self)?;
         self.indent_level -= 1;
-        
+
         self.writeln_indented("Right:")?;
         self.indent_level += 1;
         expr.right.accept(self)?;
@@ -237,7 +251,7 @@ impl Visitor<()> for PrettyAstPrinter {
             "Unary".cyan().bold(),
             format!("{:?}", expr.operator).red()
         ))?;
-        
+
         self.indent_level += 1;
         self.writeln_indented("Operand:")?;
         self.indent_level += 1;
@@ -253,7 +267,7 @@ impl Visitor<()> for PrettyAstPrinter {
             expr.name.green(),
             expr.arguments.len()
         ))?;
-        
+
         if !expr.arguments.is_empty() {
             self.indent_level += 1;
             self.writeln_indented("Arguments:")?;
@@ -271,18 +285,18 @@ impl Visitor<()> for PrettyAstPrinter {
 
     fn visit_conditional_expression(&mut self, expr: &ConditionalExpr) -> DomainResult<()> {
         self.writeln_indented(&format!("{}", "Conditional".cyan().bold()))?;
-        
+
         self.indent_level += 1;
         self.writeln_indented("Condition:")?;
         self.indent_level += 1;
         expr.condition.accept(self)?;
         self.indent_level -= 1;
-        
+
         self.writeln_indented("Then:")?;
         self.indent_level += 1;
         expr.then_branch.accept(self)?;
         self.indent_level -= 1;
-        
+
         self.writeln_indented("Else:")?;
         self.indent_level += 1;
         expr.else_branch.accept(self)?;
@@ -296,7 +310,7 @@ impl Visitor<()> for PrettyAstPrinter {
             "Block".cyan().bold(),
             expr.statements.len()
         ))?;
-        
+
         if !expr.statements.is_empty() {
             self.indent_level += 1;
             for stmt in &expr.statements {
@@ -304,7 +318,7 @@ impl Visitor<()> for PrettyAstPrinter {
             }
             self.indent_level -= 1;
         }
-        
+
         if let Some(ref ret_expr) = expr.return_expr {
             self.indent_level += 1;
             self.writeln_indented("Return:")?;

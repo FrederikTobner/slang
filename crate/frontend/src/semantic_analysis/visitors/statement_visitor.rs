@@ -114,7 +114,7 @@ impl<'a> StatementVisitor<'a> {
         let result = self.analyze_function_body(&fn_decl.body);
 
         self.current_return_type = previous_return_type;
-        
+
         if let Err(err) = self.context.end_scope() {
             return Err(SemanticAnalysisError::InvalidExpression {
                 message: format!("Failed to end function scope: {err}"),
@@ -352,23 +352,21 @@ impl<'a> StatementVisitor<'a> {
 
         // Handle coercion of unspecified int to specific integer types
         if actual_type == TypeId::unspecified_int()
-            && type_system::is_integer_type(self.context, expected_type) {
-                return type_system::check_unspecified_int_for_type(
-                    self.context,
-                    expr,
-                    expected_type,
-                );
-            }
+            && type_system::is_integer_type(self.context, expected_type)
+        {
+            return type_system::check_unspecified_int_for_type(self.context, expr, expected_type);
+        }
 
         // Handle coercion of unspecified float to specific float types
         if actual_type == TypeId::unspecified_float()
-            && type_system::is_float_type(self.context, expected_type) {
-                return type_system::check_unspecified_float_for_type(
-                    self.context,
-                    expr,
-                    expected_type,
-                );
-            }
+            && type_system::is_float_type(self.context, expected_type)
+        {
+            return type_system::check_unspecified_float_for_type(
+                self.context,
+                expr,
+                expected_type,
+            );
+        }
 
         Err(SemanticAnalysisError::ReturnTypeMismatch {
             expected: *expected_type,

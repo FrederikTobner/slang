@@ -3,11 +3,11 @@
 pub enum ErrorStrategy {
     /// Stop compilation on first error
     FailFast,
-    
+
     /// Continue compilation, collecting errors
-    Recover { 
+    Recover {
         /// Whether to continue on non-critical stage failures
-        continue_on_non_critical: bool 
+        continue_on_non_critical: bool,
     },
 }
 

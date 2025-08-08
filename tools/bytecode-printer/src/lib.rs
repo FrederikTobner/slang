@@ -10,6 +10,6 @@ pub mod formatter;
 pub mod observer;
 
 // Re-export main functionality
-pub use cli::{analyze_bytecode, Parser};
+pub use cli::{Parser, analyze_bytecode};
 pub use format::BytecodeFormat;
-pub use formatter::{BytecodeFormatter, PrettyFormatter, DebugFormatter, JsonFormatter};
+pub use formatter::{BytecodeFormatter, DebugFormatter, JsonFormatter, PrettyFormatter};

@@ -1,5 +1,5 @@
-use slang_ir::ast::Statement;
 use super::AstFormatter;
+use slang_ir::ast::Statement;
 
 /// Compact formatter for single-line overview
 pub struct CompactFormatter;
@@ -19,14 +19,14 @@ impl CompactAstPrinter {
         Self
     }
 
-    fn print_statements(&mut self, statements: &[Statement]) -> Result<String, Box<dyn std::error::Error>> {
-        let statement_types: Vec<String> = statements
-            .iter()
-            .map(get_statement_type_name)
-            .collect();
-        
+    fn print_statements(
+        &mut self,
+        statements: &[Statement],
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let statement_types: Vec<String> = statements.iter().map(get_statement_type_name).collect();
+
         Ok(format!(
-            "AST({} statements: [{}])", 
+            "AST({} statements: [{}])",
             statements.len(),
             statement_types.join(", ")
         ))

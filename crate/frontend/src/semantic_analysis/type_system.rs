@@ -3,7 +3,7 @@ use slang_ir::ast::{
     BinaryExpr, BinaryOperator, Expression, LetStatement, LiteralValue, UnaryOperator,
 };
 use slang_shared::CompilationContext;
-use slang_types::{TypeId, TYPE_NAME_U32, TYPE_NAME_U64};
+use slang_types::{TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
 
 /// Checks if a type is an integer type
 ///

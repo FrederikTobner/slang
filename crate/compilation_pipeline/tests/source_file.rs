@@ -1,6 +1,6 @@
 use slang_compilation_pipeline::{SlangSourceFile, SourceFileError};
-use tempfile::NamedTempFile;
 use std::fs;
+use tempfile::NamedTempFile;
 
 #[test]
 fn new_valid_extension() {

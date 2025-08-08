@@ -11,7 +11,7 @@ fn return_integer() {
         let result = test_function();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -27,7 +27,7 @@ fn return_string() {
         let result = test_function();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("hello");
 }
@@ -43,7 +43,7 @@ fn return_boolean() {
         let result = test_function();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("true");
 }
@@ -59,7 +59,7 @@ fn return_float() {
         let result = test_function();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("3.14");
 }
@@ -75,7 +75,7 @@ fn coerce_integer_return() {
         let result: i32 = test_function();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("165");
 }
@@ -91,8 +91,7 @@ fn coerce_float_return() {
         let result: f64 = test_function();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("6");
 }
-

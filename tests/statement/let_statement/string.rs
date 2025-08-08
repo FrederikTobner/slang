@@ -9,9 +9,11 @@ fn string_type() {
         let greeting: string = "Hello, world!";
         print_value(greeting);
     "#;
-    
+
     // Act & Assert
-    ProgramAssertion::new(program).succeeds().stdout("Hello, world!");
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("Hello, world!");
 }
 
 #[test]
@@ -21,7 +23,7 @@ fn string_type_inference() {
         let str = "Hello";
         print_value(str);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("Hello");
 }
@@ -37,7 +39,7 @@ fn from_boolean_literal(#[case] value: &str) {
         print_value(a);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -46,11 +48,11 @@ fn from_boolean_literal(#[case] value: &str) {
 }
 
 #[rstest]
-#[case("42", "int")] 
-#[case("42i32", "i32")] 
+#[case("42", "int")]
+#[case("42i32", "i32")]
 #[case("42i64", "i64")]
 #[case("42u32", "u32")]
-#[case("42u64", "u64")] 
+#[case("42u64", "u64")]
 fn from_integer_literal(#[case] value: &str, #[case] _type: &str) {
     // Arrange
     let program = format!(
@@ -59,7 +61,7 @@ fn from_integer_literal(#[case] value: &str, #[case] _type: &str) {
         print_value(a);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -70,9 +72,9 @@ fn from_integer_literal(#[case] value: &str, #[case] _type: &str) {
 }
 
 #[rstest]
-#[case("3.14", "float")] 
-#[case("3.14f32", "f32")] 
-#[case("3.14f64", "f64")] 
+#[case("3.14", "float")]
+#[case("3.14f32", "f32")]
+#[case("3.14f64", "f64")]
 fn from_float_literal(#[case] value: &str, #[case] _type: &str) {
     // Arrange
     let program = format!(
@@ -81,7 +83,7 @@ fn from_float_literal(#[case] value: &str, #[case] _type: &str) {
         print_value(a);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
@@ -97,7 +99,7 @@ fn using_string_type_as_name() {
     let program = r#"
         let string: bool = true;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()

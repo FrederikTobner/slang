@@ -10,7 +10,7 @@ fn precedence() {
         let result = a + b * c;
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("7");
 }

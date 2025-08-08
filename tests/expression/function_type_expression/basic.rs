@@ -11,7 +11,7 @@ fn simple() {
         let result = some_function(21);
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -27,7 +27,7 @@ fn no_parameters() {
         let result = get_value();
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -42,7 +42,7 @@ fn no_return() {
         
         print_number(42);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("42");
 }
@@ -62,7 +62,7 @@ fn multiple_parameters() {
         let result = complex_function(42, "hello", true);
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("hello");
 }

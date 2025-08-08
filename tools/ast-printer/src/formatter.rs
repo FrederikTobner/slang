@@ -1,17 +1,17 @@
 mod formatters {
-    pub mod error;
-    pub mod pretty;
-    pub mod json;
     pub mod compact;
-    
-    pub use error::FormatError;
-    pub use pretty::PrettyFormatter;
-    pub use json::JsonFormatter;
+    pub mod error;
+    pub mod json;
+    pub mod pretty;
+
     pub use compact::CompactFormatter;
-    
+    pub use error::FormatError;
+    pub use json::JsonFormatter;
+    pub use pretty::PrettyFormatter;
+
     use slang_ir::ast::Statement;
     use std::error::Error;
-    
+
     /// Trait for AST formatters
     pub trait AstFormatter {
         /// Format a list of AST statements
@@ -19,4 +19,4 @@ mod formatters {
     }
 }
 
-pub use formatters::{AstFormatter, PrettyFormatter, JsonFormatter, CompactFormatter};
+pub use formatters::{AstFormatter, CompactFormatter, JsonFormatter, PrettyFormatter};

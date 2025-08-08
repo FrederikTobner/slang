@@ -1,4 +1,4 @@
-use crate::formatters::{TokenFormatter, PrettyFormatter, DebugFormatter};
+use crate::formatters::{DebugFormatter, PrettyFormatter, TokenFormatter};
 
 /// Available output formats for token display
 #[derive(Clone)]
@@ -26,7 +26,9 @@ impl std::str::FromStr for TokenFormat {
         match s.to_lowercase().as_str() {
             "pretty" => Ok(TokenFormat::Pretty),
             "debug" => Ok(TokenFormat::Debug),
-            _ => Err(format!("Invalid format '{s}'. Valid formats: pretty, debug")),
+            _ => Err(format!(
+                "Invalid format '{s}'. Valid formats: pretty, debug"
+            )),
         }
     }
 }

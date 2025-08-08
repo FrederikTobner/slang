@@ -9,7 +9,7 @@ fn complex_expression() {
         let c: bool = true;
         print_value(a && b || c); 
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("true");
 }
@@ -22,7 +22,7 @@ fn with_not() {
         let b: bool = true;
         print_value(!(a && b)); 
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("false");
 }
@@ -37,7 +37,7 @@ fn precedence() {
         let result = a && b || c;
         print_value(result);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program).succeeds().stdout("true");
 }

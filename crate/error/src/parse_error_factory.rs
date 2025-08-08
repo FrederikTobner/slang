@@ -1,6 +1,6 @@
 use crate::ErrorCode;
-use crate::parse_error::ParseError;
 use crate::Location;
+use crate::parse_error::ParseError;
 
 /// Factory for creating specific parse errors with clear, intention-revealing methods.
 /// Each method creates a semantically meaningful error with appropriate error codes.
@@ -23,7 +23,7 @@ impl ParseErrorFactory {
             Some(ctx) => format!("Expected ';' {ctx}"),
             None => "Expected ';'".to_owned(),
         };
-        
+
         ParseError::InvalidSyntax {
             message,
             suggestion: None,
@@ -48,7 +48,7 @@ impl ParseErrorFactory {
             Some(ctx) => format!(" Expected '(' {ctx}"),
             None => " Expected '('".to_owned(),
         };
-        
+
         ParseError::InvalidSyntax {
             message,
             suggestion: None,
@@ -63,7 +63,7 @@ impl ParseErrorFactory {
             Some(ctx) => format!(" Expected ')' {ctx}"),
             None => " Expected ')'".to_owned(),
         };
-        
+
         ParseError::InvalidSyntax {
             message,
             suggestion: None,
@@ -78,7 +78,7 @@ impl ParseErrorFactory {
             Some(ctx) => format!("Expected '{{' {ctx}"),
             None => "Expected '{{'".to_owned(),
         };
-        
+
         ParseError::InvalidSyntax {
             message,
             suggestion: None,
@@ -93,7 +93,7 @@ impl ParseErrorFactory {
             Some(ctx) => format!("Expected '}}' {ctx}"),
             None => "Expected '}}'".to_owned(),
         };
-        
+
         ParseError::InvalidSyntax {
             message,
             suggestion: None,
@@ -118,7 +118,7 @@ impl ParseErrorFactory {
             Some(ctx) => format!("Expected ',' {ctx}"),
             None => "Expected ','".to_owned(),
         };
-        
+
         ParseError::InvalidSyntax {
             message,
             suggestion: None,
@@ -133,7 +133,7 @@ impl ParseErrorFactory {
             Some(desc) => format!(" Expected {desc}"),
             None => " Expected identifier".to_owned(),
         };
-        
+
         ParseError::InvalidSyntax {
             message,
             suggestion: None,
@@ -173,7 +173,11 @@ impl ParseErrorFactory {
     }
 
     /// Create a generic "invalid syntax" error with optional suggestion
-    pub fn invalid_syntax(location: Location, message: &str, suggestion: Option<&str>) -> ParseError {
+    pub fn invalid_syntax(
+        location: Location,
+        message: &str,
+        suggestion: Option<&str>,
+    ) -> ParseError {
         ParseError::InvalidSyntax {
             message: message.to_owned(),
             suggestion: suggestion.map(|s| s.to_owned()),

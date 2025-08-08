@@ -3,8 +3,8 @@ mod format;
 mod formatter;
 mod observer;
 
-use cli::{Parser, parse_and_print_ast};
 use clap::Parser as ClapParser;
+use cli::{Parser, parse_and_print_ast};
 use colored::Colorize;
 use std::process;
 
@@ -19,10 +19,9 @@ fn main() {
 /// Main application logic separated from exit handling
 fn run() -> Result<(), String> {
     let args = Parser::parse();
-    
+
     #[cfg(windows)]
     colored::control::set_virtual_terminal(true);
-    
-    parse_and_print_ast(&args.input, args.format)
-        .map_err(|e| e.to_string())
+
+    parse_and_print_ast(&args.input, args.format).map_err(|e| e.to_string())
 }

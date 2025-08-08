@@ -1,8 +1,8 @@
 //! Parser module public API
-//! 
+//!
 //! This module provides a recursive descent parser for the Slang programming language.
 //! It converts a stream of tokens into an Abstract Syntax Tree (AST) representation.
-//! 
+//!
 //! The parser is organized into several submodules:
 //! - `core`: Main parser struct and coordination logic
 //! - `error`: Error handling and reporting
@@ -10,14 +10,14 @@
 //! - `literals`: Literal value parsing (integers, floats, strings)
 //! - `statements`: Statement parsing (let, function declarations, etc.)
 //! - `types`: Type parsing and validation
-//! 
+//!
 //! # Example
-//! 
+//!
 //! ```rust,no_run
 //! use slang_frontend::parser::Parser;
 //! use slang_shared::CompilationContext;
 //! use slang_frontend::lexer::Lexer;
-//! 
+//!
 //! let source_code = "let x = 42;";
 //! let lexer = Lexer::new(source_code);
 //! let lexer_result = lexer.tokenize().unwrap();
@@ -38,3 +38,4 @@ pub use expressions::ExpressionParsing;
 pub use literals::LiteralParsing;
 pub use statements::StatementParsing;
 pub use types::TypeParsing;
+

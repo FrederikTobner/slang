@@ -1,6 +1,6 @@
-use slang_ir::ast::*;
-use serde_json::{json, Value};
 use super::AstFormatter;
+use serde_json::{Value, json};
+use slang_ir::ast::*;
 
 /// JSON formatter for structured output
 pub struct JsonFormatter;
@@ -20,18 +20,19 @@ impl JsonAstPrinter {
         Self
     }
 
-    fn print_statements(&mut self, statements: &[Statement]) -> Result<String, Box<dyn std::error::Error>> {
-        let statement_values: Vec<Value> = statements
-            .iter()
-            .map(simple_statement_to_json)
-            .collect();
-        
+    fn print_statements(
+        &mut self,
+        statements: &[Statement],
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let statement_values: Vec<Value> =
+            statements.iter().map(simple_statement_to_json).collect();
+
         let json_ast = json!({
             "type": "AST",
             "statement_count": statements.len(),
             "statements": statement_values
         });
-        
+
         Ok(serde_json::to_string_pretty(&json_ast)?)
     }
 }

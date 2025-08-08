@@ -1,10 +1,10 @@
-use clap::{Parser, CommandFactory};
+use clap::{CommandFactory, Parser};
 use token_printer_lib::cli::Parser as CliParser;
 use token_printer_lib::format::TokenFormat;
 
 const EXECUTABLE_NAME: &str = "token-printer";
 
-#[test] 
+#[test]
 fn help() {
     // Test that help can be accessed without panicking
     let parser = CliParser::command();
@@ -17,7 +17,7 @@ fn with_file() {
     let args = vec![EXECUTABLE_NAME, "test.sl"];
     let result = CliParser::try_parse_from(args);
     assert!(result.is_ok());
-    
+
     let parsed = result.unwrap();
     assert_eq!(parsed.input, "test.sl");
     assert!(matches!(parsed.format, TokenFormat::Pretty)); // default format
@@ -29,7 +29,7 @@ fn with_debug_format() {
     let args = vec![EXECUTABLE_NAME, "--format", "debug", "test.sl"];
     let result = CliParser::try_parse_from(args);
     assert!(result.is_ok());
-    
+
     let parsed = result.unwrap();
     assert_eq!(parsed.input, "test.sl");
     assert!(matches!(parsed.format, TokenFormat::Debug));

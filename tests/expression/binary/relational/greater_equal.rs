@@ -16,7 +16,7 @@ fn smaller_on_int(#[case] type_name: &str) {
         print_value(a >= b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("false");
 }
@@ -35,7 +35,7 @@ fn equal_on_int(#[case] type_name: &str) {
         print_value(a >= b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("true");
 }
@@ -54,7 +54,7 @@ fn greater_on_int(#[case] type_name: &str) {
         print_value(a >= b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("true");
 }
@@ -71,7 +71,7 @@ fn smaller_on_float(#[case] type_name: &str) {
         print_value(a >= b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("false");
 }
@@ -88,7 +88,7 @@ fn equal_on_float(#[case] type_name: &str) {
         print_value(a >= b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("true");
 }
@@ -105,7 +105,7 @@ fn greater_on_float(#[case] type_name: &str) {
         print_value(a >= b);
     "#
     );
-    
+
     // Act & Assert
     ProgramAssertion::new(&program).succeeds().stdout("true");
 }
@@ -118,7 +118,7 @@ fn with_unit() {
         let y = ();
         print_value(x >= y);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -132,7 +132,7 @@ fn with_booleans() {
     let program = r#"
         let result1 = true >= true;
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -146,7 +146,7 @@ fn with_strings() {
     let program = r#"
         let result1 = "hello" >= "hello";
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -163,7 +163,7 @@ fn with_function() {
         let fun_2 = my_function;
         print_value(fun_1 >= fun_2);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
@@ -177,11 +177,10 @@ fn with_native_function() {
     let program = r#"
         print_value(print_value >= print_value);
     "#;
-    
+
     // Act & Assert
     ProgramAssertion::new(program)
         .fails()
         .error_code(ErrorCode::OperationTypeMismatch)
         .stderr("Type mismatch: cannot apply '>=' operator on fn(unknown) -> i32 and fn(unknown) -> i32");
 }
-

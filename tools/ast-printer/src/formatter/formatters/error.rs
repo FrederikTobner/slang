@@ -1,4 +1,4 @@
-use slang_error::{DomainError, CompilationError, ErrorCode, Location, ErrorCategory};
+use slang_error::{CompilationError, DomainError, ErrorCategory, ErrorCode, Location};
 
 /// Custom error type for formatting operations
 #[derive(Debug)]
@@ -25,19 +25,23 @@ impl DomainError for FormatError {
         CompilationError::new(
             ErrorCode::InternalError,
             format!("Format error: {}", self.message),
-            1, 1, 0, Some(1)
+            1,
+            1,
+            0,
+            Some(1),
         )
     }
-    
+
     fn location(&self) -> &Location {
-        static DEFAULT_LOCATION: std::sync::LazyLock<Location> = std::sync::LazyLock::new(|| Location::new(0, 1, 1, 1));
+        static DEFAULT_LOCATION: std::sync::LazyLock<Location> =
+            std::sync::LazyLock::new(|| Location::new(0, 1, 1, 1));
         &DEFAULT_LOCATION
     }
-    
+
     fn category(&self) -> ErrorCategory {
         ErrorCategory::Codegen
     }
-    
+
     fn short_description(&self) -> String {
         self.message.clone()
     }
