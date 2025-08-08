@@ -41,7 +41,7 @@ fn hlist_execution_order() {
     let mut diagnostics = DiagnosticEngine::new();
     
     let result = hlist.execute("input".to_string(), &mut context, &mut diagnostics);
-    println!("Result: {:?}", result);
+    println!("Result: {result:?}");
     
     // This should show us the execution order
 }

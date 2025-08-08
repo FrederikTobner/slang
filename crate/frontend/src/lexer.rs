@@ -1,5 +1,38 @@
 use crate::token::{Token, Tokentype};
 use slang_error::{CompileResult, CompilationError, ErrorCode, LineInfo};
+use unicode_ident::{is_xid_start, is_xid_continue};
+
+/// Check if a character can start an identifier (including emojis)
+fn is_identifier_start(c: char) -> bool {
+    is_xid_start(c) || is_emoji(c)
+}
+
+/// Check if a character can continue an identifier (including emojis)
+fn is_identifier_continue(c: char) -> bool {
+    is_xid_continue(c) || is_emoji(c)
+}
+
+/// Check if a character is an emoji
+/// This is a simplified check that covers most common emoji ranges
+fn is_emoji(c: char) -> bool {
+    let code = c as u32;
+    matches!(code,
+        // Emoticons (U+1F600-U+1F64F)
+        0x1F600..=0x1F64F |
+        // Miscellaneous Symbols and Pictographs (U+1F300-U+1F5FF)
+        0x1F300..=0x1F5FF |
+        // Transport and Map Symbols (U+1F680-U+1F6FF)
+        0x1F680..=0x1F6FF |
+        // Supplemental Symbols and Pictographs (U+1F900-U+1F9FF)
+        0x1F900..=0x1F9FF |
+        // Symbols and Pictographs Extended-A (U+1FA70-U+1FAFF)
+        0x1FA70..=0x1FAFF |
+        // Miscellaneous Symbols (U+2600-U+26FF)
+        0x2600..=0x26FF |
+        // Dingbats (U+2700-U+27BF)
+        0x2700..=0x27BF
+    )
+}
 
 pub struct LexerResult<'a> {
     /// The list of tokens generated from the input
@@ -168,7 +201,7 @@ impl<'a> Lexer<'a> {
 
             match c {
                 c if c.is_whitespace() => handle_whitespace(&mut self),
-                c if c.is_alphabetic() => handle_identifier(&mut self, token_start_pos),
+                c if is_identifier_start(c) => handle_identifier(&mut self, token_start_pos),
                 c if c.is_ascii_digit() => handle_number(&mut self, token_start_pos),
                 '"' => handle_string(&mut self),
                 ':' => handle_simple_token(&mut self, Tokentype::Colon, ":", token_start_pos),
@@ -208,7 +241,7 @@ fn handle_whitespace(state: &mut Lexer) {
     }
 }
 
-/// Handles alphabetic identifiers and keywords
+/// Handles Unicode identifiers and keywords (including emojis)
 ///
 /// ### Arguments
 /// * `state` - The current lexer state
@@ -217,7 +250,7 @@ fn handle_identifier(state: &mut Lexer, start_pos: usize) {
     let mut identifier = String::new();
 
     while let Some(&c) = state.peek() {
-        if c.is_alphanumeric() || c == '_' {
+        if is_identifier_continue(c) {
             identifier.push(c);
             state.advance();
         } else {

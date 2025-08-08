@@ -20,7 +20,7 @@ impl ParseErrorFactory {
     /// Create an "expected semicolon" error with optional context
     pub fn expected_semicolon(location: Location, context: Option<&str>) -> ParseError {
         let message = match context {
-            Some(ctx) => format!("Expected ';' {}", ctx),
+            Some(ctx) => format!("Expected ';' {ctx}"),
             None => "Expected ';'".to_owned(),
         };
         
@@ -45,7 +45,7 @@ impl ParseErrorFactory {
     /// Create an "expected opening parenthesis" error with optional context
     pub fn expected_opening_paren(location: Location, context: Option<&str>) -> ParseError {
         let message = match context {
-            Some(ctx) => format!(" Expected '(' {}", ctx),
+            Some(ctx) => format!(" Expected '(' {ctx}"),
             None => " Expected '('".to_owned(),
         };
         
@@ -60,7 +60,7 @@ impl ParseErrorFactory {
     /// Create an "expected closing parenthesis" error with optional context
     pub fn expected_closing_paren(location: Location, context: Option<&str>) -> ParseError {
         let message = match context {
-            Some(ctx) => format!(" Expected ')' {}", ctx),
+            Some(ctx) => format!(" Expected ')' {ctx}"),
             None => " Expected ')'".to_owned(),
         };
         
@@ -75,7 +75,7 @@ impl ParseErrorFactory {
     /// Create an "expected opening brace" error with optional context
     pub fn expected_opening_brace(location: Location, context: Option<&str>) -> ParseError {
         let message = match context {
-            Some(ctx) => format!("Expected '{{' {}", ctx),
+            Some(ctx) => format!("Expected '{{' {ctx}"),
             None => "Expected '{{'".to_owned(),
         };
         
@@ -90,7 +90,7 @@ impl ParseErrorFactory {
     /// Create an "expected closing brace" error with optional context
     pub fn expected_closing_brace(location: Location, context: Option<&str>) -> ParseError {
         let message = match context {
-            Some(ctx) => format!("Expected '}}' {}", ctx),
+            Some(ctx) => format!("Expected '}}' {ctx}"),
             None => "Expected '}}'".to_owned(),
         };
         
@@ -115,7 +115,7 @@ impl ParseErrorFactory {
     /// Create an "expected comma" error with optional context
     pub fn expected_comma(location: Location, context: Option<&str>) -> ParseError {
         let message = match context {
-            Some(ctx) => format!("Expected ',' {}", ctx),
+            Some(ctx) => format!("Expected ',' {ctx}"),
             None => "Expected ','".to_owned(),
         };
         
@@ -130,7 +130,7 @@ impl ParseErrorFactory {
     /// Create an "expected identifier" error with optional context description
     pub fn expected_identifier(location: Location, description: Option<&str>) -> ParseError {
         let message = match description {
-            Some(desc) => format!(" Expected {}", desc),
+            Some(desc) => format!(" Expected {desc}"),
             None => " Expected identifier".to_owned(),
         };
         

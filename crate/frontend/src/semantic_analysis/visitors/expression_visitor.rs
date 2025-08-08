@@ -337,7 +337,7 @@ impl<'a> ExpressionVisitor<'a> {
 
         if let Err(err) = self.context.end_scope() {
             return Err(SemanticAnalysisError::InvalidExpression {
-                message: format!("Failed to end scope: {}", err),
+                message: format!("Failed to end scope: {err}"),
                 location: block_expr.location,
             });
         }

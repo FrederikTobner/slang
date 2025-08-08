@@ -26,7 +26,7 @@ impl std::str::FromStr for TokenFormat {
         match s.to_lowercase().as_str() {
             "pretty" => Ok(TokenFormat::Pretty),
             "debug" => Ok(TokenFormat::Debug),
-            _ => Err(format!("Invalid format '{}'. Valid formats: pretty, debug", s)),
+            _ => Err(format!("Invalid format '{s}'. Valid formats: pretty, debug")),
         }
     }
 }

@@ -31,8 +31,7 @@ impl std::str::FromStr for AstFormat {
             "json" => Ok(AstFormat::Json),
             "compact" => Ok(AstFormat::Compact),
             _ => Err(format!(
-                "Invalid format '{}'. Valid formats: pretty, json, compact", 
-                s
+                "Invalid format '{s}'. Valid formats: pretty, json, compact"
             )),
         }
     }

@@ -70,24 +70,23 @@ impl DomainError for CodegenError {
         let (code, message) = match self {
             CodegenError::StackOverflow { current_depth, max_depth, .. } => {
                 (ErrorCode::StackOverflow, 
-                 format!("Stack overflow during compilation: depth {} exceeds maximum {}", 
-                        current_depth, max_depth))
+                 format!("Stack overflow during compilation: depth {current_depth} exceeds maximum {max_depth}"))
             }
             CodegenError::LimitExceeded { resource, current, limit, .. } => {
                 (ErrorCode::TooManyConstants, 
-                 format!("Too many {}: {} exceeds limit of {}", resource, current, limit))
+                 format!("Too many {resource}: {current} exceeds limit of {limit}"))
             }
             CodegenError::UnsupportedFeature { feature, reason, alternative, .. } => {
-                let base_msg = format!("Unsupported feature '{}': {}", feature, reason);
+                let base_msg = format!("Unsupported feature '{feature}': {reason}");
                 let msg = if let Some(alternative) = alternative {
-                    format!("{}. Try: {}", base_msg, alternative)
+                    format!("{base_msg}. Try: {alternative}")
                 } else {
                     base_msg
                 };
                 (ErrorCode::UnsupportedFeature, msg)
             }
             CodegenError::InternalError { message, .. } => {
-                (ErrorCode::InternalError, format!("Internal compiler error: {}", message))
+                (ErrorCode::InternalError, format!("Internal compiler error: {message}"))
             }
         };
         
@@ -111,8 +110,8 @@ impl DomainError for CodegenError {
     fn short_description(&self) -> String {
         match self {
             CodegenError::StackOverflow { .. } => "Stack overflow".to_string(),
-            CodegenError::LimitExceeded { resource, .. } => format!("Limit exceeded: {}", resource),
-            CodegenError::UnsupportedFeature { feature, .. } => format!("Unsupported feature: {}", feature),
+            CodegenError::LimitExceeded { resource, .. } => format!("Limit exceeded: {resource}"),
+            CodegenError::UnsupportedFeature { feature, .. } => format!("Unsupported feature: {feature}"),
             CodegenError::InternalError { .. } => "Internal error".to_string(),
         }
     }

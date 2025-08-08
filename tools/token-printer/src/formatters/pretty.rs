@@ -7,7 +7,7 @@ pub struct PrettyFormatter;
 
 impl TokenFormatter for PrettyFormatter {
     fn format_tokens(&self, tokens: &[Token], file_name: &str) {
-        println!("{}", format!("=== Tokens for {} ===", file_name).bright_cyan().bold());
+        println!("{}", format!("=== Tokens for {file_name} ===").bright_cyan().bold());
         
         for (i, token) in tokens.iter().enumerate() {
             let token_type_str = format!("{:15}", format!("{:?}", token.token_type));

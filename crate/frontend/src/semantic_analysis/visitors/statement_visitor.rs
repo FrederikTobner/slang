@@ -117,7 +117,7 @@ impl<'a> StatementVisitor<'a> {
         
         if let Err(err) = self.context.end_scope() {
             return Err(SemanticAnalysisError::InvalidExpression {
-                message: format!("Failed to end function scope: {}", err),
+                message: format!("Failed to end function scope: {err}"),
                 location: fn_decl.location,
             });
         }

@@ -69,8 +69,7 @@ fn invalid_slang_syntax() {
     let error_msg = result.unwrap_err().to_string();
     assert!(
         error_msg.contains("Failed to parse source code") || error_msg.contains("syntax error"),
-        "Error message should indicate parsing failure, got: {}", 
-        error_msg
+        "Error message should indicate parsing failure, got: {error_msg}"
     );
 }
 
@@ -99,8 +98,7 @@ fn all_formats_with_complex_code() {
         let result = parse_and_print_ast(file_path_str, format.clone());
         assert!(
             result.is_ok(), 
-            "Format {:?} should handle complex code", 
-            format
+            "Format {format:?} should handle complex code"
         );
     }
 }
@@ -110,7 +108,7 @@ fn file_extension_warning() {
     let mut temp_file = NamedTempFile::new()
         .expect("Failed to create temp file");
     
-    write!(temp_file, "{}", SIMPLE_EXPRESSION)
+    write!(temp_file, "{SIMPLE_EXPRESSION}")
         .expect("Failed to write to temp file");
     
     let result = parse_and_print_ast(
@@ -143,8 +141,7 @@ fn multiple_invalid_syntax_cases() {
         
         assert!(
             result.is_err(), 
-            "Invalid syntax case '{}' should result in an error", 
-            case_name
+            "Invalid syntax case '{case_name}' should result in an error"
         );
     }
 }
@@ -164,7 +161,6 @@ fn error_message_contains_relevant_info() {
     
     assert!(
         error_msg.len() > 10,
-        "Error message should be substantial, got: '{}'", 
-        error_msg
+        "Error message should be substantial, got: '{error_msg}'"
     );
 }

@@ -9,6 +9,12 @@ pub struct TypeRegistry {
     function_type_cache: HashMap<FunctionType, TypeId>,
 }
 
+impl Default for TypeRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TypeRegistry {
     /// Creates a new TypeRegistry with built-in types registered.
     pub fn new() -> Self {

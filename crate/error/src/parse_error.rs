@@ -57,23 +57,23 @@ impl DomainError for ParseError {
                 let final_code = error_code.unwrap_or(ErrorCode::ExpectedToken);
                 (final_code, 
                  format!("Expected {}, found {} {}", expected, found, 
-                        if context.is_empty() { String::new() } else { format!("({})", context) }))
+                        if context.is_empty() { String::new() } else { format!("({context})") }))
             }
             ParseError::UnexpectedEof { expected, context, error_code, .. } => {
                 let final_code = error_code.unwrap_or(ErrorCode::UnexpectedEof);
                 (final_code,
                  format!("Unexpected end of file, expected {} {}", expected,
-                        if context.is_empty() { String::new() } else { format!("({})", context) }))
+                        if context.is_empty() { String::new() } else { format!("({context})") }))
             }
             ParseError::InvalidNumber { value, reason, error_code, .. } => {
                 let final_code = error_code.unwrap_or(ErrorCode::InvalidNumber);
-                (final_code, format!("Invalid number '{}': {}", value, reason))
+                (final_code, format!("Invalid number '{value}': {reason}"))
             }
             ParseError::InvalidSyntax { message, suggestion, error_code, .. } => {
                 let final_code = error_code.unwrap_or(ErrorCode::SyntaxError);
                 (final_code, 
                  if let Some(suggestion) = suggestion {
-                     format!("{}. {}", message, suggestion)
+                     format!("{message}. {suggestion}")
                  } else {
                      message.clone()
                  })
@@ -82,9 +82,8 @@ impl DomainError for ParseError {
                 let final_code = error_code.unwrap_or(ErrorCode::MismatchedDelimiters);
                 (final_code,
                  match found_closing {
-                     Some(found) => format!("Mismatched delimiters: opened with '{}', expected '{}', found '{}'", 
-                                           opening, expected_closing, found),
-                     None => format!("Unclosed delimiter: '{}', expected '{}'", opening, expected_closing),
+                     Some(found) => format!("Mismatched delimiters: opened with '{opening}', expected '{expected_closing}', found '{found}'"),
+                     None => format!("Unclosed delimiter: '{opening}', expected '{expected_closing}'"),
                  })
             }
         };
@@ -109,7 +108,7 @@ impl DomainError for ParseError {
     
     fn short_description(&self) -> String {
         match self {
-            ParseError::ExpectedToken { expected, .. } => format!("Expected {}", expected),
+            ParseError::ExpectedToken { expected, .. } => format!("Expected {expected}"),
             ParseError::UnexpectedEof { .. } => "Unexpected EOF".to_string(),
             ParseError::InvalidNumber { .. } => "Invalid number".to_string(),
             ParseError::InvalidSyntax { .. } => "Syntax error".to_string(),

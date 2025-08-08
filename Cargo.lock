@@ -993,6 +993,7 @@ dependencies = [
  "slang_ir",
  "slang_shared",
  "slang_types",
+ "unicode-ident",
 ]
 
 [[package]]

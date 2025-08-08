@@ -203,7 +203,7 @@ impl<'a> Parser<'a> {
     pub(super) fn current_location(&self) -> slang_error::Location {
         let current_token = self.peek();
         TokenPosition::new(current_token.pos, current_token.lexeme.len())
-            .to_location(&self.line_info)
+            .to_location(self.line_info)
     }
 
     /// Skip tokens until a safe synchronization point for error recovery

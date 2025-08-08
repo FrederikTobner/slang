@@ -34,7 +34,7 @@ impl DomainError for TypeError {
     fn to_compiler_error(&self) -> CompilationError {
         let (code, message) = match self {
             TypeError::TypeNotFound { name, suggestions, .. } => {
-                let base_msg = format!("Type not found: {}", name);
+                let base_msg = format!("Type not found: {name}");
                 let msg = if suggestions.is_empty() {
                     base_msg
                 } else {
@@ -48,7 +48,7 @@ impl DomainError for TypeError {
             }
             TypeError::InvalidTypeConstruction { attempted_type, reason, .. } => {
                 (ErrorCode::InvalidType, 
-                 format!("Invalid type construction for '{}': {}", attempted_type, reason))
+                 format!("Invalid type construction for '{attempted_type}': {reason}"))
             }
         };
         
@@ -70,9 +70,9 @@ impl DomainError for TypeError {
     
     fn short_description(&self) -> String {
         match self {
-            TypeError::TypeNotFound { name, .. } => format!("Type not found: {}", name),
-            TypeError::CircularDefinition { name, .. } => format!("Circular definition: {}", name),
-            TypeError::InvalidTypeConstruction { attempted_type, .. } => format!("Invalid type: {}", attempted_type),
+            TypeError::TypeNotFound { name, .. } => format!("Type not found: {name}"),
+            TypeError::CircularDefinition { name, .. } => format!("Circular definition: {name}"),
+            TypeError::InvalidTypeConstruction { attempted_type, .. } => format!("Invalid type: {attempted_type}"),
         }
     }
 }

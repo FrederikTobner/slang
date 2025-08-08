@@ -22,11 +22,11 @@ impl fmt::Display for SourceFileError {
         match self {
             SourceFileError::InvalidExtension { expected, found } => {
                 match found {
-                    Some(ext) => write!(f, "Invalid file extension '{}'. Expected '.{}'", ext, expected),
-                    None => write!(f, "Missing file extension. Expected '.{}'", expected),
+                    Some(ext) => write!(f, "Invalid file extension '{ext}'. Expected '.{expected}'"),
+                    None => write!(f, "Missing file extension. Expected '.{expected}'"),
                 }
             }
-            SourceFileError::Io(msg) => write!(f, "IO error: {}", msg),
+            SourceFileError::Io(msg) => write!(f, "IO error: {msg}"),
         }
     }
 }

@@ -23,7 +23,7 @@ impl JsonAstPrinter {
     fn print_statements(&mut self, statements: &[Statement]) -> Result<String, Box<dyn std::error::Error>> {
         let statement_values: Vec<Value> = statements
             .iter()
-            .map(|stmt| simple_statement_to_json(stmt))
+            .map(simple_statement_to_json)
             .collect();
         
         let json_ast = json!({

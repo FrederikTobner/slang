@@ -94,13 +94,13 @@ impl From<SourceFileError> for CliError {
         match err {
             SourceFileError::InvalidExtension { expected, found } => CliError::Generic {
                 message: match found {
-                    Some(ext) => format!("Invalid file extension '{}'. Expected '{}'", ext, expected),
-                    None => format!("Missing file extension. Expected '{}'", expected),
+                    Some(ext) => format!("Invalid file extension '{ext}'. Expected '{expected}'"),
+                    None => format!("Missing file extension. Expected '{expected}'"),
                 },
                 exit_code: exit::Code::Usage,
             },
             SourceFileError::Io(msg) => CliError::Generic {
-                message: format!("File I/O error: {}", msg),
+                message: format!("File I/O error: {msg}"),
                 exit_code: exit::Code::IoErr,
             },
         }
@@ -123,15 +123,15 @@ impl From<SlangArtifactFileError> for CliError {
             }
         },
         slang_backend::SlangArtifactFileError::Zip { source, context, .. } => CliError::Generic {
-            message: format!("ZIP error: {} - {}", context, source),
+            message: format!("ZIP error: {context} - {source}"),
             exit_code: exit::Code::IoErr,
         },
         slang_backend::SlangArtifactFileError::Serialization { source, context, .. } => CliError::Generic {
-            message: format!("Serialization error: {} - {}", context, source),
+            message: format!("Serialization error: {context} - {source}"),
             exit_code: exit::Code::Software,
         },
         other => CliError::Generic {
-            message: format!("Failed to write bytecode: {}", other),
+            message: format!("Failed to write bytecode: {other}"),
             exit_code: exit::Code::Software,
         },
     }

@@ -34,9 +34,9 @@ impl PrettyAstPrinter {
         
         for (i, statement) in statements.iter().enumerate() {
             self.indent_level = 1;
-            writeln!(self.output, "{}{}:", format!("Statement {}", i).green().bold(), self.indent())?;
+            writeln!(self.output, "{}{}:", format!("Statement {i}").green().bold(), self.indent())?;
             self.indent_level = 2;
-            statement.accept(self).map_err(|e| Box::new(FormatError::new(format!("Visitor error: {}", e))))?;
+            statement.accept(self).map_err(|e| Box::new(FormatError::new(format!("Visitor error: {e}"))))?;
         }
         
         Ok(self.output.clone())
@@ -259,7 +259,7 @@ impl Visitor<()> for PrettyAstPrinter {
             self.writeln_indented("Arguments:")?;
             self.indent_level += 1;
             for (i, arg) in expr.arguments.iter().enumerate() {
-                self.writeln_indented(&format!("Arg {}:", i))?;
+                self.writeln_indented(&format!("Arg {i}:"))?;
                 self.indent_level += 1;
                 arg.accept(self)?;
                 self.indent_level -= 1;
@@ -329,15 +329,15 @@ impl Visitor<()> for PrettyAstPrinter {
 /// Helper function to format literal values for display
 fn format_literal_value(literal: &LiteralValue) -> String {
     match literal {
-        LiteralValue::I32(i) => format!("{}i32", i),
-        LiteralValue::I64(i) => format!("{}i64", i),
-        LiteralValue::U32(i) => format!("{}u32", i),
-        LiteralValue::U64(i) => format!("{}u64", i),
+        LiteralValue::I32(i) => format!("{i}i32"),
+        LiteralValue::I64(i) => format!("{i}i64"),
+        LiteralValue::U32(i) => format!("{i}u32"),
+        LiteralValue::U64(i) => format!("{i}u64"),
         LiteralValue::UnspecifiedInteger(i) => i.to_string(),
-        LiteralValue::F32(f) => format!("{}f32", f),
-        LiteralValue::F64(f) => format!("{}f64", f),
+        LiteralValue::F32(f) => format!("{f}f32"),
+        LiteralValue::F64(f) => format!("{f}f64"),
         LiteralValue::UnspecifiedFloat(f) => f.to_string(),
-        LiteralValue::String(s) => format!("\"{}\"", s),
+        LiteralValue::String(s) => format!("\"{s}\""),
         LiteralValue::Boolean(b) => b.to_string(),
         LiteralValue::Unit => "()".to_string(),
     }

@@ -5,10 +5,6 @@ use std::process::Command;
 use tempfile::{tempdir, TempDir};
 use slang_error::ErrorCode;
 
-// ============================================================================
-// Fluent Assertion API Implementation
-// ============================================================================
-
 /// Execution modes for program testing
 #[derive(Clone, Copy)]
 pub enum ExecutionMode {
@@ -293,10 +289,6 @@ impl FailureAssertion {
         }
     }
 }
-
-// ============================================================================
-// Convenience Macros
-// ============================================================================
 
 /// Convenience macro for simple success assertions
 #[macro_export]

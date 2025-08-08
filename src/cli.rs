@@ -217,15 +217,15 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> CliResult<()> {
             }
         },
         slang_backend::SlangArtifactFileError::Zip { source, context, .. } => CliError::Generic {
-            message: format!("ZIP error: {} - {}", context, source),
+            message: format!("ZIP error: {context} - {source}"),
             exit_code: exit::Code::IoErr,
         },
         slang_backend::SlangArtifactFileError::Serialization { source, context, .. } => CliError::Generic {
-            message: format!("Serialization error: {} - {}", context, source),
+            message: format!("Serialization error: {context} - {source}"),
             exit_code: exit::Code::Software,
         },
         other => CliError::Generic {
-            message: format!("Failed to write bytecode: {}", other),
+            message: format!("Failed to write bytecode: {other}"),
             exit_code: exit::Code::Software,
         },
     })?;
@@ -253,7 +253,7 @@ fn read_bytecode_from_file(input_path: &str) -> CliResult<Chunk> {
             exit_code: exit::Code::NoInput,
         },
         other => CliError::Generic {
-            message: format!("Failed to open artifact file: {}", other),
+            message: format!("Failed to open artifact file: {other}"),
             exit_code: exit::Code::NoInput,
         },
     })?;
@@ -265,7 +265,7 @@ fn read_bytecode_from_file(input_path: &str) -> CliResult<Chunk> {
             exit_code: exit::Code::IoErr,
         },
         slang_backend::SlangArtifactFileError::Zip { source, context, .. } => CliError::Generic {
-            message: format!("ZIP error: {} - {}", context, source),
+            message: format!("ZIP error: {context} - {source}"),
             exit_code: exit::Code::Dataerr,
         },
         slang_backend::SlangArtifactFileError::MissingBytecode { .. } => CliError::Generic {
@@ -273,11 +273,11 @@ fn read_bytecode_from_file(input_path: &str) -> CliResult<Chunk> {
             exit_code: exit::Code::Dataerr,
         },
         slang_backend::SlangArtifactFileError::Serialization { source, context, .. } => CliError::Generic {
-            message: format!("Serialization error: {} - {}", context, source),
+            message: format!("Serialization error: {context} - {source}"),
             exit_code: exit::Code::Dataerr,
         },
         other => CliError::Generic {
-            message: format!("Failed to read bytecode chunk: {}", other),
+            message: format!("Failed to read bytecode chunk: {other}"),
             exit_code: exit::Code::Dataerr,
         },
     })

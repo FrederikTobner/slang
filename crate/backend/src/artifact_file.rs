@@ -310,7 +310,7 @@ impl SlangArtifactFile {
             let file = archive.by_index(i)
                 .map_err(|e| SlangArtifactFileError::Zip {
                     source: e,
-                    context: format!("Failed to access entry at index {}", i),
+                    context: format!("Failed to access entry at index {i}"),
                     path: self.path.clone(),
                 })?;
             entries.push(file.name().to_string());

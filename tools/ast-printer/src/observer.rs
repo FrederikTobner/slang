@@ -17,7 +17,7 @@ impl ASTPrinter {
         println!("{}", "=== AST ===".bright_green().bold());
         println!("Found {} statements", statements.len());
         for (i, stmt) in statements.iter().enumerate() {
-            println!("Statement {}: {:?}", i, stmt);
+            println!("Statement {i}: {stmt:?}");
         }
         println!("{}", "=== END AST ===".bright_green().bold());
     }

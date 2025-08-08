@@ -76,7 +76,7 @@ pub fn parse_and_print_ast(
             
             let formatter = format.create_formatter();
             let formatted_ast = formatter.format(&statements)?;
-            println!("{}", formatted_ast);
+            println!("{formatted_ast}");
             
             if diagnostics.has_errors() && format == AstFormat::Pretty {
                 eprintln!("\n{}: Compilation completed with diagnostics", "Info".blue().bold());
@@ -95,11 +95,11 @@ fn validate_input_file(file_path: &str) -> Result<(), String> {
     let path = std::path::Path::new(file_path);
     
     if !path.exists() {
-        return Err(format!("File '{}' does not exist", file_path));
+        return Err(format!("File '{file_path}' does not exist"));
     }
     
     if !path.is_file() {
-        return Err(format!("'{}' is not a regular file", file_path));
+        return Err(format!("'{file_path}' is not a regular file"));
     }
     
     if let Some(extension) = path.extension() {
@@ -118,5 +118,5 @@ fn validate_input_file(file_path: &str) -> Result<(), String> {
 /// Read source file with proper error handling
 fn read_source_file(file_path: &str) -> Result<String, String> {
     fs::read_to_string(file_path)
-        .map_err(|e| format!("Failed to read file '{}': {}", file_path, e))
+        .map_err(|e| format!("Failed to read file '{file_path}': {e}"))
 }

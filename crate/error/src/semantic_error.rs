@@ -63,7 +63,7 @@ impl DomainError for SemanticError {
     fn to_compiler_error(&self) -> CompilationError {
         let (code, message) = match self {
             SemanticError::UndefinedSymbol { name, suggestions, .. } => {
-                let base_msg = format!("Undefined symbol: {}", name);
+                let base_msg = format!("Undefined symbol: {name}");
                 let msg = if suggestions.is_empty() {
                     base_msg
                 } else {
@@ -73,24 +73,23 @@ impl DomainError for SemanticError {
             }
             SemanticError::SymbolRedefinition { name, kind, .. } => {
                 (ErrorCode::SymbolRedefinition, 
-                 format!("{} '{}' is already defined in the current scope", kind, name))
+                 format!("{kind} '{name}' is already defined in the current scope"))
             }
             SemanticError::TypeMismatch { expected, found, context: ctx, can_convert, .. } => {
                 let base_msg = format!("Type mismatch: expected {}, found {} {}", 
                                      expected, found, 
-                                     if ctx.is_empty() { String::new() } else { format!("({})", ctx) });
+                                     if ctx.is_empty() { String::new() } else { format!("({ctx})") });
                 let msg = if *can_convert {
-                    format!("{}. Consider explicit type conversion.", base_msg)
+                    format!("{base_msg}. Consider explicit type conversion.")
                 } else {
                     base_msg
                 };
                 (ErrorCode::TypeMismatch, msg)
             }
             SemanticError::InvalidOperation { operation, left_type, right_type, suggestion, .. } => {
-                let base_msg = format!("Invalid operation '{}' between {} and {}", 
-                                     operation, left_type, right_type);
+                let base_msg = format!("Invalid operation '{operation}' between {left_type} and {right_type}");
                 let msg = if let Some(suggestion) = suggestion {
-                    format!("{}. {}", base_msg, suggestion)
+                    format!("{base_msg}. {suggestion}")
                 } else {
                     base_msg
                 };
@@ -99,7 +98,7 @@ impl DomainError for SemanticError {
             SemanticError::FunctionCallError { function_name, error_kind, .. } => {
                 let msg = match error_kind {
                     FunctionCallErrorKind::UndefinedFunction { suggestions } => {
-                        let base_msg = format!("Undefined function: {}", function_name);
+                        let base_msg = format!("Undefined function: {function_name}");
                         if suggestions.is_empty() {
                             base_msg
                         } else {
@@ -107,14 +106,13 @@ impl DomainError for SemanticError {
                         }
                     }
                     FunctionCallErrorKind::ArgumentCountMismatch { expected, found } => {
-                        format!("Function '{}' expects {} arguments, but {} were provided", 
-                               function_name, expected, found)
+                        format!("Function '{function_name}' expects {expected} arguments, but {found} were provided")
                     }
                     FunctionCallErrorKind::ArgumentTypeMismatch { argument_index, expected, found, can_convert } => {
                         let base_msg = format!("Argument {} of function '{}': expected {}, found {}", 
                                              argument_index + 1, function_name, expected, found);
                         if *can_convert {
-                            format!("{}. Consider explicit type conversion.", base_msg)
+                            format!("{base_msg}. Consider explicit type conversion.")
                         } else {
                             base_msg
                         }
@@ -144,11 +142,11 @@ impl DomainError for SemanticError {
     
     fn short_description(&self) -> String {
         match self {
-            SemanticError::UndefinedSymbol { name, .. } => format!("Undefined symbol: {}", name),
-            SemanticError::SymbolRedefinition { name, .. } => format!("Symbol redefinition: {}", name),
+            SemanticError::UndefinedSymbol { name, .. } => format!("Undefined symbol: {name}"),
+            SemanticError::SymbolRedefinition { name, .. } => format!("Symbol redefinition: {name}"),
             SemanticError::TypeMismatch { .. } => "Type mismatch".to_string(),
-            SemanticError::InvalidOperation { operation, .. } => format!("Invalid operation: {}", operation),
-            SemanticError::FunctionCallError { function_name, .. } => format!("Function call error: {}", function_name),
+            SemanticError::InvalidOperation { operation, .. } => format!("Invalid operation: {operation}"),
+            SemanticError::FunctionCallError { function_name, .. } => format!("Function call error: {function_name}"),
         }
     }
 }

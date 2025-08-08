@@ -32,8 +32,8 @@ fn unit_type_annotation() {
 fn boolean_literal(#[case] value: &str) {
     // Arrange
     let program = format!(r#"
-        let x : () = {};
-    "#, value);
+        let x : () = {value};
+    "#);
     
     // Act & Assert
     ProgramAssertion::new(&program)
@@ -51,14 +51,14 @@ fn boolean_literal(#[case] value: &str) {
 fn integer_literal(#[case] value: &str, #[case] used_type: &str) {
     // Arrange
     let program = format!(r#"
-        let x : () = {};
-    "#, value);
+        let x : () = {value};
+    "#);
     
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
         .error_code(ErrorCode::TypeMismatch)
-        .stderr(&format!(" Type mismatch: variable x is () but expression is {}", used_type));
+        .stderr(&format!(" Type mismatch: variable x is () but expression is {used_type}"));
 }
 
 #[rstest]
@@ -68,14 +68,14 @@ fn integer_literal(#[case] value: &str, #[case] used_type: &str) {
 fn float_literal(#[case] value: &str, #[case] used_type: &str) {
     // Arrange
     let program = format!(r#"
-        let x : () = {};
-    "#, value);
+        let x : () = {value};
+    "#);
     
     // Act & Assert
     ProgramAssertion::new(&program)
         .fails()
         .error_code(ErrorCode::TypeMismatch)
-        .stderr(&format!(" Type mismatch: variable x is () but expression is {}", used_type));
+        .stderr(&format!(" Type mismatch: variable x is () but expression is {used_type}"));
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn string_literal() {
     "#;
     
     // Act & Assert
-    ProgramAssertion::new(&program)
+    ProgramAssertion::new(program)
         .fails()
         .error_code(ErrorCode::TypeMismatch)
         .stderr(" Type mismatch: variable x is () but expression is string");
