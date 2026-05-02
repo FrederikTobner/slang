@@ -494,7 +494,7 @@ pub fn create_pipeline(
     source: &str,
     file_name: Option<String>,
     recovery_mode: bool,
-) -> CompilationPipeline {
+) -> CompilationPipeline<'_> {
     CompilationPipeline::new(source, file_name).with_recovery_mode(recovery_mode)
 }
 
@@ -569,7 +569,7 @@ pub fn compile_to_bytecode(
     source: &str,
     file_name: Option<String>,
     recovery_mode: bool,
-) -> CompilationResult {
+) -> CompilationResult<'_> {
     let pipeline = create_pipeline(source, file_name, recovery_mode);
     execute_compilation_stages(pipeline)
 }

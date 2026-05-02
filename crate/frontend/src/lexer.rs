@@ -153,7 +153,7 @@ impl<'a> LexerState<'a> {
 /// ### Returns
 ///
 /// A CompileResult containing LexerResult (tokens and line information) or lexer errors
-pub fn tokenize(input: &str) -> CompileResult<LexerResult> {
+pub fn tokenize(input: &str) -> CompileResult<LexerResult<'_>> {
     let mut state = LexerState::new(input);
 
     while let Some(&c) = state.peek() {
