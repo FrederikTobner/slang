@@ -192,7 +192,7 @@ impl LineInfo<'_> {
     ///
     /// ### Returns
     /// A new LineInfo object with the line starts calculated
-    pub fn new(source: &str) -> LineInfo {
+    pub fn new(source: &str) -> LineInfo<'_> {
         let mut line_starts = vec![0];
 
         for (i, c) in source.char_indices() {

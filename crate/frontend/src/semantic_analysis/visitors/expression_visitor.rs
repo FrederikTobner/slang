@@ -50,7 +50,7 @@ impl<'a> ExpressionVisitor<'a> {
     }
 
     /// Create a type checking coordinator for this visitor's context
-    fn create_type_coordinator(&self) -> TypeCheckingCoordinator {
+    fn create_type_coordinator(&self) -> TypeCheckingCoordinator<'_> {
         TypeCheckingCoordinator::new(self.context)
     }
 
