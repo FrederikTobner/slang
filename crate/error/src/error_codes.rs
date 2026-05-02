@@ -74,6 +74,16 @@ pub enum ErrorCode {
     ExpectedElse = 1031,
     /// Expected a closing quote for a string literal
     ExpectedClosingQuote = 1032,
+    /// Expected a specific token
+    ExpectedToken = 1033,
+    /// Unexpected end of file
+    UnexpectedEof = 1034,
+    /// Invalid number format
+    InvalidNumber = 1035,
+    /// Syntax error
+    SyntaxError = 1036,
+    /// Mismatched delimiters
+    MismatchedDelimiters = 1037,
 
     // Semantic Analysis Errors (2000-2999)
     /// Variable used before being defined
@@ -112,6 +122,22 @@ pub enum ErrorCode {
     InvalidExpression = 2017,
     /// Attempt to call a non-callable value (non-function)
     VariableNotCallable = 2018,
+    /// Undefined type referenced
+    UndefinedType = 2019,
+    /// Circular dependency in type definitions
+    CircularDependency = 2020,
+    /// Invalid type definition
+    InvalidType = 2021,
+
+    // Code Generation Errors (2500-2599)
+    /// Stack overflow during compilation
+    StackOverflow = 2500,
+    /// Too many constants defined
+    TooManyConstants = 2501,
+    /// Unsupported language feature
+    UnsupportedFeature = 2502,
+    /// Internal compiler error
+    InternalError = 2503,
 
     // Generic Compile Errors (3000-3999)
     /// Generic compile error not categorized
@@ -159,6 +185,11 @@ impl ErrorCode {
             ErrorCode::UnknownType => "Unknow type",
             ErrorCode::ExpectedElse => "Expected 'else' after if expression",
             ErrorCode::ExpectedClosingQuote => "Expected closing quote for string literal",
+            ErrorCode::ExpectedToken => "Expected specific token",
+            ErrorCode::UnexpectedEof => "Unexpected end of file",
+            ErrorCode::InvalidNumber => "Invalid number format",
+            ErrorCode::SyntaxError => "Syntax error",
+            ErrorCode::MismatchedDelimiters => "Mismatched delimiters",
 
             // Semantic Analysis Errors
             ErrorCode::UndefinedVariable => "Undefined variable",
@@ -179,6 +210,13 @@ impl ErrorCode {
             ErrorCode::AssignmentToImmutableVariable => "Assignment to immutable variable",
             ErrorCode::InvalidExpression => "Invalid expression",
             ErrorCode::VariableNotCallable => "Variable is not callable",
+            ErrorCode::UndefinedType => "Undefined type",
+            ErrorCode::CircularDependency => "Circular dependency in types",
+            ErrorCode::InvalidType => "Invalid type definition",
+            ErrorCode::StackOverflow => "Stack overflow during compilation",
+            ErrorCode::TooManyConstants => "Too many constants",
+            ErrorCode::UnsupportedFeature => "Unsupported language feature",
+            ErrorCode::InternalError => "Internal compiler error",
             ErrorCode::GenericCompileError => "Generic compile error",
         }
     }
@@ -186,13 +224,13 @@ impl ErrorCode {
     /// Check if this is a parse error (1000-1999 range)
     pub fn is_parse_error(&self) -> bool {
         let code = self.code();
-        code >= 1000 && code < 2000
+        (1000..2000).contains(&code)
     }
 
     /// Check if this is a semantic error (2000-2999 range)
     pub fn is_semantic_error(&self) -> bool {
         let code = self.code();
-        code >= 2000 && code < 3000
+        (2000..3000).contains(&code)
     }
 }
 

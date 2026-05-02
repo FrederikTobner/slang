@@ -2,19 +2,20 @@
 name = "slang_frontend"
 version = "0.1.0"
 edition = "2024"
+license = "GPL-3.0"
+description = "Frontend components of the Slang programming language"
+authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 
 [dependencies]
-colored = "2.0.4"
 slang_ir = { path = "../ir" }
 slang_types = { path = "../types" }
 slang_shared = { path = "../shared" }
 slang_error = { path = "../error" }
+unicode-ident = "1.0"
 
 [features]
 default = []
-print-tokens = []
 
 [lib]
 name = "slang_frontend"
 path = "src/lib.rs"
-

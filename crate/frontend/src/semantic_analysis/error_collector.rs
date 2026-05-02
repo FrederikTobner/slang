@@ -1,14 +1,14 @@
-use std::collections::HashSet;
-use slang_error::{CompilerError, ErrorCode};
-use slang_shared::CompilationContext;
 use super::error::SemanticAnalysisError;
+use slang_error::{CompilationError, ErrorCode};
+use slang_shared::CompilationContext;
+use std::collections::HashSet;
 
 /// A centralized error collector that handles error creation, formatting, and deduplication
-/// 
+///
 /// This provides a single source of truth for error handling in the semantic analysis system,
 /// ensuring consistent error formatting and efficient deduplication.
 pub struct ErrorCollector {
-    errors: Vec<CompilerError>,
+    errors: Vec<CompilationError>,
     seen_errors: HashSet<ErrorKey>,
 }
 
@@ -31,26 +31,30 @@ impl ErrorCollector {
     }
 
     /// Add a semantic analysis error to the collection
-    /// 
+    ///
     /// # Arguments
     /// * `error` - The semantic analysis error to add
     /// * `context` - The compilation context for error conversion
-    /// 
+    ///
     /// # Returns
     /// `true` if the error was added (not a duplicate), `false` if it was deduplicated
-    pub fn add_semantic_error(&mut self, error: SemanticAnalysisError, context: &CompilationContext) -> bool {
+    pub fn add_semantic_error(
+        &mut self,
+        error: SemanticAnalysisError,
+        context: &CompilationContext,
+    ) -> bool {
         let compiler_error = error.to_compiler_error(context);
         self.add_compiler_error(compiler_error)
     }
 
     /// Add a compiler error directly to the collection
-    /// 
+    ///
     /// # Arguments
     /// * `error` - The compiler error to add
-    /// 
+    ///
     /// # Returns
     /// `true` if the error was added (not a duplicate), `false` if it was deduplicated
-    pub fn add_compiler_error(&mut self, error: CompilerError) -> bool {
+    pub fn add_compiler_error(&mut self, error: CompilationError) -> bool {
         let key = ErrorKey {
             code: error.error_code,
             line: error.line,
@@ -67,7 +71,7 @@ impl ErrorCollector {
     }
 
     /// Get all collected errors
-    pub fn into_errors(self) -> Vec<CompilerError> {
+    pub fn into_errors(self) -> Vec<CompilationError> {
         self.errors
     }
 
@@ -80,7 +84,6 @@ impl ErrorCollector {
     pub fn error_count(&self) -> usize {
         self.errors.len()
     }
-
 }
 
 impl Default for ErrorCollector {

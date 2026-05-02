@@ -1,6 +1,6 @@
-use crate::bytecode::{Chunk, NativeFunction, OpCode};
-use crate::value::{Value, ArithmeticOps, LogicalOps, ComparisonOps};
+use crate::bytecode::{Chunk, OpCode};
 use crate::native;
+use crate::value::{ArithmeticOps, ComparisonOps, LogicalOps, NativeFunction, Value};
 use std::collections::HashMap;
 
 /// Represents a single scope with its variables
@@ -34,7 +34,6 @@ pub struct VM {
     current_frame: Option<usize>,
 }
 
-
 /// Execute a bytecode chunk in the VM
 ///
 /// ### Arguments
@@ -49,7 +48,6 @@ pub fn execute_bytecode(chunk: &Chunk) -> Result<(), String> {
     vm.interpret(chunk)
 }
 
-
 impl Default for VM {
     fn default() -> Self {
         Self::new()
@@ -62,7 +60,9 @@ impl VM {
         let mut vm = VM {
             ip: 0,
             stack: Vec::new(),
-            scopes: vec![Scope { variables: HashMap::new() }], // Global scope
+            scopes: vec![Scope {
+                variables: HashMap::new(),
+            }], // Global scope
             frames: Vec::new(),
             current_frame: None,
         };
@@ -97,7 +97,6 @@ impl VM {
         self.set_variable(name.to_string(), native_fn);
     }
 
-
     /// Interprets and executes a bytecode chunk
     ///
     /// ### Arguments
@@ -118,7 +117,7 @@ impl VM {
             if !self.stack.is_empty() {
                 println!("\n=== Values on stack at end of execution ===");
                 for value in &self.stack {
-                    println!("{}", value);
+                    println!("{value}");
                 }
             }
         }
@@ -138,7 +137,7 @@ impl VM {
     fn execute_instruction(&mut self, chunk: &Chunk) -> Result<(), String> {
         let instruction = self.read_byte(chunk);
         let op = OpCode::from_int(instruction)
-            .ok_or_else(|| format!("Unknown opcode: {}", instruction))?;
+            .ok_or_else(|| format!("Unknown opcode: {instruction}"))?;
 
         match op {
             OpCode::Constant => {
@@ -168,7 +167,7 @@ impl VM {
             OpCode::Return => {
                 if let Some(frame_index) = self.current_frame {
                     let return_value = if self.stack.is_empty() {
-                        Value::Unit(()) 
+                        Value::Unit(())
                     } else {
                         self.pop()?
                     };
@@ -197,7 +196,7 @@ impl VM {
             }
             OpCode::Print => {
                 let value = self.pop()?;
-                println!("{}", value);
+                println!("{value}");
             }
             OpCode::GetVariable => {
                 let var_index = self.read_byte(chunk) as usize;
@@ -212,12 +211,12 @@ impl VM {
                     } else if let Some(value) = self.get_variable(var_name) {
                         value.clone()
                     } else {
-                        return Err(format!("Undefined variable '{}'", var_name));
+                        return Err(format!("Undefined variable '{var_name}'"));
                     }
                 } else if let Some(value) = self.get_variable(var_name) {
                     value.clone()
                 } else {
-                    return Err(format!("Undefined variable '{}'", var_name));
+                    return Err(format!("Undefined variable '{var_name}'"));
                 };
 
                 self.stack.push(value);

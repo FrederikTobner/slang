@@ -17,17 +17,23 @@ The backend crate is responsible for compiling the AST to bytecode and executing
 
 The backend consists of several key components:
 
-- **CodeGenerator (`codegen.rs`)**: Translates AST into bytecode instructions
+- **Code Generator (`codegen.rs`)**: Translates AST into bytecode instructions with optimization
 - **Virtual Machine (`vm.rs`)**: The core execution engine that interprets Slang bytecode
-- **Bytecode (`bytecode.rs`)**: Definitions of bytecode instructions and chunks
-- **Value System (`value.rs`)**: Runtime value representations and operations
+- **Bytecode (`bytecode.rs`)**: Definitions of bytecode instructions, chunks, and serialization
+- **Value System (`value/`)**: Runtime value representations and operations
+  - **Value Operations (`value/operations/`)**: Arithmetic, logical, and comparison operations
+- **Native Functions (`native.rs`)**: Built-in functions and standard library implementations
 - **Core Library (`lib.rs`)**: Exports the public API and initializes the backend components
 
 ## Features
 
 - Stack-based virtual machine with efficient instruction dispatch
-- Bytecode serialization for storing compiled programs
-- Rich runtime value system supporting all Slang types
+- Bytecode serialization for storing and loading compiled programs
+- Rich runtime value system supporting all Slang types (primitives, functions, structs)
+- Native function integration for built-in operations
+- Memory management and garbage collection for runtime values
+- Comprehensive error handling during execution
+- Debugging support with execution tracing
 - Detailed runtime error reporting
 - Support for native function calls
 

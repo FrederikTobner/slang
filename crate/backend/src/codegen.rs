@@ -1,13 +1,19 @@
-use crate::bytecode::{Chunk, Function, OpCode};
-use crate::value::Value;
-use slang_error::{CompilerError, CompileResult, ErrorCode};
+use crate::bytecode::{Chunk, OpCode};
+use crate::value::{Function, Value};
+use slang_error::location::Location;
+use slang_error::{
+    CodegenError, CodegenResult, CompilationError, CompileResult, DomainResult, ResourceType,
+};
 use slang_ir::Visitor;
 use slang_ir::ast::{
     BinaryExpr, BinaryOperator, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
-    FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr, Statement, TypeDefinitionStmt,
-    UnaryExpr, UnaryOperator,
+    FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr,
+    ReturnStatement, Statement, TypeDefinitionStmt, UnaryExpr, UnaryOperator,
 };
-use slang_ir::location::Location;
+
+/// Maximum jump distance for bytecode instructions
+/// Uses 16-bit offset, so maximum value is 2^16 - 1
+const MAX_JUMP_DISTANCE: usize = 0xFFFF;
 
 /// Compiles AST nodes into bytecode instructions
 pub struct CodeGenerator {
@@ -22,12 +28,18 @@ pub struct CodeGenerator {
     /// Stack of scopes for tracking local variables
     local_scopes: Vec<Vec<String>>,
     /// Accumulated errors during compilation
-    errors: Vec<CompilerError>,
+    errors: Vec<CompilationError>,
 }
 
 pub fn generate_bytecode(statements: &[Statement]) -> CompileResult<Chunk> {
     let compiler = CodeGenerator::new();
     compiler.compile(statements)
+}
+
+impl Default for CodeGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CodeGenerator {
@@ -48,17 +60,19 @@ impl CodeGenerator {
         self.line = location.line;
     }
 
-    /// Creates a CompilerError with the current location and adds it to the error list
-    fn add_error(&mut self, message: String) {
-        let error = CompilerError::new(
-            ErrorCode::GenericCompileError,
-            message,
-            self.line,
-            0, // column - we don't track this in codegen currently
-            0, // position - we don't track this in codegen currently  
-            None, // token_length - not applicable for codegen errors
-        );
-        self.errors.push(error);
+    /// Check if we've exceeded the maximum function recursion depth
+    fn check_stack_depth(&self, location: slang_error::Location) -> CodegenResult<()> {
+        const MAX_FUNCTION_DEPTH: usize = 1000;
+
+        if self.functions.len() > MAX_FUNCTION_DEPTH {
+            Err(CodegenError::StackOverflow {
+                current_depth: self.functions.len(),
+                max_depth: MAX_FUNCTION_DEPTH,
+                location,
+            })
+        } else {
+            Ok(())
+        }
     }
 
     /// Compiles a list of statements into bytecode
@@ -72,9 +86,12 @@ impl CodeGenerator {
     /// A CompileResult containing the compiled bytecode chunk or errors
     fn compile(mut self, statements: &[Statement]) -> CompileResult<Chunk> {
         for stmt in statements {
-            stmt.accept(&mut self).unwrap_or_else(|_| {
-                // Error already added to self.errors
-            });
+            if let Err(domain_error) = stmt.accept(&mut self) {
+                // Convert DomainError back to CompilerError and add to errors list
+                let compiler_error = domain_error.to_compiler_error();
+                self.errors.push(compiler_error);
+                break; // Stop compilation on first error
+            }
         }
 
         self.emit_op(OpCode::Return);
@@ -97,11 +114,14 @@ impl CodeGenerator {
     /// CompileResult indicating success or containing errors
     pub fn compile_statements(&mut self, statements: &[Statement]) -> CompileResult<()> {
         for stmt in statements {
-            stmt.accept(self).unwrap_or_else(|_| {
-                // Error already added to self.errors
-            });
+            if let Err(domain_error) = stmt.accept(self) {
+                // Convert DomainError back to CompilerError and add to errors list
+                let compiler_error = domain_error.to_compiler_error();
+                self.errors.push(compiler_error);
+                break; // Stop compilation on first error
+            }
         }
-        
+
         if self.errors.is_empty() {
             Ok(())
         } else {
@@ -130,16 +150,21 @@ impl CodeGenerator {
     /// * `op` - The opcode to emit
     fn emit_op(&mut self, op: OpCode) {
         self.chunk.write_op(op, self.line);
-    }    /// Adds a constant value to the chunk and emits code to load it
+    }
+    /// Adds a constant value to the chunk and emits code to load it
     ///
     /// ### Arguments
     ///
     /// * `value` - The constant value to add
-    fn emit_constant(&mut self, value: Value) -> Result<(), ()> {
+    fn emit_constant(&mut self, value: Value) -> DomainResult<()> {
         let constant_index = self.chunk.add_constant(value);
         if constant_index > 255 {
-            self.add_error("Too many constants in one chunk".to_string());
-            return Err(());
+            return Err(Box::new(CodegenError::LimitExceeded {
+                resource: ResourceType::Constants,
+                current: constant_index,
+                limit: 255,
+                location: slang_error::Location::default(), // Use default for now since we don't have context
+            }));
         }
         self.emit_op(OpCode::Constant);
         self.emit_byte(constant_index as u8);
@@ -167,14 +192,24 @@ impl CodeGenerator {
     /// ### Arguments
     ///
     /// * `offset` - The position of the jump offset to patch
-    fn patch_jump(&mut self, offset: usize) {
+    ///
+    /// ### Returns
+    ///
+    /// `Ok(())` if the jump distance is within limits, or `CodegenError::LimitExceeded` if too far
+    fn patch_jump(&mut self, offset: usize) -> CodegenResult<()> {
         let jump = self.chunk.code.len() - offset - 2;
-        if jump > 0xFFFF {
-            panic!("Jump too far");
+        if jump > MAX_JUMP_DISTANCE {
+            return Err(CodegenError::LimitExceeded {
+                resource: ResourceType::JumpDistance,
+                current: jump,
+                limit: MAX_JUMP_DISTANCE,
+                location: Location::new(self.chunk.code.len(), self.line, 1, 1),
+            });
         }
 
         self.chunk.code[offset] = ((jump >> 8) & 0xFF) as u8;
         self.chunk.code[offset + 1] = (jump & 0xFF) as u8;
+        Ok(())
     }
 
     fn begin_scope(&mut self) {
@@ -188,8 +223,8 @@ impl CodeGenerator {
     }
 }
 
-impl Visitor<Result<(), ()>> for CodeGenerator {
-    fn visit_statement(&mut self, stmt: &Statement) -> Result<(), ()> {
+impl Visitor<()> for CodeGenerator {
+    fn visit_statement(&mut self, stmt: &Statement) -> DomainResult<()> {
         // Update current line from the statement's location
         let location = match stmt {
             Statement::Let(let_stmt) => let_stmt.location,
@@ -201,7 +236,13 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
             Statement::If(if_stmt) => if_stmt.location,
         };
         self.set_current_location(&location);
-        
+
+        // Use proper domain error handling
+        let result: CodegenResult<()> = self.check_stack_depth(location);
+        if let Err(error) = result {
+            return Err(Box::new(error));
+        }
+
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
             Statement::Assignment(assign_stmt) => self.visit_assignment_statement(assign_stmt),
@@ -215,10 +256,10 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         }
     }
 
-    fn visit_expression(&mut self, expr: &Expression) -> Result<(), ()> {
+    fn visit_expression(&mut self, expr: &Expression) -> DomainResult<()> {
         // Update current line from the expression's location
         self.set_current_location(&expr.location());
-        
+
         match expr {
             Expression::Literal(lit_expr) => self.visit_literal_expression(lit_expr),
             Expression::Binary(bin_expr) => self.visit_binary_expression(bin_expr),
@@ -227,14 +268,16 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
             Expression::Call(call_expr) => self.visit_call_expression(call_expr),
             Expression::Conditional(cond_expr) => self.visit_conditional_expression(cond_expr),
             Expression::Block(block_expr) => self.visit_block_expression(block_expr),
-            Expression::FunctionType(func_type_expr) => self.visit_function_type_expression(func_type_expr),
+            Expression::FunctionType(func_type_expr) => {
+                self.visit_function_type_expression(func_type_expr)
+            }
         }
     }
 
     fn visit_function_declaration_statement(
         &mut self,
         fn_decl: &FunctionDeclarationStmt,
-    ) -> Result<(), ()> {
+    ) -> DomainResult<()> {
         self.functions.push(fn_decl.name.clone());
         let function_name_idx = self.chunk.add_identifier(fn_decl.name.clone());
 
@@ -264,7 +307,10 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         self.emit_op(OpCode::Return);
 
         self.end_scope();
-        self.patch_jump(jump_over);
+
+        // Convert CodegenError to DomainError for propagation
+        self.patch_jump(jump_over)
+            .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
 
         let function = Value::Function(Box::new(Function {
             name: fn_decl.name.clone(),
@@ -281,7 +327,7 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_return_statement(&mut self, return_stmt: &slang_ir::ast::ReturnStatement) -> Result<(), ()> {
+    fn visit_return_statement(&mut self, return_stmt: &ReturnStatement) -> DomainResult<()> {
         if let Some(expr) = &return_stmt.value {
             self.visit_expression(expr)?;
         } else {
@@ -291,12 +337,12 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_expression_statement(&mut self, expr: &Expression) -> Result<(), ()> {
+    fn visit_expression_statement(&mut self, expr: &Expression) -> DomainResult<()> {
         self.visit_expression(expr)?;
         Ok(())
     }
 
-    fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> Result<(), ()> {
+    fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> DomainResult<()> {
         let is_local = !self.local_scopes.is_empty();
 
         if is_local {
@@ -311,8 +357,17 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
 
         let var_index = self.chunk.add_identifier(let_stmt.name.clone());
         if var_index > 255 {
-            self.add_error("Too many variables in one scope".to_string());
-            return Err(());
+            return Err(Box::new(CodegenError::LimitExceeded {
+                resource: ResourceType::LocalVariables,
+                current: var_index,
+                limit: 255,
+                location: slang_error::Location::new(
+                    let_stmt.location.position,
+                    let_stmt.location.line,
+                    let_stmt.location.column,
+                    let_stmt.location.length,
+                ),
+            }));
         }
 
         self.emit_op(OpCode::SetVariable);
@@ -326,12 +381,21 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
     fn visit_assignment_statement(
         &mut self,
         assign_stmt: &slang_ir::ast::AssignmentStatement,
-    ) -> Result<(), ()> {
+    ) -> DomainResult<()> {
         self.visit_expression(&assign_stmt.value)?;
         let var_index = self.chunk.add_identifier(assign_stmt.name.clone());
         if var_index > 255 {
-            self.add_error("Too many variables in one scope".to_string());
-            return Err(());
+            return Err(Box::new(CodegenError::LimitExceeded {
+                resource: ResourceType::Variables,
+                current: var_index,
+                limit: 255,
+                location: slang_error::Location::new(
+                    assign_stmt.location.position,
+                    assign_stmt.location.line,
+                    assign_stmt.location.column,
+                    assign_stmt.location.length,
+                ),
+            }));
         }
         self.emit_op(OpCode::SetVariable);
         self.emit_byte(var_index as u8);
@@ -339,7 +403,7 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> Result<(), ()> {
+    fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> DomainResult<()> {
         for arg in &call_expr.arguments {
             self.visit_expression(arg)?;
         }
@@ -354,7 +418,7 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> Result<(), ()> {
+    fn visit_literal_expression(&mut self, lit_expr: &LiteralExpr) -> DomainResult<()> {
         match &lit_expr.value {
             slang_ir::ast::LiteralValue::I32(i) => {
                 self.emit_constant(Value::I32(*i))?;
@@ -394,14 +458,15 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_binary_expression(&mut self, bin_expr: &BinaryExpr) -> Result<(), ()> {
+    fn visit_binary_expression(&mut self, bin_expr: &BinaryExpr) -> DomainResult<()> {
         match bin_expr.operator {
             BinaryOperator::And => {
                 self.visit_expression(&bin_expr.left)?;
                 let jump_if_false = self.emit_jump(OpCode::JumpIfFalse);
                 self.emit_op(OpCode::Pop);
                 self.visit_expression(&bin_expr.right)?;
-                self.patch_jump(jump_if_false);
+                self.patch_jump(jump_if_false)
+                    .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
                 return Ok(());
             }
 
@@ -409,10 +474,12 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
                 self.visit_expression(&bin_expr.left)?;
                 let jump_if_true = self.emit_jump(OpCode::JumpIfFalse);
                 let jump_to_end = self.emit_jump(OpCode::Jump);
-                self.patch_jump(jump_if_true);
+                self.patch_jump(jump_if_true)
+                    .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
                 self.emit_op(OpCode::Pop);
                 self.visit_expression(&bin_expr.right)?;
-                self.patch_jump(jump_to_end);
+                self.patch_jump(jump_to_end)
+                    .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
                 return Ok(());
             }
 
@@ -432,11 +499,17 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
                     BinaryOperator::Equal => self.emit_op(OpCode::Equal),
                     BinaryOperator::NotEqual => self.emit_op(OpCode::NotEqual),
                     _ => {
-                        self.add_error(format!(
-                            "Unsupported binary operator: {:?}",
-                            bin_expr.operator
-                        ));
-                        return Err(());
+                        return Err(Box::new(CodegenError::UnsupportedFeature {
+                            feature: format!("Binary operator: {:?}", bin_expr.operator),
+                            reason: "This binary operator is not implemented yet".to_string(),
+                            alternative: Some("Use a supported binary operator".to_string()),
+                            location: slang_error::Location::new(
+                                bin_expr.location.position,
+                                bin_expr.location.line,
+                                bin_expr.location.column,
+                                bin_expr.location.length,
+                            ),
+                        }));
                     }
                 }
             }
@@ -445,7 +518,7 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> Result<(), ()> {
+    fn visit_unary_expression(&mut self, unary_expr: &UnaryExpr) -> DomainResult<()> {
         self.visit_expression(&unary_expr.right)?;
 
         match unary_expr.operator {
@@ -459,27 +532,33 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
     fn visit_variable_expression(
         &mut self,
         var_expr: &slang_ir::ast::VariableExpr,
-    ) -> Result<(), ()> {
+    ) -> DomainResult<()> {
         let var_index = self.chunk.add_identifier(var_expr.name.clone());
         if var_index > 255 {
-            self.add_error("Too many variables".to_string());
-            return Err(());
+            return Err(Box::new(CodegenError::LimitExceeded {
+                resource: ResourceType::Variables,
+                current: var_index,
+                limit: 255,
+                location: slang_error::Location::new(
+                    var_expr.location.position,
+                    var_expr.location.line,
+                    var_expr.location.column,
+                    var_expr.location.length,
+                ),
+            }));
         }
         self.emit_op(OpCode::GetVariable);
         self.emit_byte(var_index as u8);
         Ok(())
     }
 
-    fn visit_type_definition_statement(
-        &mut self,
-        _stmt: &TypeDefinitionStmt,
-    ) -> Result<(), ()> {
+    fn visit_type_definition_statement(&mut self, _stmt: &TypeDefinitionStmt) -> DomainResult<()> {
         // Type definitions don't generate code at runtime
         // They're just used by the semantic analyzer
         Ok(())
     }
 
-    fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) -> Result<(), ()> {
+    fn visit_conditional_expression(&mut self, cond_expr: &ConditionalExpr) -> DomainResult<()> {
         self.visit_expression(&cond_expr.condition)?;
 
         let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
@@ -487,16 +566,18 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         self.visit_expression(&cond_expr.then_branch)?;
 
         let jump_over_else = self.emit_jump(OpCode::Jump);
-        self.patch_jump(jump_to_else);
+        self.patch_jump(jump_to_else)
+            .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
         self.emit_op(OpCode::Pop);
         self.visit_expression(&cond_expr.else_branch)?;
 
-        self.patch_jump(jump_over_else);
+        self.patch_jump(jump_over_else)
+            .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
 
         Ok(())
     }
 
-    fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> Result<(), ()> {
+    fn visit_if_statement(&mut self, if_stmt: &IfStatement) -> DomainResult<()> {
         self.visit_expression(&if_stmt.condition)?;
 
         let jump_to_else = self.emit_jump(OpCode::JumpIfFalse);
@@ -507,21 +588,24 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         if let Some(else_branch) = &if_stmt.else_branch {
             let jump_over_else = self.emit_jump(OpCode::Jump);
 
-            self.patch_jump(jump_to_else);
+            self.patch_jump(jump_to_else)
+                .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
             self.emit_op(OpCode::Pop);
 
             self.visit_block_expression(else_branch)?;
 
-            self.patch_jump(jump_over_else);
+            self.patch_jump(jump_over_else)
+                .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
         } else {
-            self.patch_jump(jump_to_else);
+            self.patch_jump(jump_to_else)
+                .map_err(|e| -> Box<dyn slang_error::DomainError> { Box::new(e) })?;
             self.emit_op(OpCode::Pop);
         }
 
         Ok(())
     }
 
-    fn visit_block_expression(&mut self, block_expr: &BlockExpr) -> Result<(), ()> {
+    fn visit_block_expression(&mut self, block_expr: &BlockExpr) -> DomainResult<()> {
         self.begin_scope();
 
         for stmt in &block_expr.statements {
@@ -539,7 +623,10 @@ impl Visitor<Result<(), ()>> for CodeGenerator {
         Ok(())
     }
 
-    fn visit_function_type_expression(&mut self, _func_type_expr: &FunctionTypeExpr) -> Result<(), ()> {
+    fn visit_function_type_expression(
+        &mut self,
+        _func_type_expr: &FunctionTypeExpr,
+    ) -> DomainResult<()> {
         // Function type expressions are compile-time constructs that don't generate runtime bytecode
         // They are used for type checking and don't produce any values at runtime
         Ok(())

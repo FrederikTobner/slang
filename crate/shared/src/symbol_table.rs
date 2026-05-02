@@ -1,4 +1,4 @@
-use slang_types::types::TypeId;
+use slang_types::TypeId;
 use std::collections::HashMap;
 
 /// Represents the specific data for each symbol kind
@@ -84,7 +84,7 @@ pub struct Scope {
 ///
 /// ### Example
 /// ```
-/// use slang_shared::{SymbolTable, SymbolData};
+/// use slang_shared::symbol_table::{SymbolTable, SymbolData};
 /// use slang_types::TypeId;
 ///
 /// let mut table = SymbolTable::new();
@@ -136,12 +136,17 @@ impl SymbolTable {
     /// Ends the current scope by popping it from the scope stack
     ///
     /// Used when exiting a block, function, or other lexical scope.
-    /// Will panic if attempting to end the global scope.
-    pub fn end_scope(&mut self) {
+    /// Returns an error if attempting to end the global scope.
+    ///
+    /// ### Returns
+    /// * `Ok(())` if the scope was successfully ended
+    /// * `Err(String)` if attempting to end the global scope
+    pub fn end_scope(&mut self) -> Result<(), String> {
         if self.scopes.len() > 1 {
             self.scopes.pop();
+            Ok(())
         } else {
-            panic!("Cannot end the global scope");
+            Err("Cannot end the global scope".to_string())
         }
     }
 
@@ -162,7 +167,7 @@ impl SymbolTable {
     ///
     /// ### Example
     /// ```
-    /// use slang_shared::{SymbolTable, SymbolData};
+    /// use slang_shared::symbol_table::{SymbolTable, SymbolData};
     /// use slang_types::TypeId;
     ///
     /// let mut table = SymbolTable::new();
@@ -185,16 +190,14 @@ impl SymbolTable {
             if let Some(existing_symbol) = current_scope.symbols.get(&name) {
                 let error_message = match (&existing_symbol.data, &data) {
                     (SymbolData::Type, _) => {
-                        format!("Type '{}' is already defined in the current scope.", name)
+                        format!("Type '{name}' is already defined in the current scope.")
                     }
-                    (SymbolData::Function, _) => format!(
-                        "Function '{}' is already defined in the current scope.",
-                        name
-                    ),
-                    (SymbolData::Variable { .. }, _) => format!(
-                        "Variable '{}' is already defined in the current scope.",
-                        name
-                    ),
+                    (SymbolData::Function, _) => {
+                        format!("Function '{name}' is already defined in the current scope.")
+                    }
+                    (SymbolData::Variable { .. }, _) => {
+                        format!("Variable '{name}' is already defined in the current scope.")
+                    }
                 };
                 return Err(error_message);
             }
@@ -229,7 +232,7 @@ impl SymbolTable {
     ///
     /// ### Example
     /// ```
-    /// use slang_shared::{SymbolTable, SymbolData};
+    /// use slang_shared::symbol_table::{SymbolTable, SymbolData};
     /// use slang_types::TypeId;
     ///
     /// let mut table = SymbolTable::new();

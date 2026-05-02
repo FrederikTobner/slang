@@ -1,4 +1,4 @@
-use slang_ir::Location;
+use slang_error::Location;
 use slang_ir::ast::*;
 use slang_shared::{CompilationContext, SymbolKind};
 use slang_types::{TYPE_NAME_U32, TYPE_NAME_U64, TypeId};
@@ -62,12 +62,12 @@ impl<'a> StatementVisitor<'a> {
     ) -> SemanticResult {
         let mut param_types = Vec::new();
         for param in &fn_decl.parameters {
-            param_types.push(param.param_type.clone());
+            param_types.push(param.param_type);
         }
 
         let function_type_id = self
             .context
-            .register_function_type(param_types.clone(), fn_decl.return_type.clone());
+            .register_function_type(param_types.clone(), fn_decl.return_type);
 
         if self
             .context
@@ -86,8 +86,8 @@ impl<'a> StatementVisitor<'a> {
             });
         }
 
-        let previous_return_type = self.current_return_type.clone();
-        self.current_return_type = Some(fn_decl.return_type.clone());
+        let previous_return_type = self.current_return_type;
+        self.current_return_type = Some(fn_decl.return_type);
 
         self.context.begin_scope();
         for param in &fn_decl.parameters {
@@ -96,7 +96,7 @@ impl<'a> StatementVisitor<'a> {
                 .define_symbol(
                     param.name.clone(),
                     SymbolKind::Variable,
-                    param.param_type.clone(),
+                    param.param_type,
                     true,
                 )
                 .is_err()
@@ -114,9 +114,15 @@ impl<'a> StatementVisitor<'a> {
         let result = self.analyze_function_body(&fn_decl.body);
 
         self.current_return_type = previous_return_type;
-        self.context.end_scope();
 
-        result.and(Ok(fn_decl.return_type.clone()))
+        if let Err(err) = self.context.end_scope() {
+            return Err(SemanticAnalysisError::InvalidExpression {
+                message: format!("Failed to end function scope: {err}"),
+                location: fn_decl.location,
+            });
+        }
+
+        result.and(Ok(fn_decl.return_type))
     }
 
     /// Visit a return statement
@@ -127,7 +133,7 @@ impl<'a> StatementVisitor<'a> {
         };
 
         if let Some(expected_type) = &self.current_return_type {
-            let expected_type = expected_type.clone();
+            let expected_type = *expected_type;
             if let Some(expr) = &return_stmt.value {
                 return self.check_return_expr_type_internal(
                     expr,
@@ -136,7 +142,7 @@ impl<'a> StatementVisitor<'a> {
                 );
             } else if expected_type != TypeId::unknown() && expected_type != TypeId::unit() {
                 return Err(SemanticAnalysisError::MissingReturnValue {
-                    expected: expected_type.clone(),
+                    expected: expected_type,
                     location: error_location,
                 });
             }
@@ -163,7 +169,7 @@ impl<'a> StatementVisitor<'a> {
                             let negative_value = -n;
                             return Err(SemanticAnalysisError::ValueOutOfRange {
                                 value: negative_value.to_string(),
-                                target_type: let_stmt.expr_type.clone(),
+                                target_type: let_stmt.expr_type,
                                 is_float: false,
                                 location: let_stmt.location,
                             });
@@ -200,7 +206,7 @@ impl<'a> StatementVisitor<'a> {
             .define_symbol(
                 let_stmt.name.clone(),
                 SymbolKind::Variable,
-                final_type.clone(),
+                final_type,
                 let_stmt.is_mutable,
             )
             .is_err()
@@ -222,7 +228,7 @@ impl<'a> StatementVisitor<'a> {
         // First check if variable exists and get its type and mutability
         let (var_type_id, is_mutable) =
             if let Some(var_info) = self.resolve_variable(&assign_stmt.name) {
-                (var_info.type_id.clone(), var_info.is_mutable())
+                (var_info.type_id, var_info.is_mutable())
             } else {
                 return Err(SemanticAnalysisError::UndefinedVariable {
                     name: assign_stmt.name.clone(),
@@ -278,11 +284,11 @@ impl<'a> StatementVisitor<'a> {
                 return Err(SemanticAnalysisError::InvalidFieldType {
                     struct_name: type_def.name.clone(),
                     field_name: name.clone(),
-                    type_id: type_id.clone(),
+                    type_id: *type_id,
                     location: type_def.location,
                 });
             }
-            field_types_for_registration.push((name.clone(), type_id.clone()));
+            field_types_for_registration.push((name.clone(), *type_id));
         }
 
         match self
@@ -345,29 +351,25 @@ impl<'a> StatementVisitor<'a> {
         }
 
         // Handle coercion of unspecified int to specific integer types
-        if actual_type == TypeId::unspecified_int() {
-            if type_system::is_integer_type(self.context, expected_type) {
-                return type_system::check_unspecified_int_for_type(
-                    self.context,
-                    expr,
-                    expected_type,
-                );
-            }
+        if actual_type == TypeId::unspecified_int()
+            && type_system::is_integer_type(self.context, expected_type)
+        {
+            return type_system::check_unspecified_int_for_type(self.context, expr, expected_type);
         }
 
         // Handle coercion of unspecified float to specific float types
-        if actual_type == TypeId::unspecified_float() {
-            if type_system::is_float_type(self.context, expected_type) {
-                return type_system::check_unspecified_float_for_type(
-                    self.context,
-                    expr,
-                    expected_type,
-                );
-            }
+        if actual_type == TypeId::unspecified_float()
+            && type_system::is_float_type(self.context, expected_type)
+        {
+            return type_system::check_unspecified_float_for_type(
+                self.context,
+                expr,
+                expected_type,
+            );
         }
 
         Err(SemanticAnalysisError::ReturnTypeMismatch {
-            expected: expected_type.clone(),
+            expected: *expected_type,
             actual: actual_type,
             location: *location,
         })
@@ -386,14 +388,14 @@ impl<'a> StatementVisitor<'a> {
     fn visit_expression(&mut self, expr: &Expression) -> SemanticResult {
         // Create a new expression visitor with the current return type context
         let mut expr_visitor =
-            ExpressionVisitor::with_return_type(self.context, self.current_return_type.clone());
+            ExpressionVisitor::with_return_type(self.context, self.current_return_type);
         expr_visitor.visit_expression(expr)
     }
 
     fn visit_block_expression(&mut self, block: &BlockExpr) -> SemanticResult {
         // Create a new expression visitor with the current return type context
         let mut expr_visitor =
-            ExpressionVisitor::with_return_type(self.context, self.current_return_type.clone());
+            ExpressionVisitor::with_return_type(self.context, self.current_return_type);
         expr_visitor.visit_block_expression(block)
     }
 

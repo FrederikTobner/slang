@@ -6,7 +6,7 @@
 /// ### Returns
 /// This function does not return. It will terminate the program with the specified exit code.
 pub fn with_code(code: Code, message: &str) -> ! {
-    eprintln!("{}", message);
+    eprintln!("{message}");
     std::process::exit(code.into());
 }
 

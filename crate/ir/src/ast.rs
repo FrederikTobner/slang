@@ -1,6 +1,7 @@
-use crate::Location;
 use crate::Visitor;
-use slang_types::types::TypeId;
+use slang_error::DomainResult;
+use slang_error::Location;
+use slang_types::TypeId;
 use std::fmt::Display;
 
 #[derive(Debug, PartialEq)]
@@ -47,7 +48,7 @@ impl Display for BinaryOperator {
             BinaryOperator::And => "&&",
             BinaryOperator::Or => "||",
         };
-        write!(f, "{}", op_str)
+        write!(f, "{op_str}")
     }
 }
 
@@ -65,7 +66,7 @@ impl Display for UnaryOperator {
             UnaryOperator::Negate => "-",
             UnaryOperator::Not => "!",
         };
-        write!(f, "{}", op_str)
+        write!(f, "{op_str}")
     }
 }
 
@@ -101,6 +102,19 @@ impl Expression {
             Expression::Conditional(e) => e.location,
             Expression::Block(e) => e.location,
             Expression::FunctionType(e) => e.location,
+        }
+    }
+
+    pub fn expr_type(&self) -> TypeId {
+        match self {
+            Expression::Literal(e) => e.expr_type,
+            Expression::Binary(e) => e.expr_type,
+            Expression::Variable(_e) => TypeId::unknown(), // Variables need lookup in semantic analysis
+            Expression::Unary(e) => e.expr_type,
+            Expression::Call(e) => e.expr_type,
+            Expression::Conditional(e) => e.expr_type,
+            Expression::Block(e) => e.expr_type,
+            Expression::FunctionType(e) => e.expr_type,
         }
     }
 }
@@ -346,7 +360,7 @@ impl Statement {
     ///
     /// ### Returns
     /// The result of the visitor's visit method for this statement
-    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> DomainResult<T> {
         match self {
             Statement::Let(let_stmt) => visitor.visit_let_statement(let_stmt),
             Statement::Assignment(assign_stmt) => visitor.visit_assignment_statement(assign_stmt),
@@ -371,7 +385,7 @@ impl Expression {
     ///
     /// ### Returns
     /// The result of the visitor's visit method for this expression
-    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> DomainResult<T> {
         match self {
             Expression::Literal(lit) => visitor.visit_literal_expression(lit),
             Expression::Binary(bin) => visitor.visit_binary_expression(bin),

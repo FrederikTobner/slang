@@ -1,7 +1,8 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn early_return_in_if_statement() {
+    // Arrange
     let program = r#"
         fn test_function(x: i32) -> i32 {
             if x > 0 {
@@ -15,11 +16,14 @@ fn early_return_in_if_statement() {
         print_value(result1);
         print_value(result2);
     "#;
-    execute_program_and_assert(program, "10\n0");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("10\n0");
 }
 
 #[test]
 fn multiple_return_paths() {
+    // Arrange
     let program = r#"
         fn test_function(x: i32) -> string {
             if x > 10 {
@@ -40,11 +44,16 @@ fn multiple_return_paths() {
         print_value(result2);
         print_value(result3);
     "#;
-    execute_program_and_assert(program, "large\nsmall\nzero or negative");
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("large\nsmall\nzero or negative");
 }
 
 #[test]
 fn unreachable_code_after_return() {
+    // Arrange
     let program = r#"
         fn test_function() -> i64 {
             return 42;
@@ -55,6 +64,8 @@ fn unreachable_code_after_return() {
         let result = test_function();
         print_value(result);
     "#;
+
+    // Act & Assert
     // This might be a warning rather than an error, depending on implementation
-    execute_program_and_assert(program, "42");
+    ProgramAssertion::new(program).succeeds().stdout("42");
 }

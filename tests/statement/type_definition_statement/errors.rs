@@ -1,83 +1,94 @@
 use crate::ErrorCode;
-use crate::test_utils::execute_program_expect_error;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn missing_name() {
+    // Arrange
     let program = r#"
         struct {
             x: i32,
             y: i32,
         }
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::ExpectedIdentifier,
-        "Expected struct name after \'struct\' keyword",
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::ExpectedIdentifier)
+        .stderr("Expected struct name after \'struct\' keyword");
 }
 
 #[test]
 fn missing_opening_brace() {
+    // Arrange
     let program = r#"
         struct Point
             x: i32,
             y: i32
         }
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::ExpectedOpeningBrace,
-        "Expected '{' after struct name",
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::ExpectedOpeningBrace)
+        .stderr("Expected '{' after struct name");
 }
 
 #[test]
 fn missing_closing_brace() {
+    // Arrange
     let program = r#"
         struct Point {
             x: i32,
             y: i32
         // Missing closing brace
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::ExpectedComma,
-        "Expected \',\' after field or \'}\'",
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::ExpectedComma)
+        .stderr("Expected \',\' after field or \'}\'");
 }
 
 #[test]
 fn field_missing_type() {
+    // Arrange
     let program = r#"
         struct Point {
             x: i32,
             y: 
         }
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::ExpectedIdentifier,
-        "Expected type identifier",
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::ExpectedIdentifier)
+        .stderr("Expected type identifier");
 }
 
 #[test]
 fn missing_colon() {
+    // Arrange
     let program = r#"
         struct Point {
             x: i32
             y: i32
         }
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::ExpectedComma,
-        "Expected \',\' after field or \'}\'",
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::ExpectedComma)
+        .stderr("Expected \',\' after field or \'}\'");
 }
 
 #[test]
 fn duplicate_definition() {
+    // Arrange
     let program = r#"
         struct Point {
             x: i32,
@@ -88,9 +99,10 @@ fn duplicate_definition() {
             y: i32,
         };
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::SymbolRedefinition,
-        "Type \'Point\' is already defined in the current scope.",
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::SymbolRedefinition)
+        .stderr("Type \'Point\' is already defined in the current scope.");
 }

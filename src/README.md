@@ -17,19 +17,75 @@ The main application consists of several key modules:
 ### Core Modules
 
 - **`main.rs`** - Application entry point and command routing
-- **`cli.rs`** - Command-line interface implementation and compilation pipeline
+- **`cli.rs`** - Command-line interface implementation using clap for argument parsing
+- **`compilation_pipeline.rs`** - Composable compilation pipeline with error recovery
+- **`compiler.rs`** - High-level compilation orchestration and file I/O
 - **`error.rs`** - Error handling and exit code management  
 - **`exit.rs`** - Unix-style exit codes and program termination
 
 ## Compilation Pipeline
 
-The compiler orchestrates a multi-stage compilation process:
+The compiler orchestrates a multi-stage compilation process through the type-safe `ChainPipeline`:
 
-1. **Lexical Analysis** - Tokenize source code
-2. **Parsing** - Generate Abstract Syntax Tree
-3. **Semantic Analysis** - Type checking and symbol resolution
-4. **Code Generation** - Generate bytecode
-5. **Execution** - Run bytecode using a VM
+1. **Lexical Analysis** - Tokenize source code with position tracking
+2. **Parsing** - Generate Abstract Syntax Tree with error recovery
+3. **Semantic Analysis** - Type checking, symbol resolution, and validation
+4. **Code Generation** - Transform AST into bytecode instructions
+5. **Execution** - Run bytecode on the virtual machine (optional)
+
+### Pipeline Features
+
+- **Error Recovery**: Collect multiple errors in a single compilation pass
+- **Rich Diagnostics**: Detailed error reporting with source context and suggestions
+- **Composable Stages**: Individual pipeline stages can be executed independently
+- **Performance Tracking**: Built-in timing and memory usage monitoring
+- **Graceful Degradation**: Continue compilation when possible despite errors
+
+## Command Line Interface
+
+The CLI supports three main operation modes:
+
+### Compile Mode
+
+```bash
+slang compile input.sl
+```
+
+Compiles source files to bytecode (.sip) format with optional optimization flags.
+
+### Execute Mode
+
+```bash
+slang execute input.sl
+```
+
+Directly executes source files without generating intermediate bytecode files.
+
+### Run Mode
+
+```bash
+slang run input.sip
+```
+
+Executes pre-compiled bytecode files for faster startup times.
+
+## Integration
+
+This module integrates with all workspace crates:
+
+- **Frontend Crates**: `slang_frontend` for lexing and parsing
+- **IR Crate**: `slang_ir` for AST representation and manipulation
+- **Backend Crates**: `slang_backend` for code generation and execution
+- **Support Crates**: `slang_types`, `slang_error`, `slang_shared` for foundational services
+
+## Error Management
+
+Comprehensive error handling with:
+
+- **Structured Exit Codes**: Unix-style exit codes for different error conditions
+- **User-Friendly Messages**: Clear error descriptions with actionable suggestions
+- **Source Context**: Error highlighting with line and column information
+- **Error Recovery**: Continue processing when possible to report multiple issues
 
 ## Command-Line Interface
 

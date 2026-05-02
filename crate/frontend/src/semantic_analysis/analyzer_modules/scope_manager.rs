@@ -7,11 +7,11 @@ use slang_types::TypeId;
 ///
 /// This implementation provides the standard scope management behavior
 /// by delegating to the compilation context's scope operations.
-pub struct ContextScopeManager<'a> {
+pub struct ScopeStack<'a> {
     context: &'a mut CompilationContext,
 }
 
-impl<'a> ContextScopeManager<'a> {
+impl<'a> ScopeStack<'a> {
     /// Create a new context-based scope manager
     ///
     /// # Arguments
@@ -21,13 +21,13 @@ impl<'a> ContextScopeManager<'a> {
     }
 }
 
-impl ScopeManager for ContextScopeManager<'_> {
+impl ScopeManager for ScopeStack<'_> {
     fn enter_scope(&mut self) {
         self.context.begin_scope();
     }
 
-    fn exit_scope(&mut self) {
-        self.context.end_scope();
+    fn exit_scope(&mut self) -> Result<(), String> {
+        self.context.end_scope()
     }
 
     fn define_symbol(

@@ -98,9 +98,7 @@ impl ArithmeticOps for Value {
                 }
             }
             // String concatenation
-            (Value::String(a), Value::String(b)) => {
-                Ok(Value::String(Box::new(format!("{}{}", a, b))))
-            }
+            (Value::String(a), Value::String(b)) => Ok(Value::String(Box::new(format!("{a}{b}")))),
             _ => Err("Cannot add these types".to_string()),
         }
     }

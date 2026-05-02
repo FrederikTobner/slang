@@ -1,11 +1,10 @@
 use super::super::error::SemanticAnalysisError;
-use slang_ir::Location;
+use slang_error::Location;
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
 
 /// Helper functions for common type checking operations.
 /// This module provides utility functions that are shared across different operation types.
-
 /// Creates a boolean type ID.
 /// This is a convenience function used by relational and logical operations.
 ///
@@ -19,7 +18,7 @@ pub fn bool_type() -> TypeId {
 /// This is a convenience function to create consistent error messages across operations.
 ///
 /// ### Arguments
-/// * `operator` - The operator that failed
+/// * `operator` - The operator that failed (will be converted to string only once)
 /// * `left_type` - The type of the left operand
 /// * `right_type` - The type of the right operand
 /// * `location` - The source location of the operation
@@ -27,15 +26,15 @@ pub fn bool_type() -> TypeId {
 /// ### Returns
 /// * `SemanticAnalysisError` with operation type mismatch details
 pub fn operation_type_mismatch_error(
-    operator: &str,
+    operator: &impl std::fmt::Display,
     left_type: &TypeId,
     right_type: &TypeId,
     location: &Location,
 ) -> SemanticAnalysisError {
     SemanticAnalysisError::OperationTypeMismatch {
         operator: operator.to_string(),
-        left_type: left_type.clone(),
-        right_type: right_type.clone(),
+        left_type: *left_type,
+        right_type: *right_type,
         location: *location,
     }
 }
@@ -59,8 +58,8 @@ pub fn logical_operator_type_mismatch_error(
 ) -> SemanticAnalysisError {
     SemanticAnalysisError::LogicalOperatorTypeMismatch {
         operator: operator.to_string(),
-        left_type: left_type.clone(),
-        right_type: right_type.clone(),
+        left_type: *left_type,
+        right_type: *right_type,
         location: *location,
     }
 }

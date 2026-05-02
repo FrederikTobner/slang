@@ -1,0 +1,21 @@
+[package]
+name = "token-printer"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0"
+description = "Token analysis and printing tool for Slang"
+authors = ["Frederik Tobner <f.tobner@gmail.com>"]
+
+[lib]
+name = "token_printer_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "token-printer"
+path = "src/main.rs"
+
+[dependencies]
+slang_compilation_pipeline = { workspace = true }
+slang_frontend = { workspace = true }
+clap = { workspace = true }
+colored = { workspace = true }

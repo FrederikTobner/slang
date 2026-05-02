@@ -3,6 +3,8 @@ name = "slang"
 version = "0.1.0"
 edition = "2024"
 license = "GPL-3.0"
+description = "Slang project"
+authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 
 [workspace]
 members = [
@@ -13,29 +15,91 @@ members = [
         "crate/derive",
         "crate/shared",
         "crate/error",
+        "crate/compilation_pipeline",
+        "tools/ast-printer",
+        "tools/token-printer",
+        "tools/bytecode-printer",
 ]
+
+# Only build essential components by default
+default-members = [
+        "crate/*",
+        ".", # Root slang binary
+]
+
+[workspace.dependencies]
+slang_compilation_pipeline = { path = "crate/compilation_pipeline", features = [] }
+slang_frontend = { path = "crate/frontend" }
+slang_ir = { path = "crate/ir" }
+slang_backend = { path = "crate/backend" }
+slang_shared = { path = "crate/shared" }
+slang_error = { path = "crate/error" }
+# Shared external dependencies
+colored = "3.0.0"
+clap = { version = "4.5.42", features = ["derive"] }
+serde_json = "1.0.142"
+syn = "2.0.104"
+quote = "1.0.40"
+thiserror = "2.0.11"
+zip = "4.3.0"
+tempfile = "3.8.1"
+# Dev dependencies  
+rstest = "0.26.1"
+peak_alloc = "0.3.0"
+assert_cmd = "2.0.12"
+predicates = "3.0.4"
+divan = "0.1.21"
+
+# Tool-specific commands via cargo aliases
+[workspace.metadata.commands]
+build-tools = "cargo build --package ast-printer --package token-printer --package bytecode-printer"
 
 [features]
 default = []
-print-byte_code = ["slang_backend/print-byte_code"]
-print-ast = ["slang_ir/print-ast"]
-print-tokens = ["slang_frontend/print-tokens"]
 trace-execution = ["slang_backend/trace-execution"]
 
 [dependencies]
-clap = { version = "4.5.36", features = ["derive"] }
-zip = "2.6.1"
-colored = "2.0.4"
+clap = { workspace = true }
+colored = { workspace = true }
+slang_backend = { path = "crate/backend", features = [] }
+slang_compilation_pipeline = { path = "crate/compilation_pipeline", features = [] }
+slang_error = { path = "crate/error", features = [] }
 slang_frontend = { path = "crate/frontend", features = [] }
 slang_ir = { path = "crate/ir", features = [] }
-slang_backend = { path = "crate/backend", features = [] }
-slang_types = { path = "crate/types", features = [] }
-slang_shared = { path = "crate/shared", features = [] }
-slang_error = { path = "crate/error", features = [] }
+zip = { workspace = true }
 
 
 [dev-dependencies]
-assert_cmd = "2.0.12"
-predicates = "3.0.4"
-tempfile = "3.8.1"
-rstest = "0.18.2"
+# E2E tests
+assert_cmd = { workspace = true }
+predicates = { workspace = true }
+tempfile = { workspace = true }
+rstest = { workspace = true }
+# Performance tests
+divan = { workspace = true }
+peak_alloc = { workspace = true }
+
+
+[[bench]]
+name = "lexer_benchmarks"
+harness = false
+
+[[bench]]
+name = "parser_benchmarks"
+harness = false
+
+[[bench]]
+name = "semantic_benchmarks"
+harness = false
+
+[[bench]]
+name = "codegen_benchmarks"
+harness = false
+
+[[bench]]
+name = "vm_benchmarks"
+harness = false
+
+[[bench]]
+name = "e2e_benchmarks"
+harness = false

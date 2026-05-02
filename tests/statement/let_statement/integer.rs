@@ -1,5 +1,5 @@
 use crate::ErrorCode;
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::test_utils::ProgramAssertion;
 use rstest::rstest;
 
 #[rstest]
@@ -9,14 +9,16 @@ use rstest::rstest;
 #[case(": u32")]
 #[case(": u64")]
 fn from_literal(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
-        let a{} = 42;
+        let a{type_name} = 42;
         print_value(a);
-    "#,
-        type_name
+    "#
     );
-    execute_program_and_assert(&program, "42");
+
+    // Act & Assert
+    ProgramAssertion::new(&program).succeeds().stdout("42");
 }
 
 #[rstest]
@@ -25,31 +27,35 @@ fn from_literal(#[case] type_name: &str) {
 #[case("u32")]
 #[case("u64")]
 fn from_literal_with_type_suffix(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
-        let a = 42{};
+        let a = 42{type_name};
         print_value(a);
-    "#,
-        type_name
+    "#
     );
-    execute_program_and_assert(&program, "42");
+
+    // Act & Assert
+    ProgramAssertion::new(&program).succeeds().stdout("42");
 }
 
 #[rstest]
-#[case("")] // No type suffix
+#[case("")]
 #[case("i32")]
 #[case("i64")]
 #[case("u32")]
 #[case("u64")]
 fn from_binary_expression(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
-        let a = 20{} + 22{};
+        let a = 20{type_name} + 22{type_name};
         print_value(a);
-    "#,
-        type_name, type_name
+    "#
     );
-    execute_program_and_assert(&program, "42");
+
+    // Act & Assert
+    ProgramAssertion::new(&program).succeeds().stdout("42");
 }
 
 #[rstest]
@@ -58,20 +64,20 @@ fn from_binary_expression(#[case] type_name: &str) {
 #[case("u32")]
 #[case("u64")]
 fn from_true_literal(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
-        let a: {} = true;
-    "#,
-        type_name
+        let a: {type_name} = true;
+    "#
     );
-    execute_program_expect_error(
-        &program,
-        ErrorCode::TypeMismatch,
-        &format!(
-            "Type mismatch: variable a is {} but expression is bool",
-            type_name
-        ),
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(&program)
+        .fails()
+        .error_code(ErrorCode::TypeMismatch)
+        .stderr(&format!(
+            "Type mismatch: variable a is {type_name} but expression is bool"
+        ));
 }
 
 #[rstest]
@@ -80,20 +86,20 @@ fn from_true_literal(#[case] type_name: &str) {
 #[case("u32")]
 #[case("u64")]
 fn from_false_literal(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
-        let a: {} = false;
-    "#,
-        type_name
+        let a: {type_name} = false;
+    "#
     );
-    execute_program_expect_error(
-        &program,
-        ErrorCode::TypeMismatch,
-        &format!(
-            "Type mismatch: variable a is {} but expression is bool",
-            type_name
-        ),
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(&program)
+        .fails()
+        .error_code(ErrorCode::TypeMismatch)
+        .stderr(&format!(
+            "Type mismatch: variable a is {type_name} but expression is bool"
+        ));
 }
 
 #[rstest]
@@ -102,20 +108,20 @@ fn from_false_literal(#[case] type_name: &str) {
 #[case("u32")]
 #[case("u64")]
 fn from_string_literal(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
-        let a: {} = "hello";
-    "#,
-        type_name
+        let a: {type_name} = "hello";
+    "#
     );
-    execute_program_expect_error(
-        &program,
-        ErrorCode::TypeMismatch,
-        &format!(
-            "Type mismatch: variable a is {} but expression is string",
-            type_name
-        ),
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(&program)
+        .fails()
+        .error_code(ErrorCode::TypeMismatch)
+        .stderr(&format!(
+            "Type mismatch: variable a is {type_name} but expression is string"
+        ));
 }
 
 #[rstest]
@@ -124,20 +130,20 @@ fn from_string_literal(#[case] type_name: &str) {
 #[case("u32")]
 #[case("u64")]
 fn from_float_literal(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
-        let a: {} = 42.0;
-    "#,
-        type_name
+        let a: {type_name} = 42.0;
+    "#
     );
-    execute_program_expect_error(
-        &program,
-        ErrorCode::TypeMismatch,
-        &format!(
-            "Type mismatch: variable a is {} but expression is float",
-            type_name
-        ),
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(&program)
+        .fails()
+        .error_code(ErrorCode::TypeMismatch)
+        .stderr(&format!(
+            "Type mismatch: variable a is {type_name} but expression is float"
+        ));
 }
 
 #[rstest]
@@ -146,20 +152,20 @@ fn from_float_literal(#[case] type_name: &str) {
 #[case("u32")]
 #[case("u64")]
 fn from_float_literal_with_f32_suffix(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
-        let a: {} = 42.0f32;
-    "#,
-        type_name
+        let a: {type_name} = 42.0f32;
+    "#
     );
-    execute_program_expect_error(
-        &program,
-        ErrorCode::TypeMismatch,
-        &format!(
-            "Type mismatch: variable a is {} but expression is f32",
-            type_name
-        ),
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(&program)
+        .fails()
+        .error_code(ErrorCode::TypeMismatch)
+        .stderr(&format!(
+            "Type mismatch: variable a is {type_name} but expression is f32"
+        ));
 }
 
 #[rstest]
@@ -168,56 +174,62 @@ fn from_float_literal_with_f32_suffix(#[case] type_name: &str) {
 #[case("u32")]
 #[case("u64")]
 fn from_float_literal_with_f64_suffix(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
-        let a: {} = 42.0f64;
-    "#,
-        type_name
+        let a: {type_name} = 42.0f64;
+    "#
     );
-    execute_program_expect_error(
-        &program,
-        ErrorCode::TypeMismatch,
-        &format!(
-            "Type mismatch: variable a is {} but expression is f64",
-            type_name
-        ),
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(&program)
+        .fails()
+        .error_code(ErrorCode::TypeMismatch)
+        .stderr(&format!(
+            "Type mismatch: variable a is {type_name} but expression is f64"
+        ));
 }
 
 #[test]
 fn int_type() {
+    // Arrange
     let program = r#"
         let a: int = 0; 
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::UnknownType,
-        "\'int\' is not a valid type specifier. Use \'i32\', \'i64\', \'u32\', or \'u64\' instead",
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::UnknownType)
+        .stderr("\'int\' is not a valid type specifier. Use \'i32\', \'i64\', \'u32\', or \'u64\' instead");
 }
 
 #[test]
 fn i32_value_out_of_range() {
+    // Arrange
     let program = r#"
         let a: i32 = 2147483648; 
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::ValueOutOfRange,
-        "Integer literal 2147483648 is out of range for type i32",
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::ValueOutOfRange)
+        .stderr("Integer literal 2147483648 is out of range for type i32");
 }
 
 #[test]
 fn u32_unsigned_negative_value_error() {
+    // Arrange
     let program = r#"
         let a: u32 = -1;
     "#;
-    execute_program_expect_error(
-        program,
-        ErrorCode::ValueOutOfRange,
-        "Integer literal -1 is out of range for type u32",
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::ValueOutOfRange)
+        .stderr("Integer literal -1 is out of range for type u32");
 }
 
 #[rstest]
@@ -226,18 +238,18 @@ fn u32_unsigned_negative_value_error() {
 #[case("u32")]
 #[case("u64")]
 fn using_type_as_variable_name(#[case] type_name: &str) {
+    // Arrange
     let program = format!(
         r#"
-        let {} = 42.0;
-    "#,
-        type_name
+        let {type_name} = 42.0;
+    "#
     );
-    execute_program_expect_error(
-        &program,
-        ErrorCode::SymbolRedefinition,
-        &format!(
-            "Symbol \'{}\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol.",
-            type_name
-        ),
-    );
+
+    // Act & Assert
+    ProgramAssertion::new(&program)
+        .fails()
+        .error_code(ErrorCode::SymbolRedefinition)
+        .stderr(&format!(
+            "Symbol \'{type_name}\' of kind \'variable (conflicts with type)\' is already defined or conflicts with an existing symbol."
+        ));
 }

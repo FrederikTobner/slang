@@ -1,0 +1,23 @@
+[package]
+name = "slang_compilation_pipeline"
+version = "0.1.0"
+edition = "2024"
+description = "Compilation pipeline infrastructure for the Slang programming language"
+license = "GPL-3.0"
+authors = ["Frederik Tobner <f.tobner@gmail.com>"]
+
+[dependencies]
+# Core Slang crates
+slang_shared = { path = "../shared" }
+slang_frontend = { path = "../frontend" }
+slang_ir = { path = "../ir" }
+slang_backend = { path = "../backend" }
+
+# External dependencies for pipeline features
+colored = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[features]
+default = []

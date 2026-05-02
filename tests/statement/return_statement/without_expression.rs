@@ -1,8 +1,9 @@
 use crate::ErrorCode;
-use crate::test_utils::{execute_program_and_assert, execute_program_expect_error};
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn returns_unit_implicitly() {
+    // Arrange
     let program = r#"
         fn test_function() -> () {
             return;
@@ -11,15 +12,25 @@ fn returns_unit_implicitly() {
         test_function();
         print_value("completed");
     "#;
-    execute_program_and_assert(program, "completed");
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("completed");
 }
 
 #[test]
 fn without_expression_in_non_unit_function_error() {
+    // Arrange
     let program = r#"
         fn test_function() -> i32 {
             return;
         }
     "#;
-    execute_program_expect_error(program, ErrorCode::MissingReturnValue, "Type mismatch");
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::MissingReturnValue)
+        .stderr("Type mismatch");
 }

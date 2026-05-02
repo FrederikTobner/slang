@@ -2,13 +2,16 @@
 name = "slang_ir"
 version = "0.1.0"
 edition = "2024"
+license = "GPL-3.0"
+description = "Intermediate Representation (IR) of the Slang programming language"
+authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 
 [dependencies]
 slang_types = { path = "../types" }
+slang_error = { path = "../error" }
 
 [features]
 default = []
-print-ast = []
 
 
 [lib]

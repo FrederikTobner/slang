@@ -1,15 +1,14 @@
-use crate::compilation_pipeline::CompilationResult;
-use crate::compiler::{CompileOptions, Compiler};
+use crate::compile_options::CompileOptions;
 use crate::error::{CliError, CliResult};
 use crate::exit;
 use clap::{Parser as ClapParser, Subcommand};
 use colored::Colorize;
 use slang_backend::bytecode::Chunk;
-use slang_backend::vm;
-use std::fs::{self, File};
-use std::io::Write;
+use slang_backend::{SlangArtifactFile, vm};
+use slang_compilation_pipeline::result::CompilationResult;
+use slang_compilation_pipeline::{ChainPipeline, ErrorStrategy, SlangSourceFile};
+use std::fs;
 use std::path::Path;
-use zip::{ZipArchive, ZipWriter, write::FileOptions};
 
 /// Command line interface for the Slang language
 #[derive(ClapParser)]
@@ -67,14 +66,14 @@ enum ExecutionMode {
 /// ### Arguments
 /// * `input` - The input compiled bytecode file
 pub fn run_file(input: &str) -> CliResult<()> {
-    println!("Running compiled file: {}", input);
+    println!("Running compiled file: {input}");
 
     // Validate file extension for better user experience
     validate_file_extension(input, SLANG_BYTECODE_EXTENSION, "bytecode execution")?;
 
     let chunk = read_bytecode_from_file(input)?;
     vm::execute_bytecode(&chunk).map_err(|e| CliError::Generic {
-        message: format!("{}: {} (in file '{}')", "Runtime Error".red(), e, input),
+        message: format!("{}: {e} (in file '{input}')", "Runtime Error".red()),
         exit_code: exit::Code::Software,
     })?;
 
@@ -91,19 +90,28 @@ pub fn run_file(input: &str) -> CliResult<()> {
 /// Result indicating success or failure
 fn process_source_file(input: &str, mode: ExecutionMode) -> CliResult<()> {
     let source = read_source_file(input)?;
-    let compiler = Compiler::new();
     let recovery_mode = matches!(mode, ExecutionMode::Execute);
 
-    let compile_options = CompileOptions {
-        recovery_mode,
-        file_name: Some(input.to_string()),
+    let compile_options = CompileOptions { recovery_mode };
+
+    let source_file = SlangSourceFile::new(input, source.clone())?;
+
+    let error_strategy = if compile_options.recovery_mode {
+        ErrorStrategy::Recover {
+            continue_on_non_critical: true,
+        }
+    } else {
+        ErrorStrategy::FailFast
     };
 
-    let result = compiler.compile_source(&source, compile_options);
+    let pipeline = ChainPipeline::full_compilation().with_error_strategy(error_strategy);
+
+    let result = pipeline.execute(source_file);
 
     match result {
         CompilationResult::Success {
-            chunk, diagnostics, ..
+            output: chunk,
+            diagnostics,
         } => {
             let has_diagnostics = diagnostics.error_count() > 0 || diagnostics.warning_count() > 0;
             if has_diagnostics {
@@ -113,21 +121,21 @@ fn process_source_file(input: &str, mode: ExecutionMode) -> CliResult<()> {
             match mode {
                 ExecutionMode::Compile { output_path } => {
                     write_bytecode(&chunk, &output_path)?;
-                    println!("Successfully compiled to {}", output_path);
+                    println!("Successfully compiled to {output_path}");
                 }
                 ExecutionMode::Execute => {
                     vm::execute_bytecode(&chunk).map_err(|e| CliError::Generic {
-                        message: format!("{}: {} (in file '{}')", "Runtime Error".red(), e, input),
+                        message: format!("{}: {e} (in file '{input}')", "Runtime Error".red()),
                         exit_code: exit::Code::Software,
                     })?;
                 }
             }
             Ok(())
         }
-        CompilationResult::Failed { diagnostics, .. } => {
+        CompilationResult::Failed { diagnostics } => {
             diagnostics.report_all(&source);
             Err(CliError::Generic {
-                message: format!("Compilation failed for file '{}'", input),
+                message: format!("Compilation failed for file '{input}'"),
                 exit_code: exit::Code::Software,
             })
         }
@@ -151,7 +159,7 @@ fn resolve_output_path(input: &str, output: Option<String>) -> String {
                 .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("output");
-            format!("{}.{}", stem, SLANG_BYTECODE_EXTENSION)
+            format!("{stem}.{SLANG_BYTECODE_EXTENSION}")
         }
     }
 }
@@ -174,7 +182,7 @@ fn read_source_file(path: &str) -> CliResult<String> {
         {
             CliError::Io {
                 source,
-                path: format!("{} (attempted to read source file)", path),
+                path: format!("{path} (attempted to read source file)"),
                 exit_code,
             }
         } else {
@@ -192,52 +200,37 @@ fn read_source_file(path: &str) -> CliResult<String> {
 /// ### Returns
 /// Ok(()) if successful, or a CliError on failure
 fn write_bytecode(chunk: &Chunk, output_path: &str) -> CliResult<()> {
-    let path = Path::new(output_path);
+    let artifact = SlangArtifactFile::new(output_path);
 
-    let file = File::create(path).map_err(|e| CliError::Io {
-        exit_code: if e.kind() == std::io::ErrorKind::PermissionDenied {
-            exit::Code::NoPerm
-        } else {
-            exit::Code::CantCreat
-        },
-        source: e,
-        path: output_path.to_string(),
-    })?;
-
-    let mut zip = ZipWriter::new(file);
-    let options = FileOptions::<()>::default()
-        .compression_method(zip::CompressionMethod::Deflated)
-        .unix_permissions(0o755);
-
-    zip.start_file("bytecode.bin", options)
-        .map_err(|e| CliError::Zip {
-            source: e,
-            context: "Failed to create zip entry",
-            exit_code: exit::Code::IoErr,
-        })?;
-
-    {
-        let mut cursor = std::io::Cursor::new(Vec::new());
-        chunk
-            .serialize(&mut cursor)
-            .map_err(|e| CliError::Serialization {
-                source: Box::new(e),
-                context: "Failed to serialize bytecode",
-                exit_code: exit::Code::Software,
-            })?;
-
-        zip.write_all(&cursor.into_inner())
-            .map_err(|e| CliError::Io {
-                source: e,
+    artifact.write_chunk(chunk).map_err(|e| match e {
+        slang_backend::SlangArtifactFileError::Io { source, .. } => {
+            let exit_code = if source.kind() == std::io::ErrorKind::PermissionDenied {
+                exit::Code::NoPerm
+            } else {
+                exit::Code::CantCreat
+            };
+            CliError::Io {
+                source,
                 path: output_path.to_string(),
-                exit_code: exit::Code::IoErr,
-            })?;
-    }
-
-    zip.finish().map_err(|e| CliError::Zip {
-        source: e,
-        context: "Failed to finalize zip file",
-        exit_code: exit::Code::IoErr,
+                exit_code,
+            }
+        }
+        slang_backend::SlangArtifactFileError::Zip {
+            source, context, ..
+        } => CliError::Generic {
+            message: format!("ZIP error: {context} - {source}"),
+            exit_code: exit::Code::IoErr,
+        },
+        slang_backend::SlangArtifactFileError::Serialization {
+            source, context, ..
+        } => CliError::Generic {
+            message: format!("Serialization error: {context} - {source}"),
+            exit_code: exit::Code::Software,
+        },
+        other => CliError::Generic {
+            message: format!("Failed to write bytecode: {other}"),
+            exit_code: exit::Code::Software,
+        },
     })?;
 
     Ok(())
@@ -251,40 +244,50 @@ fn write_bytecode(chunk: &Chunk, output_path: &str) -> CliResult<()> {
 /// ### Returns
 /// The bytecode chunk, or a CliError on failure
 fn read_bytecode_from_file(input_path: &str) -> CliResult<Chunk> {
-    let file = File::open(input_path).map_err(|e| CliError::Io {
-        source: e,
-        path: input_path.to_string(),
-        exit_code: exit::Code::NoInput,
+    let artifact = SlangArtifactFile::from_path(input_path).map_err(|e| match e {
+        slang_backend::SlangArtifactFileError::Io { source, .. } => CliError::Io {
+            source,
+            path: input_path.to_string(),
+            exit_code: exit::Code::NoInput,
+        },
+        slang_backend::SlangArtifactFileError::FileNotFound { .. } => CliError::Io {
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"),
+            path: input_path.to_string(),
+            exit_code: exit::Code::NoInput,
+        },
+        other => CliError::Generic {
+            message: format!("Failed to open artifact file: {other}"),
+            exit_code: exit::Code::NoInput,
+        },
     })?;
 
-    let mut archive = ZipArchive::new(file).map_err(|e| CliError::Zip {
-        source: e,
-        context: "Failed to read zip archive",
-        exit_code: exit::Code::Dataerr,
-    })?;
-
-    if let Ok(mut bytecode_file) = archive.by_name("bytecode.bin") {
-        let mut buffer = Vec::new();
-        std::io::copy(&mut bytecode_file, &mut buffer).map_err(|e| CliError::Io {
-            source: e,
+    artifact.read_chunk().map_err(|e| match e {
+        slang_backend::SlangArtifactFileError::Io { source, .. } => CliError::Io {
+            source,
             path: input_path.to_string(),
             exit_code: exit::Code::IoErr,
-        })?;
-
-        let mut cursor = std::io::Cursor::new(buffer);
-        let chunk = Chunk::deserialize(&mut cursor).map_err(|e| CliError::Serialization {
-            source: Box::new(e),
-            context: "Failed to deserialize bytecode",
+        },
+        slang_backend::SlangArtifactFileError::Zip {
+            source, context, ..
+        } => CliError::Generic {
+            message: format!("ZIP error: {context} - {source}"),
             exit_code: exit::Code::Dataerr,
-        })?;
-
-        Ok(chunk)
-    } else {
-        Err(CliError::Generic {
+        },
+        slang_backend::SlangArtifactFileError::MissingBytecode { .. } => CliError::Generic {
             message: "Invalid bytecode file format: missing bytecode.bin".to_string(),
             exit_code: exit::Code::Dataerr,
-        })
-    }
+        },
+        slang_backend::SlangArtifactFileError::Serialization {
+            source, context, ..
+        } => CliError::Generic {
+            message: format!("Serialization error: {context} - {source}"),
+            exit_code: exit::Code::Dataerr,
+        },
+        other => CliError::Generic {
+            message: format!("Failed to read bytecode chunk: {other}"),
+            exit_code: exit::Code::Dataerr,
+        },
+    })
 }
 
 /// Validate that a file has the expected extension for its operation
@@ -316,8 +319,7 @@ fn validate_file_extension(path: &str, expected_ext: &str, operation: &str) -> C
     } else {
         Err(CliError::Generic {
             message: format!(
-                "Missing file extension for {}: expected '.{}' (file: '{}')",
-                operation, expected_ext, path
+                "Missing file extension for {operation}: expected '.{expected_ext}' (file: '{path}')",
             ),
             exit_code: exit::Code::Usage,
         })
@@ -331,7 +333,7 @@ fn validate_file_extension(path: &str, expected_ext: &str, operation: &str) -> C
 /// * `output` - The output file path (if provided)
 pub fn compile_file(input: &str, output: Option<String>) -> CliResult<()> {
     let output_path = resolve_output_path(input, output);
-    println!("Compiling {} to {}", input, output_path);
+    println!("Compiling {input} to {output_path}");
     process_source_file(input, ExecutionMode::Compile { output_path })
 }
 
@@ -340,7 +342,6 @@ pub fn compile_file(input: &str, output: Option<String>) -> CliResult<()> {
 /// ### Arguments
 /// * `input` - The input source file
 pub fn execute_file(input: &str) -> CliResult<()> {
-    println!("Executing source file: {}", input);
+    println!("Executing source file: {input}");
     process_source_file(input, ExecutionMode::Execute)
 }
-

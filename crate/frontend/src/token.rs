@@ -97,6 +97,8 @@ pub struct Token {
     pub lexeme: String,
     /// Position index - used with LineInfo to determine line number
     pub pos: usize,
+    /// Optional type suffix for numeric literals (e.g., "i32", "f64")
+    pub suffix: Option<String>,
 }
 
 impl Token {
@@ -106,6 +108,22 @@ impl Token {
             token_type,
             lexeme,
             pos,
+            suffix: None,
+        }
+    }
+
+    /// Creates a new token with the given type, lexeme, position, and suffix
+    pub fn new_with_suffix(
+        token_type: Tokentype,
+        lexeme: String,
+        pos: usize,
+        suffix: Option<String>,
+    ) -> Token {
+        Token {
+            token_type,
+            lexeme,
+            pos,
+            suffix,
         }
     }
 }

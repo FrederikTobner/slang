@@ -1,37 +1,49 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn basic() {
+    // Arrange
     let program = r#"
         let héllo = "unicode";
         print_value(héllo);
     "#;
-    execute_program_and_assert(program, "unicode");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("unicode");
 }
 
 #[test]
 fn emoji_identifier() {
+    // Arrange
     let program = r#"
-        let rocket = "launch";
-        print_value(rocket);
+        let 😮 = "test";
+        print_value(😮);
     "#;
-    execute_program_and_assert(program, "launch");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("test");
 }
 
 #[test]
 fn greek_identifier() {
+    // Arrange
     let program = r#"
         let π = 3.14159;
         print_value(π);
     "#;
-    execute_program_and_assert(program, "3.14159");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("3.14159");
 }
 
 #[test]
 fn mixed_unicode_ascii() {
+    // Arrange
     let program = r#"
         let user_名前 = "name";
         print_value(user_名前);
     "#;
-    execute_program_and_assert(program, "name");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("name");
 }

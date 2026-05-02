@@ -1,6 +1,6 @@
 use colored::Colorize;
-use slang_error::{CompilerError, ErrorCode, LineInfo};
-use slang_ir::location::Location;
+use slang_error::location::Location;
+use slang_error::{CompilationError, ErrorCode, LineInfo};
 
 /// Represents the severity level of a diagnostic message
 #[derive(Debug, Clone)]
@@ -57,9 +57,8 @@ pub struct Suggestion {
 /// ### Example
 /// ```rust
 /// use slang_shared::DiagnosticEngine;
-/// use slang_error::ErrorCode;
-/// use slang_ir::location::Location;
-///
+/// use slang_error::{ErrorCode, Location};
+/// let source_code = "let x = 42\nlet y = x + 1"; // Example source code
 /// let mut engine = DiagnosticEngine::new();
 /// engine.set_file_name("example.sl".to_string());
 /// engine.emit_error(
@@ -116,9 +115,8 @@ impl<'a> DiagnosticEngine<'a> {
     ///
     /// ### Example
     /// ```rust
-    /// use slang_shared::{DiagnosticEngine, Diagnostic, ErrorSeverity};
-    /// use slang_error::ErrorCode;
-    /// use slang_ir::location::Location;
+    /// use slang_shared::diagnostic_engine::{DiagnosticEngine, Diagnostic, ErrorSeverity};
+    /// use slang_error::{ErrorCode, Location};
     ///
     /// let mut engine = DiagnosticEngine::new();
     /// let diagnostic = Diagnostic {
@@ -158,8 +156,7 @@ impl<'a> DiagnosticEngine<'a> {
     /// ### Example
     /// ```rust
     /// use slang_shared::DiagnosticEngine;
-    /// use slang_error::ErrorCode;
-    /// use slang_ir::location::Location;
+    /// use slang_error::{ErrorCode, Location};
     ///
     /// let mut engine = DiagnosticEngine::new();
     /// engine.emit_error(
@@ -191,12 +188,11 @@ impl<'a> DiagnosticEngine<'a> {
     /// ### Example
     /// ```rust
     /// use slang_shared::DiagnosticEngine;
-    /// use slang_error::ErrorCode;
-    /// use slang_ir::location::Location;
+    /// use slang_error::{ErrorCode, Location};
     ///
     /// let mut engine = DiagnosticEngine::new();
     /// engine.emit_warning(
-    ///     ErrorCode::UnusedVariable,
+    ///     ErrorCode::VariableNotCallable,
     ///     "Variable 'x' is declared but never used".to_string(),
     ///     Location::new(15, 3, 5, 1)
     /// );
@@ -226,7 +222,7 @@ impl<'a> DiagnosticEngine<'a> {
     /// ```rust
     /// use slang_shared::{DiagnosticEngine, Suggestion};
     /// use slang_error::ErrorCode;
-    /// use slang_ir::location::Location;
+    /// use slang_error::location::Location;
     ///
     /// let mut engine = DiagnosticEngine::new();
     /// let suggestion = Suggestion {
@@ -258,28 +254,28 @@ impl<'a> DiagnosticEngine<'a> {
         });
     }
 
-    /// Directly emits a CompilerError as a diagnostic
+    /// Directly emits a CompilationError as a diagnostic
     ///
-    /// This method provides seamless integration with the existing CompilerError type,
+    /// This method provides seamless integration with the existing CompilationError type,
     /// allowing for unified error handling across the compiler pipeline.
     ///
     /// ### Arguments
-    /// * `error` - The CompilerError to emit as a diagnostic
+    /// * `error` - The CompilationError to emit as a diagnostic
     ///
     /// ### Example
     /// ```rust
     /// use slang_shared::DiagnosticEngine;
-    /// use slang_error::{CompilerError, ErrorCode};
+    /// use slang_error::{CompilationError, ErrorCode};
     ///
     /// let mut engine = DiagnosticEngine::new();
-    /// let error = CompilerError::new(
+    /// let error = CompilationError::new(
     ///     ErrorCode::ExpectedSemicolon,
     ///     "Missing semicolon".to_string(),
     ///     5, 10, 42, Some(1)
     /// );
     /// engine.emit_compiler_error(error);
     /// ```
-    pub fn emit_compiler_error(&mut self, error: CompilerError) {
+    pub fn emit_compiler_error(&mut self, error: CompilationError) {
         let diagnostic = Diagnostic {
             severity: ErrorSeverity::Error,
             error_code: error.error_code,
@@ -307,8 +303,7 @@ impl<'a> DiagnosticEngine<'a> {
     /// ### Example
     /// ```rust
     /// use slang_shared::DiagnosticEngine;
-    /// use slang_error::ErrorCode;
-    /// use slang_ir::location::Location;
+    /// use slang_error::{ErrorCode, location::Location};
     ///
     /// let mut engine = DiagnosticEngine::new();
     /// engine.emit_error(
@@ -320,12 +315,12 @@ impl<'a> DiagnosticEngine<'a> {
     /// let errors = engine.get_compiler_errors();
     /// assert_eq!(errors.len(), 1);
     /// ```
-    pub fn get_compiler_errors(&self) -> Vec<CompilerError> {
+    pub fn get_compiler_errors(&self) -> Vec<CompilationError> {
         self.diagnostics
             .iter()
             .filter(|d| matches!(d.severity, ErrorSeverity::Error))
             .map(|d| {
-                CompilerError::new(
+                CompilationError::new(
                     d.error_code,
                     d.message.clone(),
                     d.location.line,
@@ -447,6 +442,7 @@ impl<'a> DiagnosticEngine<'a> {
     /// ```rust
     /// use slang_shared::DiagnosticEngine;
     ///
+    /// let source_code = "let x = 42\nlet y = x + 1"; // Example source code
     /// let engine = DiagnosticEngine::new();
     /// // ... collect some diagnostics ...
     /// engine.report_all(&source_code);
@@ -510,14 +506,14 @@ impl<'a> DiagnosticEngine<'a> {
             diagnostic.message
         );
 
-        eprintln!("  {} {}:{}:{}", "-->".yellow(), "main", line, col);
+        eprintln!("  {} main:{}:{}", "-->".yellow(), line, col);
 
-        let line_num_str = format!("{}", line);
+        let line_num_str = format!("{line}");
         let indent_width = line_num_str.len() + 1;
         let indent = " ".repeat(indent_width);
         let pipe = "|".yellow();
 
-        eprintln!("{indent}{}", pipe);
+        eprintln!("{indent}{pipe}");
         eprintln!("{} {} {}", line_num_str.yellow(), pipe, current_line_text);
 
         let error_marker = " ".repeat(col.saturating_sub(1))
@@ -526,7 +522,7 @@ impl<'a> DiagnosticEngine<'a> {
                 .bold()
                 .red()
                 .to_string();
-        eprintln!("{indent}{} {}", pipe, error_marker);
+        eprintln!("{indent}{pipe} {error_marker}");
 
         for suggestion in &diagnostic.suggestions {
             eprintln!(

@@ -1,25 +1,32 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn parentheses() {
+    // Arrange
     let program = r#"
         let a = 3 * (1 + 2);
         print_value(a);
     "#;
-    execute_program_and_assert(program, "9");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("9");
 }
 
 #[test]
 fn precedence() {
+    // Arrange
     let program = r#"
         let a = 1 + 2 * 3;
         print_value(a);
     "#;
-    execute_program_and_assert(program, "7");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("7");
 }
 
 #[test]
 fn nested_blocks() {
+    // Arrange
     let program = r#"
         let x = 10;
         {
@@ -30,11 +37,14 @@ fn nested_blocks() {
             }
         }
     "#;
-    execute_program_and_assert(program, "60");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("60");
 }
 
 #[test]
 fn variable_shadowing() {
+    // Arrange
     let program = r#"
         let x = 5;
         {
@@ -43,11 +53,14 @@ fn variable_shadowing() {
         }
         print_value(x); // Should print 5
     "#;
-    execute_program_and_assert(program, "10\n5");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("10\n5");
 }
 
 #[test]
 fn variable_shadowing_with_different_types() {
+    // Arrange
     let program = r#"
         let x = 5;
         {
@@ -56,11 +69,14 @@ fn variable_shadowing_with_different_types() {
         }
         print_value(x); // Should print 5
     "#;
-    execute_program_and_assert(program, "foo\n5");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("foo\n5");
 }
 
 #[test]
 fn variable_in_different_scopes() {
+    // Arrange
     let program = r#"
         {
             let y = 2;
@@ -71,11 +87,14 @@ fn variable_in_different_scopes() {
             print_value(y); // Should print 3
         }
     "#;
-    execute_program_and_assert(program, "2\n3");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("2\n3");
 }
 
 #[test]
 fn variable_in_nested_scopes_with_different_types() {
+    // Arrange
     let program = r#"
         let x = 5;
         {
@@ -88,5 +107,9 @@ fn variable_in_nested_scopes_with_different_types() {
         }
         print_value(x); // Should print 5
     "#;
-    execute_program_and_assert(program, "foo\n10\n5");
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("foo\n10\n5");
 }

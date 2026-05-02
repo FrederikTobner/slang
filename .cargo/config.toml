@@ -1,0 +1,12 @@
+[alias]
+# Build all debug tools
+build-tools = "build --release --manifest-path tools/Cargo.toml"
+
+# Install all tools to system PATH
+install-tools = "install --manifest-path tools/token-printer/Cargo.toml --path tools/token-printer"
+
+# Build individual tools
+build-tokens = "build --release --manifest-path tools/token-printer/Cargo.toml"
+
+# Run tools in development mode
+run-tokens = "run --manifest-path tools/token-printer/Cargo.toml --"

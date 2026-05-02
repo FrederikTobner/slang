@@ -1,7 +1,8 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn precedence() {
+    // Arrange
     let program = r#"
         let a: i32 = 1;
         let b: i32 = 2;
@@ -9,5 +10,7 @@ fn precedence() {
         let result = a + b * c;
         print_value(result);
     "#;
-    execute_program_and_assert(program, "7");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("7");
 }

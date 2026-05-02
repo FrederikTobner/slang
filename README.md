@@ -35,6 +35,64 @@ slang run input.sip
 
 For details about the language grammar, see [GRAMMAR.md](GRAMMAR.md).
 
-### Debug Feature Flags
+## Building
 
-The following compilation flags can be used to debug the compiler.
+Build the project using Cargo:
+
+```bash
+# Build in debug mode
+cargo build
+
+# Build in release mode (optimized)
+cargo build --release
+
+# Run tests
+cargo test
+
+# Run benchmarks
+cargo bench
+```
+
+## Project Structure
+
+The project is organized as a Rust workspace with multiple crates:
+
+- **`crate/`** - Core language implementation crates
+  - **`types/`** - Type system foundation
+  - **`error/`** - Error handling and diagnostics
+  - **`derive/`** - Procedural macros
+  - **`ir/`** - Intermediate representation (AST)
+  - **`shared/`** - Common utilities
+  - **`frontend/`** - Lexing, parsing, and semantic analysis
+  - **`backend/`** - Code generation and virtual machine
+- **`src/`** - Main CLI application
+- **`tests/`** - End-to-end integration tests
+- **`benches/`** - Performance benchmarks
+
+For detailed information about the crate structure, see [crate/README.md](crate/README.md).
+
+## Features
+
+The Slang language supports:
+
+- **Static Type System**: Rich type checking with primitive and user-defined types
+- **Functions**: First-class functions with explicit type annotations
+- **Control Flow**: If/else expressions and statements
+- **Variables**: Mutable and immutable variable declarations
+- **Error Handling**: Comprehensive error reporting with source location tracking
+- **Bytecode Compilation**: Efficient compilation to bytecode format
+- **Virtual Machine**: Stack-based execution engine
+
+## Development
+
+The project uses modern Rust development practices:
+
+- **Workspace Organization**: Modular crate structure for clean separation of concerns
+- **Error Recovery**: Robust error handling throughout the compilation pipeline
+- **Performance Testing**: Comprehensive benchmarking suite using Divan
+- **Integration Testing**: End-to-end tests covering all language features
+- **CI/CD**: Automated testing and code coverage with GitHub Actions
+
+## License
+
+This project is licensed under the GPL-3.0 License. See [LICENSE](LICENSE) for details.

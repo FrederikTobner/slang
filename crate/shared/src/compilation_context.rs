@@ -27,7 +27,7 @@ impl CompilationContext {
     /// ### Returns
     /// A new CompilationContext instance ready for compilation
     pub fn new() -> Self {
-        let type_registry = TypeRegistry::new_instance();
+        let type_registry = TypeRegistry::new();
         let mut symbol_table = SymbolTable::new();
 
         let mut define_primitive = |ptype: PrimitiveType| {
@@ -270,7 +270,7 @@ impl CompilationContext {
         type_kind: TypeKind,
     ) -> Result<TypeId, String> {
         if self.symbol_table.lookup(name).is_some() {
-            return Err(format!("Symbol '{}' is already defined.", name));
+            return Err(format!("Symbol '{name}' is already defined."));
         }
 
         let type_id = self.type_registry.register_type(name, type_kind);
@@ -337,7 +337,11 @@ impl CompilationContext {
 
     /// Ends the current scope by calling the symbol table
     /// Used when exiting a block, function, or other lexical scope.
-    pub fn end_scope(&mut self) {
-        self.symbol_table.end_scope();
+    ///
+    /// ### Returns
+    /// * `Ok(())` if the scope was successfully ended
+    /// * `Err(String)` if attempting to end the global scope
+    pub fn end_scope(&mut self) -> Result<(), String> {
+        self.symbol_table.end_scope()
     }
 }

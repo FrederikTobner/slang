@@ -1,3 +1,5 @@
+use slang_backend::SlangArtifactFileError;
+use slang_compilation_pipeline::SourceFileError;
 use std::error::Error;
 use std::fmt;
 use std::io;
@@ -11,18 +13,6 @@ pub enum CliError {
     Io {
         source: io::Error,
         path: String,
-        exit_code: exit::Code,
-    },
-    /// Error related to reading/writing ZIP files
-    Zip {
-        source: zip::result::ZipError,
-        context: &'static str,
-        exit_code: exit::Code,
-    },
-    /// Error related to serialization/deserialization
-    Serialization {
-        source: Box<dyn std::error::Error + Send + Sync>,
-        context: &'static str,
         exit_code: exit::Code,
     },
     /// Generic error with custom message
@@ -40,8 +30,6 @@ impl CliError {
     pub fn exit_code(&self) -> exit::Code {
         match self {
             CliError::Io { exit_code, .. } => *exit_code,
-            CliError::Zip { exit_code, .. } => *exit_code,
-            CliError::Serialization { exit_code, .. } => *exit_code,
             CliError::Generic { exit_code, .. } => *exit_code,
         }
     }
@@ -79,20 +67,10 @@ impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CliError::Io { source, path, .. } => {
-                write!(f, "Error reading file '{}': {}", path, source)
-            }
-            CliError::Zip {
-                source, context, ..
-            } => {
-                write!(f, "{}: {}", context, source)
-            }
-            CliError::Serialization {
-                source, context, ..
-            } => {
-                write!(f, "{}: {}", context, source)
+                write!(f, "Error reading file '{path}': {source}")
             }
             CliError::Generic { message, .. } => {
-                write!(f, "{}", message)
+                write!(f, "{message}")
             }
         }
     }
@@ -106,9 +84,60 @@ impl Error for CliError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             CliError::Io { source, .. } => Some(source),
-            CliError::Zip { source, .. } => Some(source),
-            CliError::Serialization { source, .. } => Some(source.as_ref()),
             CliError::Generic { .. } => None,
+        }
+    }
+}
+
+impl From<SourceFileError> for CliError {
+    fn from(err: SourceFileError) -> Self {
+        match err {
+            SourceFileError::InvalidExtension { expected, found } => CliError::Generic {
+                message: match found {
+                    Some(ext) => format!("Invalid file extension '{ext}'. Expected '{expected}'"),
+                    None => format!("Missing file extension. Expected '{expected}'"),
+                },
+                exit_code: exit::Code::Usage,
+            },
+            SourceFileError::Io(msg) => CliError::Generic {
+                message: format!("File I/O error: {msg}"),
+                exit_code: exit::Code::IoErr,
+            },
+        }
+    }
+}
+
+impl From<SlangArtifactFileError> for CliError {
+    fn from(err: SlangArtifactFileError) -> Self {
+        match err {
+            slang_backend::SlangArtifactFileError::Io { source, path } => {
+                let exit_code = if source.kind() == std::io::ErrorKind::PermissionDenied {
+                    exit::Code::NoPerm
+                } else {
+                    exit::Code::CantCreat
+                };
+                CliError::Io {
+                    source,
+                    path: path.as_path().to_str().unwrap_or("unknown").to_string(),
+                    exit_code,
+                }
+            }
+            slang_backend::SlangArtifactFileError::Zip {
+                source, context, ..
+            } => CliError::Generic {
+                message: format!("ZIP error: {context} - {source}"),
+                exit_code: exit::Code::IoErr,
+            },
+            slang_backend::SlangArtifactFileError::Serialization {
+                source, context, ..
+            } => CliError::Generic {
+                message: format!("Serialization error: {context} - {source}"),
+                exit_code: exit::Code::Software,
+            },
+            other => CliError::Generic {
+                message: format!("Failed to write bytecode: {other}"),
+                exit_code: exit::Code::Software,
+            },
         }
     }
 }

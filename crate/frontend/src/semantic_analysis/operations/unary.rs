@@ -1,6 +1,6 @@
 use super::super::{error::SemanticAnalysisError, traits::SemanticResult};
 use super::helpers;
-use slang_ir::Location;
+use slang_error::Location;
 use slang_ir::ast::{Expression, LiteralValue, UnaryExpr, UnaryOperator};
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
@@ -70,14 +70,14 @@ pub fn check_negation_operation(
     if is_numeric {
         // Signed types can be negated
         if is_signed_numeric_type(operand_type) {
-            return Ok(operand_type.clone());
+            return Ok(*operand_type);
         }
 
         // Unsigned types cannot be negated
         if is_unsigned_integer_type(operand_type) {
             return Err(SemanticAnalysisError::InvalidUnaryOperation {
                 operator: "-".to_string(),
-                operand_type: operand_type.clone(),
+                operand_type: *operand_type,
                 location: unary_expr.location,
             });
         }
@@ -85,7 +85,7 @@ pub fn check_negation_operation(
 
     Err(SemanticAnalysisError::InvalidUnaryOperation {
         operator: "-".to_string(),
-        operand_type: operand_type.clone(),
+        operand_type: *operand_type,
         location: unary_expr.location,
     })
 }
@@ -106,7 +106,7 @@ pub fn check_logical_not_operation(operand_type: &TypeId, location: &Location) -
     } else {
         Err(SemanticAnalysisError::InvalidUnaryOperation {
             operator: "!".to_string(),
-            operand_type: operand_type.clone(),
+            operand_type: *operand_type,
             location: *location,
         })
     }

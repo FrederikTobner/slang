@@ -1,8 +1,9 @@
 use crate::ast::{
     AssignmentStatement, BinaryExpr, BlockExpr, ConditionalExpr, Expression, FunctionCallExpr,
-    FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr, ReturnStatement, Statement, TypeDefinitionStmt,
-    UnaryExpr, VariableExpr,
+    FunctionDeclarationStmt, FunctionTypeExpr, IfStatement, LetStatement, LiteralExpr,
+    ReturnStatement, Statement, TypeDefinitionStmt, UnaryExpr, VariableExpr,
 };
+use slang_error::DomainResult;
 
 /// Trait implementing the visitor pattern for traversing the AST
 ///
@@ -10,9 +11,10 @@ use crate::ast::{
 /// the AST, such as type checking, interpretation, or compilation.
 ///
 /// The generic parameter T represents the return type of the visit methods.
+/// All visit methods now return DomainResult<T> for consistent error handling.
 pub trait Visitor<T> {
     /// Visit a general statement
-    fn visit_statement(&mut self, stmt: &Statement) -> T {
+    fn visit_statement(&mut self, stmt: &Statement) -> DomainResult<T> {
         match stmt {
             Statement::Let(let_stmt) => self.visit_let_statement(let_stmt),
             Statement::Assignment(assign_stmt) => self.visit_assignment_statement(assign_stmt),
@@ -27,25 +29,28 @@ pub trait Visitor<T> {
     }
 
     /// Visit an expression statement
-    fn visit_expression_statement(&mut self, expr: &Expression) -> T;
+    fn visit_expression_statement(&mut self, expr: &Expression) -> DomainResult<T>;
 
     /// Visit a variable declaration statement
-    fn visit_let_statement(&mut self, stmt: &LetStatement) -> T;
+    fn visit_let_statement(&mut self, stmt: &LetStatement) -> DomainResult<T>;
 
     /// Visit a type definition statement
-    fn visit_type_definition_statement(&mut self, stmt: &TypeDefinitionStmt) -> T;
+    fn visit_type_definition_statement(&mut self, stmt: &TypeDefinitionStmt) -> DomainResult<T>;
 
     /// Visit a function declaration statement
-    fn visit_function_declaration_statement(&mut self, stmt: &FunctionDeclarationStmt) -> T;
+    fn visit_function_declaration_statement(
+        &mut self,
+        stmt: &FunctionDeclarationStmt,
+    ) -> DomainResult<T>;
 
     /// Visit a return statement
-    fn visit_return_statement(&mut self, stmt: &ReturnStatement) -> T;
+    fn visit_return_statement(&mut self, stmt: &ReturnStatement) -> DomainResult<T>;
 
     /// Visit a variable assignment statement
-    fn visit_assignment_statement(&mut self, stmt: &AssignmentStatement) -> T;
+    fn visit_assignment_statement(&mut self, stmt: &AssignmentStatement) -> DomainResult<T>;
 
     /// Visit a general expression
-    fn visit_expression(&mut self, expr: &Expression) -> T {
+    fn visit_expression(&mut self, expr: &Expression) -> DomainResult<T> {
         match expr {
             Expression::Literal(lit) => self.visit_literal_expression(lit),
             Expression::Binary(bin) => self.visit_binary_expression(bin),
@@ -59,29 +64,29 @@ pub trait Visitor<T> {
     }
 
     /// Visit a binary expression (e.g., a + b)
-    fn visit_binary_expression(&mut self, expr: &BinaryExpr) -> T;
+    fn visit_binary_expression(&mut self, expr: &BinaryExpr) -> DomainResult<T>;
 
     /// Visit a unary expression (e.g., -x)
-    fn visit_unary_expression(&mut self, expr: &UnaryExpr) -> T;
+    fn visit_unary_expression(&mut self, expr: &UnaryExpr) -> DomainResult<T>;
 
     /// Visit a literal expression (e.g., 42, "hello")
-    fn visit_literal_expression(&mut self, expr: &LiteralExpr) -> T;
+    fn visit_literal_expression(&mut self, expr: &LiteralExpr) -> DomainResult<T>;
 
     /// Visit a variable reference expression
-    fn visit_variable_expression(&mut self, var_expr: &VariableExpr) -> T;
+    fn visit_variable_expression(&mut self, var_expr: &VariableExpr) -> DomainResult<T>;
 
     /// Visit a function call expression
-    fn visit_call_expression(&mut self, expr: &FunctionCallExpr) -> T;
+    fn visit_call_expression(&mut self, expr: &FunctionCallExpr) -> DomainResult<T>;
 
     /// Visit a conditional expression (if/else)
-    fn visit_conditional_expression(&mut self, expr: &ConditionalExpr) -> T;
+    fn visit_conditional_expression(&mut self, expr: &ConditionalExpr) -> DomainResult<T>;
 
     /// Visit a block expression
-    fn visit_block_expression(&mut self, expr: &BlockExpr) -> T;
+    fn visit_block_expression(&mut self, expr: &BlockExpr) -> DomainResult<T>;
 
     /// Visit a function type expression (e.g., fn(i32, string) -> string)
-    fn visit_function_type_expression(&mut self, expr: &FunctionTypeExpr) -> T;
+    fn visit_function_type_expression(&mut self, expr: &FunctionTypeExpr) -> DomainResult<T>;
 
     /// Visit a conditional statement (if/else)
-    fn visit_if_statement(&mut self, stmt: &IfStatement) -> T;
+    fn visit_if_statement(&mut self, stmt: &IfStatement) -> DomainResult<T>;
 }

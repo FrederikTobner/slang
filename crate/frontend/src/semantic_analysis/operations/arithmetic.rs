@@ -1,6 +1,6 @@
 use super::super::traits::SemanticResult;
 use super::helpers;
-use slang_ir::Location;
+use slang_error::Location;
 use slang_ir::ast::{BinaryExpr, BinaryOperator};
 use slang_shared::CompilationContext;
 use slang_types::TypeId;
@@ -30,23 +30,17 @@ pub fn check_same_type_arithmetic(
         || context.is_function_type(type_id)
     {
         return Err(helpers::operation_type_mismatch_error(
-            &operator.to_string(),
-            type_id,
-            type_id,
-            location,
+            operator, type_id, type_id, location,
         ));
     }
 
     if helpers::is_string_type(type_id) && operator != &BinaryOperator::Add {
         return Err(helpers::operation_type_mismatch_error(
-            &operator.to_string(),
-            type_id,
-            type_id,
-            location,
+            operator, type_id, type_id, location,
         ));
     }
 
-    Ok(type_id.clone())
+    Ok(*type_id)
 }
 
 /// Checks if mixed-type arithmetic operations are allowed, particularly handling
@@ -93,11 +87,11 @@ pub fn check_mixed_arithmetic_operation(
         && helpers::is_string_type(left_type)
         && helpers::is_string_type(right_type)
     {
-        return Ok(left_type.clone());
+        return Ok(*left_type);
     }
 
     Err(helpers::operation_type_mismatch_error(
-        &bin_expr.operator.to_string(),
+        &bin_expr.operator,
         left_type,
         right_type,
         &bin_expr.location,

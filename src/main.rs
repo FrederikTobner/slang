@@ -1,8 +1,7 @@
 mod cli;
+mod compile_options;
 mod error;
 mod exit;
-mod compilation_pipeline;
-mod compiler;
 
 use clap::Parser;
 
@@ -13,30 +12,22 @@ fn main() {
     }
 }
 
-/// Main application logic separated from exit handling for testability
+/// Main application logic separated from exit handling
 fn run() -> error::CliResult<()> {
     let input = cli::Parser::parse();
     #[cfg(windows)]
     colored::control::set_virtual_terminal(true);
 
     match &input.command {
-        Some(cli::Commands::Compile { input, output }) => {
-            cli::compile_file(input, output.clone())
-        }
+        Some(cli::Commands::Compile { input, output }) => cli::compile_file(input, output.clone()),
 
-        Some(cli::Commands::Run { input }) => {
-            cli::run_file(input)
-        }
+        Some(cli::Commands::Run { input }) => cli::run_file(input),
 
-        Some(cli::Commands::Execute { input }) => {
-            cli::execute_file(input)
-        }
-        
-        None => {
-            Err(error::CliError::Generic {
-                message: "No command provided. Use --help for usage information.".to_string(),
-                exit_code: exit::Code::Usage,
-            })
-        }
+        Some(cli::Commands::Execute { input }) => cli::execute_file(input),
+
+        None => Err(error::CliError::Generic {
+            message: "No command provided. Use --help for usage information.".to_string(),
+            exit_code: exit::Code::Usage,
+        }),
     }
 }

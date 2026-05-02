@@ -1,7 +1,8 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn with_multiple_params() {
+    // Arrange
     let program = r#"
         fn add(a: i32, b: i32) -> i32 {
             return a + b;
@@ -9,23 +10,29 @@ fn with_multiple_params() {
         
         print_value(add(20, 22));
     "#;
-    execute_program_and_assert(program, "42");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("42");
 }
 
 #[test]
 fn function_with_no_params() {
+    // Arrange
     let program = r#"
         fn get_magic_number() -> i32 {
-            return 42;
+            return 420;
         }
         
         print_value(get_magic_number());
     "#;
-    execute_program_and_assert(program, "42");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("420");
 }
 
 #[test]
 fn empty_return() {
+    // Arrange
     let program = r#"
         fn void_function() {
             return ();
@@ -34,11 +41,14 @@ fn empty_return() {
         void_function();
         print_value(42); // Just to verify program continues
     "#;
-    execute_program_and_assert(program, "42");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("42");
 }
 
 #[test]
 fn with_no_return() {
+    // Arrange
     let program = r#"
         fn no_return_function() {
             // No return statement
@@ -47,11 +57,14 @@ fn with_no_return() {
         no_return_function();
         print_value(42); // Just to verify program continues
     "#;
-    execute_program_and_assert(program, "42");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("42");
 }
 
 #[test]
 fn nested_function_calls() {
+    // Arrange
     let program = r#"
         fn add(a: i32, b: i32)-> i32 {
             return a + b;
@@ -63,11 +76,14 @@ fn nested_function_calls() {
         
         print_value(add(multiply(3, 10), 12));
     "#;
-    execute_program_and_assert(program, "42");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("42");
 }
 
 #[test]
 fn arguments_are_passed_by_value() {
+    // Arrange
     let program = r#"
         fn modify_value(x: i32) -> i32 {
             x = x + 10;
@@ -79,11 +95,14 @@ fn arguments_are_passed_by_value() {
         
         print_value(a); // Should print 5, not 15
     "#;
-    execute_program_and_assert(program, "5");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("5");
 }
 
 #[test]
 fn factorial_recursive_function() {
+    // Arrange
     let program = r#"
         fn factorial(n: i32) -> i32 {
             print_value(n); // To show recursion depth
@@ -95,11 +114,14 @@ fn factorial_recursive_function() {
         
         print_value(factorial(5));
     "#;
-    execute_program_and_assert(program, "120");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("120");
 }
 
 #[test]
 fn fibonacci_recursive_function() {
+    // Arrange
     let program = r#"
         fn fibonacci(n: i32) -> i32 {
             if n <= 1 {
@@ -110,11 +132,14 @@ fn fibonacci_recursive_function() {
         
         print_value(fibonacci(10)); // Should print 55
     "#;
-    execute_program_and_assert(program, "55");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("55");
 }
 
 #[test]
 fn unit_function_parameter() {
+    // Arrange
     let program = r#"
         fn test_fn(param: ()) -> () {
             return param;
@@ -123,11 +148,14 @@ fn unit_function_parameter() {
         let result = test_fn(());
         print_value(result);
     "#;
-    execute_program_and_assert(program, "()");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("()");
 }
 
 #[test]
 fn empty_return_statement() {
+    // Arrange
     let program = r#"
         fn test_fn() {
             return;
@@ -136,11 +164,14 @@ fn empty_return_statement() {
         let result = test_fn();
         print_value(result);
     "#;
-    execute_program_and_assert(program, "()");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("()");
 }
 
 #[test]
 fn returns_unit_explicitly() {
+    // Arrange
     let program = r#"
         fn test_fn() -> () {
             return ();
@@ -149,11 +180,14 @@ fn returns_unit_explicitly() {
         let result = test_fn();
         print_value(result);
     "#;
-    execute_program_and_assert(program, "()");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("()");
 }
 
 #[test]
 fn returns_unit_implicitly() {
+    // Arrange
     let program = r#"
         fn test_fn() {
             let x = 42;
@@ -162,25 +196,37 @@ fn returns_unit_implicitly() {
         let result = test_fn();
         print_value(result);
     "#;
-    execute_program_and_assert(program, "()");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("()");
 }
 
 #[test]
 fn print_function() {
+    // Arrange
     let program = r#"
         fn test_fn() {
         }
         
         print_value(test_fn);
     "#;
-    execute_program_and_assert(program, "<fn test_fn>");
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("<fn test_fn>");
 }
 
 #[test]
 fn print_native_function() {
+    // Arrange
     let program = r#"
         
         print_value(print_value);
     "#;
-    execute_program_and_assert(program, "<native fn print_value>");
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .succeeds()
+        .stdout("<native fn print_value>");
 }

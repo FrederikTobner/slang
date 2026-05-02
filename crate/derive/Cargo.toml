@@ -2,11 +2,15 @@
 name = "slang_derive"
 version = "0.1.0"
 edition = "2024"
+license = "GPL-3.0"
+description = "Procedural macros for the Slang compiler"
+authors = ["Frederik Tobner <f.tobner@gmail.com>"]
 
 [lib]
 proc-macro = true
 
 [dependencies]
-syn = "2.0"
-quote = "1.0"
 proc-macro2 = "1.0"
+syn = { workspace = true }
+quote = { workspace = true }
+

@@ -1,28 +1,35 @@
-use crate::test_utils::execute_program_and_assert;
+use crate::test_utils::ProgramAssertion;
 
 #[test]
 fn complex_expression() {
+    // Arrange
     let program = r#"
         let a: bool = true;
         let b: bool = false;
         let c: bool = true;
         print_value(a && b || c); 
     "#;
-    execute_program_and_assert(program, "true");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("true");
 }
 
 #[test]
 fn with_not() {
+    // Arrange
     let program = r#"
         let a: bool = true;
         let b: bool = true;
         print_value(!(a && b)); 
     "#;
-    execute_program_and_assert(program, "false");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("false");
 }
 
 #[test]
 fn precedence() {
+    // Arrange
     let program = r#"
         let a: bool = true;
         let b: bool = false;
@@ -30,5 +37,7 @@ fn precedence() {
         let result = a && b || c;
         print_value(result);
     "#;
-    execute_program_and_assert(program, "true");
+
+    // Act & Assert
+    ProgramAssertion::new(program).succeeds().stdout("true");
 }

@@ -27,4 +27,3 @@ fn compile_and_run() {
         .success()
         .stdout(predicate::str::contains("42"));
 }
-
