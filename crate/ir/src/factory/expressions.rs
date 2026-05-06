@@ -82,20 +82,21 @@ impl ExprFactory {
     /// // Creating a function call: print(42)
     /// let arg = ExprFactory::literal_expr_with_location(42, location);
     /// let args = vec![Expression::Literal(arg)];
-    /// let call = ExprFactory::call_expr_with_location("print", args, location);
+    /// let callee = ExprFactory::variable_expr_with_location("print", location);
+    /// let call = ExprFactory::call_expr_with_location(Expression::Variable(callee), args, location);
     /// // Result is FunctionCallExpr that can be wrapped in Expression::Call if needed
     /// ```
     ///
     /// Returns the specific `FunctionCallExpr` type instead of the generic `Expression` enum.
     /// Use this when you need the specific type for further manipulation.
     #[inline(always)]
-    pub fn call_expr_with_location<S: Into<String>>(
-        name: S,
+    pub fn call_expr_with_location(
+        callee: Expression,
         arguments: Vec<Expression>,
         location: Location,
     ) -> FunctionCallExpr {
         FunctionCallExpr {
-            name: name.into(),
+            callee: Box::new(callee),
             arguments,
             expr_type: TypeId::unknown(), // Will be resolved by semantic analysis
             location,

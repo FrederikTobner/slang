@@ -3,13 +3,13 @@ use crate::test_utils::ProgramAssertion;
 use rstest::rstest;
 
 #[rstest]
-#[case("i32", "42")]
-#[case("u32", "42")]
-#[case("i64", "42")]
-#[case("u64", "42")]
-fn with_integer_variable(#[case] type_name: &str, #[case] value: &str) {
+#[case("i32")]
+#[case("u32")]
+#[case("i64")]
+#[case("u64")]
+fn with_integer_variable(#[case] type_name: &str) {
     // Arrange
-    let program = format!("let a: {type_name} = {value}; a();");
+    let program = format!("let a: {type_name} = 42; a();");
 
     // Act & Assert
     ProgramAssertion::new(&program)
@@ -19,11 +19,11 @@ fn with_integer_variable(#[case] type_name: &str, #[case] value: &str) {
 }
 
 #[rstest]
-#[case("f32", "42.0")]
-#[case("f64", "42.0")]
-fn with_float_variable(#[case] type_name: &str, #[case] value: &str) {
+#[case("f32")]
+#[case("f64")]
+fn with_float_variable(#[case] type_name: &str) {
     // Arrange
-    let program = format!("let a: {type_name} = {value}; a();");
+    let program = format!("let a: {type_name} = 42.0; a();");
 
     // Act & Assert
     ProgramAssertion::new(&program)
@@ -74,4 +74,40 @@ fn with_unit_variable() {
         .fails()
         .error_code(ErrorCode::VariableNotCallable)
         .stderr("Cannot call () type 'a' as a function");
+}
+
+#[test]
+fn argument_count_mismatch() {
+    // Arrange
+    let program = r#"
+        fn add(a: i32, b: i32) -> i32 {
+            return a + b;
+        }
+
+        add(1);
+    "#;
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::ArgumentCountMismatch)
+        .stderr("Function 'add' expects 2 arguments, but got 1");
+}
+
+#[test]
+fn argument_type_mismatch() {
+    // Arrange
+    let program = r#"
+        fn add(a: i32, b: i32) -> i32 {
+            return a + b;
+        }
+
+        add("hello", 5);
+    "#;
+
+    // Act & Assert
+    ProgramAssertion::new(program)
+        .fails()
+        .error_code(ErrorCode::ArgumentTypeMismatch)
+        .stderr("Type mismatch: function 'add' expects argument 1 to be i32, but got string");
 }

@@ -261,12 +261,25 @@ impl Visitor<()> for PrettyAstPrinter {
     }
 
     fn visit_call_expression(&mut self, expr: &FunctionCallExpr) -> DomainResult<()> {
+        let callee_display: String = match expr.callee.as_ref() {
+            Expression::Variable(v) => v.name.green().to_string(),
+            _ => "<expr>".green().to_string(),
+        };
         self.writeln_indented(&format!(
             "{}(function: {}, args: {})",
             "Call".cyan().bold(),
-            expr.name.green(),
+            callee_display,
             expr.arguments.len()
         ))?;
+
+        // For non-variable callees, show the callee sub-expression
+        if !matches!(expr.callee.as_ref(), Expression::Variable(_)) {
+            self.indent_level += 1;
+            self.writeln_indented("Callee:")?;
+            self.indent_level += 1;
+            expr.callee.accept(self)?;
+            self.indent_level -= 2;
+        }
 
         if !expr.arguments.is_empty() {
             self.indent_level += 1;

@@ -292,10 +292,9 @@ impl<'a> Parser<'a> {
 
     pub(super) fn finish_call(
         &mut self,
-        name: String,
-        name_location: slang_error::location::Location,
+        callee: slang_ir::ast::Expression,
     ) -> Result<Expression, ParseError> {
-        ExpressionParsing::finish_call(self, name, name_location)
+        ExpressionParsing::finish_call(self, callee)
     }
 
     pub(super) fn conditional_expression(&mut self) -> Result<Expression, ParseError> {
