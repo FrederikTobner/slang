@@ -241,7 +241,7 @@ impl<'a> ExpressionParsing for Parser<'a> {
     }
 
     fn finish_call(&mut self, callee: Expression) -> Result<Expression, ParseError> {
-        let location = callee.location();
+        let callee_location = callee.location();
         let mut arguments = Vec::new();
 
         if !self.check(&Tokentype::RightParen) {
@@ -265,6 +265,12 @@ impl<'a> ExpressionParsing for Parser<'a> {
                 Some("after function arguments"),
             ));
         }
+
+        // Span call location from callee start to closing ')' so diagnostics
+        // can highlight the full call site, including chained calls.
+        let right_paren = self.previous();
+        let end_pos = right_paren.pos + right_paren.lexeme.len();
+        let location = self.location_from_range(callee_location.position, end_pos);
 
         Ok(Expression::Call(
             slang_ir::ExprFactory::call_expr_with_location(callee, arguments, location),

@@ -62,4 +62,3 @@ pub fn tokenize_file(
 
     Ok(())
 }
-

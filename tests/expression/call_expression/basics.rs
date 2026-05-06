@@ -4,7 +4,7 @@
 /// refactor that moves call-expression parsing into a new `postfix` rule.
 /// Any breakage here signals a regression in the refactor.
 use crate::ErrorCode;
-use crate::test_utils::ProgramAssertion;
+use crate::assertions::ProgramAssertion;
 
 #[test]
 fn simple_named_function_call() {
@@ -162,7 +162,6 @@ fn call_result_in_comparison() {
     ProgramAssertion::new(program).succeeds().stdout("true");
 }
 
-
 #[test]
 fn undefined_function_error() {
     let program = r#"
@@ -174,4 +173,3 @@ fn undefined_function_error() {
         .error_code(ErrorCode::UndefinedFunction)
         .stderr("Undefined function: does_not_exist");
 }
-

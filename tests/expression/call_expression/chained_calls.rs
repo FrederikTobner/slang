@@ -4,7 +4,7 @@
 /// rule.  They will fail until the refactor described in
 /// `docs/call-expression-chaining.md` is implemented.
 use crate::ErrorCode;
-use crate::test_utils::ProgramAssertion;
+use crate::assertions::ProgramAssertion;
 
 #[test]
 fn call_result_called_immediately_no_args() {
@@ -122,9 +122,6 @@ fn chained_call_passed_as_argument() {
 
 #[test]
 fn outer_call_receives_argument_and_returns_function() {
-    // make_pipeline(0)(20, 22) — the outer call receives an argument too.
-    // Demonstrates that `expr(args)(more_args)` works when the first call
-    // also has arguments.
     let program = r#"
         fn add(a: i32, b: i32) -> i32 {
             return a + b;
@@ -157,7 +154,14 @@ fn chained_call_wrong_argument_count() {
 
     ProgramAssertion::new(program)
         .fails()
-        .stderr("Function \'<expression>\' expects 1 arguments, but got 2")
+        .stderr("Called expression expects 1 arguments, but got 2")
+        .diagnostic_snippet(
+            10,
+            r#"
+            |        get_identity()(1, 2);
+            |        ^^^^^^^^^^^^^^^^^^^^
+            "#,
+        )
         .error_code(ErrorCode::ArgumentCountMismatch);
 }
 
@@ -178,7 +182,14 @@ fn chained_call_wrong_argument_type() {
 
     ProgramAssertion::new(program)
         .fails()
-        .stderr("function \'<expression>\' expects argument 1 to be i32, but got string")
+        .stderr("Type mismatch: Called expression expects argument 1 to be i32, but got string")
+        .diagnostic_snippet(
+            10,
+            r#"
+            |        get_identity()("not an int");
+            |                       ^^^^^^^^^^^^
+            "#,
+        )
         .error_code(ErrorCode::ArgumentTypeMismatch);
 }
 
@@ -197,5 +208,12 @@ fn calling_non_callable_expression_result_errors() {
     ProgramAssertion::new(program)
         .fails()
         .stderr("Expression result is not callable")
+        .diagnostic_snippet(
+            6,
+            r#"
+            |        get_number()();
+            |        ^^^^^^^^^^^^^^
+            "#,
+        )
         .error_code(ErrorCode::InvalidExpression);
 }

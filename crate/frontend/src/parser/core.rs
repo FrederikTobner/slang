@@ -371,7 +371,7 @@ impl<'a> Parser<'a> {
                 &token.lexeme,
                 TokenPosition {
                     pos: token.pos,
-                    len: token.lexeme.len(),
+                    len: token.lexeme.len() + 2, // +2 for the opening and closing quote characters
                 },
             ))
         } else {
