@@ -1,5 +1,5 @@
 use crate::ErrorCode;
-use crate::test_utils::ProgramAssertion;
+use crate::assertions::ProgramAssertion;
 use rstest::rstest;
 
 #[rstest]
@@ -157,8 +157,12 @@ fn with_incompatible_types() {
             // Act & Assert
             ProgramAssertion::new(&program)
                 .fails()
+                .stderr(&expected_error)
                 .error_code(ErrorCode::OperationTypeMismatch)
-                .stderr(&expected_error);
+                .diagnostic_snippet(4, r#"
+                |                print_value(a / b);
+                |                            ^^^^^
+                "#);
         }
     }
 }

@@ -1,5 +1,5 @@
 use crate::ErrorCode;
-use crate::test_utils::ProgramAssertion;
+use crate::assertions::ProgramAssertion;
 
 #[test]
 fn test_variable_scoping_in_blocks() {

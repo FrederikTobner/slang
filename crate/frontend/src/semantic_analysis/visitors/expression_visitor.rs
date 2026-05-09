@@ -147,48 +147,70 @@ impl<'a> ExpressionVisitor<'a> {
 
     /// Visit a function call expression
     pub fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> SemanticResult {
-        let function_type = if let Some(symbol) = self.context.lookup_symbol(&call_expr.name) {
-            match symbol.kind() {
-                SymbolKind::Function => {
-                    if self.context.is_function_type(&symbol.type_id) {
-                        self.context.get_function_type(&symbol.type_id).cloned()
-                    } else {
-                        return Err(SemanticAnalysisError::UndefinedFunction {
-                            name: call_expr.name.clone(),
-                            location: call_expr.location,
-                        });
+        // Resolve the callee's function type.
+        // For a bare Variable callee we use the existing symbol-lookup path so that
+        // precise error variants (UndefinedFunction, VariableNotCallable) and their
+        // messages are preserved unchanged.
+        // For any other expression (e.g., another call) we visit it and require the
+        // result to be a function type.
+        let (function_type, callee_name) = match call_expr.callee.as_ref() {
+            Expression::Variable(var) => {
+                let fn_type = if let Some(symbol) = self.context.lookup_symbol(&var.name) {
+                    match symbol.kind() {
+                        SymbolKind::Function => {
+                            if self.context.is_function_type(&symbol.type_id) {
+                                self.context.get_function_type(&symbol.type_id).cloned()
+                            } else {
+                                return Err(SemanticAnalysisError::UndefinedFunction {
+                                    name: var.name.clone(),
+                                    location: call_expr.location,
+                                });
+                            }
+                        }
+                        SymbolKind::Variable => {
+                            if self.context.is_function_type(&symbol.type_id) {
+                                self.context.get_function_type(&symbol.type_id).cloned()
+                            } else {
+                                return Err(SemanticAnalysisError::VariableNotCallable {
+                                    variable_name: var.name.clone(),
+                                    variable_type: symbol.type_id,
+                                    location: call_expr.location,
+                                });
+                            }
+                        }
+                        _ => {
+                            return Err(SemanticAnalysisError::UndefinedFunction {
+                                name: var.name.clone(),
+                                location: call_expr.location,
+                            });
+                        }
                     }
-                }
-                SymbolKind::Variable => {
-                    if self.context.is_function_type(&symbol.type_id) {
-                        self.context.get_function_type(&symbol.type_id).cloned()
-                    } else {
-                        return Err(SemanticAnalysisError::VariableNotCallable {
-                            variable_name: call_expr.name.clone(),
-                            variable_type: symbol.type_id,
-                            location: call_expr.location,
-                        });
-                    }
-                }
-                _ => {
+                } else {
                     return Err(SemanticAnalysisError::UndefinedFunction {
-                        name: call_expr.name.clone(),
+                        name: var.name.clone(),
+                        location: call_expr.location,
+                    });
+                };
+                (fn_type, var.name.clone())
+            }
+            callee_expr => {
+                let callee_type = self.visit_expression(callee_expr)?;
+                if !self.context.is_function_type(&callee_type) {
+                    return Err(SemanticAnalysisError::InvalidExpression {
+                        message: "Expression result is not callable".to_string(),
                         location: call_expr.location,
                     });
                 }
+                let fn_type = self.context.get_function_type(&callee_type).cloned();
+                (fn_type, "<expression>".to_string())
             }
-        } else {
-            return Err(SemanticAnalysisError::UndefinedFunction {
-                name: call_expr.name.clone(),
-                location: call_expr.location,
-            });
         };
 
         if let Some(func_type) = function_type {
             // Check argument count
             if func_type.param_types.len() != call_expr.arguments.len() {
                 return Err(SemanticAnalysisError::ArgumentCountMismatch {
-                    function_name: call_expr.name.clone(),
+                    function_name: callee_name,
                     expected: func_type.param_types.len(),
                     actual: call_expr.arguments.len(),
                     location: call_expr.location,
@@ -216,7 +238,7 @@ impl<'a> ExpressionVisitor<'a> {
                             .is_err()
                         {
                             return Err(SemanticAnalysisError::ArgumentTypeMismatch {
-                                function_name: call_expr.name.clone(),
+                                function_name: callee_name.clone(),
                                 argument_position: i + 1,
                                 expected: param_type,
                                 actual: arg_type,
@@ -226,7 +248,7 @@ impl<'a> ExpressionVisitor<'a> {
                     } else {
                         // For non-literal types, it's a direct type mismatch
                         return Err(SemanticAnalysisError::ArgumentTypeMismatch {
-                            function_name: call_expr.name.clone(),
+                            function_name: callee_name.clone(),
                             argument_position: i + 1,
                             expected: param_type,
                             actual: arg_type,
@@ -239,7 +261,7 @@ impl<'a> ExpressionVisitor<'a> {
             Ok(func_type.return_type)
         } else {
             Err(SemanticAnalysisError::UndefinedFunction {
-                name: call_expr.name.clone(),
+                name: callee_name,
                 location: call_expr.location,
             })
         }
