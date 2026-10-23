@@ -59,12 +59,12 @@ pub fn check_unspecified_int_for_type(
     expr: &Expression,
     target_type: &TypeId,
 ) -> SemanticResult {
-    if let Expression::Unary(unary_expr) = expr {
-        if unary_expr.operator == UnaryOperator::Negate {
-            if let Expression::Literal(lit) = &*unary_expr.right {
-                if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                    if context.get_type_name(target_type) == "u32"
-                        || context.get_type_name(target_type) == "u64"
+    if let Expression::Unary(unary_expr) = expr
+        && unary_expr.operator == UnaryOperator::Negate
+            && let Expression::Literal(lit) = &*unary_expr.right
+                && let LiteralValue::UnspecifiedInteger(n) = &lit.value
+                    && (context.get_type_name(target_type) == "u32"
+                        || context.get_type_name(target_type) == "u64")
                     {
                         return Err(SemanticAnalysisError::ValueOutOfRange {
                             value: format!("-{n}"),
@@ -73,13 +73,9 @@ pub fn check_unspecified_int_for_type(
                             location: expr.location(),
                         });
                     }
-                }
-            }
-        }
-    }
 
-    if let Expression::Literal(lit) = expr {
-        if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
+    if let Expression::Literal(lit) = expr
+        && let LiteralValue::UnspecifiedInteger(n) = &lit.value {
             let value_in_range = context.check_value_in_range(n, target_type);
 
             if value_in_range {
@@ -93,7 +89,6 @@ pub fn check_unspecified_int_for_type(
                 });
             }
         }
-    }
     Ok(*target_type)
 }
 
@@ -114,8 +109,8 @@ pub fn check_unspecified_float_for_type(
     expr: &Expression,
     target_type: &TypeId,
 ) -> SemanticResult {
-    if let Expression::Literal(lit) = expr {
-        if let LiteralValue::UnspecifiedFloat(f) = &lit.value {
+    if let Expression::Literal(lit) = expr
+        && let LiteralValue::UnspecifiedFloat(f) = &lit.value {
             let value_in_range = context.check_float_value_in_range(f, target_type);
 
             if value_in_range {
@@ -129,7 +124,6 @@ pub fn check_unspecified_float_for_type(
                 });
             }
         }
-    }
     Ok(*target_type)
 }
 

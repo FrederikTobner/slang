@@ -305,12 +305,11 @@ fn handle_number(state: &mut Lexer, start_pos: usize) {
         } else if c == 'e' || c == 'E' {
             number.push(c);
             state.advance();
-            if let Some(&next_c) = state.peek() {
-                if next_c == '+' || next_c == '-' {
+            if let Some(&next_c) = state.peek()
+                && (next_c == '+' || next_c == '-') {
                     number.push(next_c);
                     state.advance();
                 }
-            }
         } else {
             break;
         }
@@ -318,8 +317,8 @@ fn handle_number(state: &mut Lexer, start_pos: usize) {
 
     // Check for type suffix (i32, i64, u32, u64, f32, f64)
     let mut suffix = None;
-    if let Some(&c) = state.peek() {
-        if c.is_ascii_alphabetic() {
+    if let Some(&c) = state.peek()
+        && c.is_ascii_alphabetic() {
             let mut potential_suffix = String::new();
 
             // Collect potential suffix characters
@@ -351,7 +350,6 @@ fn handle_number(state: &mut Lexer, start_pos: usize) {
                 }
             }
         }
-    }
 
     let token_type = if is_float {
         Tokentype::FloatLiteral
@@ -475,11 +473,10 @@ fn handle_block_comment(state: &mut Lexer) {
             break;
         }
 
-        if let Some(&c) = state.peek() {
-            if c == '\n' {
+        if let Some(&c) = state.peek()
+            && c == '\n' {
                 state.record_line_break();
             }
-        }
 
         if state.peek() == Some(&'*') {
             state.advance();

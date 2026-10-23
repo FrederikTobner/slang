@@ -186,8 +186,8 @@ impl SymbolTable {
         type_id: TypeId,
     ) -> Result<(), String> {
         // Check if symbol already exists in current scope
-        if let Some(current_scope) = self.scopes.last() {
-            if let Some(existing_symbol) = current_scope.symbols.get(&name) {
+        if let Some(current_scope) = self.scopes.last()
+            && let Some(existing_symbol) = current_scope.symbols.get(&name) {
                 let error_message = match (&existing_symbol.data, &data) {
                     (SymbolData::Type, _) => {
                         format!("Type '{name}' is already defined in the current scope.")
@@ -201,7 +201,6 @@ impl SymbolTable {
                 };
                 return Err(error_message);
             }
-        }
 
         // Add symbol to current scope
         if let Some(current_scope) = self.scopes.last_mut() {
