@@ -109,7 +109,6 @@ fn integer_division_uses_remainder(#[case] type_name: &str) {
 #[test]
 fn with_incompatible_types() {
     // Arrange
-    // Define all the types we want to test
     let all_types = ["i32", "i64", "u32", "u64", "f32", "f64", "bool", "string"];
     // Valid combinations (types that can be added together)
     let valid_combinations = [

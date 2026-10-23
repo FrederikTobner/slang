@@ -1,14 +1,8 @@
-/// Tests for chained call expressions: `expr(args)(more_args)`.
-///
-/// These tests define the expected behaviour of the new `postfix` parsing
-/// rule.  They will fail until the refactor described in
-/// `docs/call-expression-chaining.md` is implemented.
 use crate::ErrorCode;
 use crate::assertions::ProgramAssertion;
 
 #[test]
 fn call_result_called_immediately_no_args() {
-    // get_getter()() — both the outer and inner calls take no arguments.
     let program = r#"
         fn get_value() -> i32 {
             return 42;
@@ -26,8 +20,6 @@ fn call_result_called_immediately_no_args() {
 
 #[test]
 fn call_result_called_with_argument() {
-    // get_adder()(32) — the outer call returns a function, which is then
-    // applied to an argument.
     let program = r#"
         fn add_ten(x: i32) -> i32 {
             return x + 10;
@@ -63,7 +55,6 @@ fn chained_call_result_assigned_to_variable() {
 
 #[test]
 fn chained_call_in_arithmetic_expression() {
-    // Two independent chained calls combined with +.
     let program = r#"
         fn identity(x: i32) -> i32 {
             return x;
@@ -167,7 +158,6 @@ fn chained_call_wrong_argument_count() {
 
 #[test]
 fn chained_call_wrong_argument_type() {
-    // The inner call receives an argument of the wrong type.
     let program = r#"
         fn identity(x: i32) -> i32 {
             return x;
@@ -195,8 +185,6 @@ fn chained_call_wrong_argument_type() {
 
 #[test]
 fn calling_non_callable_expression_result_errors() {
-    // get_number() returns i32, so get_number()() must fail at the second
-    // call site.  A new or existing "not callable" error code should fire.
     let program = r#"
         fn get_number() -> i32 {
             return 42;

@@ -8,7 +8,6 @@ use crate::assertions::ProgramAssertion;
 
 #[test]
 fn simple_named_function_call() {
-    // The most basic form: a bare identifier followed by argument list.
     let program = r#"
         fn get_value() -> i32 {
             return 42;
@@ -22,8 +21,6 @@ fn simple_named_function_call() {
 
 #[test]
 fn calling_variable_with_function_type() {
-    // A variable that holds a function value must still be callable.
-    // This exercises the SymbolKind::Variable path in semantic analysis.
     let program = r#"
         fn add(a: i32, b: i32) -> i32 {
             return a + b;
@@ -38,7 +35,6 @@ fn calling_variable_with_function_type() {
 
 #[test]
 fn call_result_used_in_arithmetic() {
-    // Call expressions must remain valid operands at every precedence level.
     let program = r#"
         fn twenty() -> i32 {
             return 20;
@@ -56,8 +52,6 @@ fn call_result_used_in_arithmetic() {
 
 #[test]
 fn call_result_with_unary_negation() {
-    // The new `postfix` rule sits between `unary` and `primary`.
-    // Unary operators must bind correctly around it.
     let program = r#"
         fn get_value() -> i32 {
             return 42;
@@ -115,7 +109,6 @@ fn call_result_assigned_to_variable() {
 
 #[test]
 fn call_as_argument_to_another_call() {
-    // Passing a call result as an argument (nested, not chained).
     let program = r#"
         fn double(x: i32) -> i32 {
             return x * 2;
@@ -133,7 +126,6 @@ fn call_as_argument_to_another_call() {
 
 #[test]
 fn call_result_in_multiplication() {
-    // Ensures calls work at every binary operator level.
     let program = r#"
         fn six() -> i32 {
             return 6;

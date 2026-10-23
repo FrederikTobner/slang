@@ -3,7 +3,10 @@ use predicates::prelude::*;
 
 #[test]
 fn command() {
+    // Arrange
     let mut cmd = Command::cargo_bin("slang").unwrap();
+
+    // Act & Assert
     cmd.arg("--version")
         .assert()
         .success()

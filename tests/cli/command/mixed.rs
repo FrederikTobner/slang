@@ -5,12 +5,14 @@ use tempfile::TempDir;
 
 #[test]
 fn compile_and_run() {
+    // Arrange
     let temp_dir = TempDir::new().unwrap();
     let source_file = temp_dir.path().join("test.sl");
     let bytecode_file = temp_dir.path().join("test.sip");
 
     fs::write(&source_file, "print_value(42);").unwrap();
 
+    // Act & Assert
     Command::cargo_bin("slang")
         .unwrap()
         .arg("compile")
@@ -20,8 +22,9 @@ fn compile_and_run() {
         .assert()
         .success();
 
-    let mut cmd = Command::cargo_bin("slang").unwrap();
-    cmd.arg("run")
+    Command::cargo_bin("slang")
+        .unwrap()
+        .arg("run")
         .arg(&bytecode_file)
         .assert()
         .success()
