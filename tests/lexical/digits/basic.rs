@@ -1,4 +1,4 @@
-use crate::test_utils::ProgramAssertion;
+use crate::assertions::ProgramAssertion;
 
 #[test]
 fn test_digit_recognition_0_to_9() {

@@ -4,12 +4,15 @@ use tempfile::TempDir;
 
 #[test]
 fn invalid_bytecode_file() {
+    // Arrange
     let temp_dir = TempDir::new().unwrap();
     let invalid_file = temp_dir.path().join("invalid.sip");
 
     fs::write(&invalid_file, "not a valid bytecode file").unwrap();
 
     let mut cmd = Command::cargo_bin("slang").unwrap();
+   
+    // Act & Assert
     cmd.arg("run")
         .arg(&invalid_file)
         .assert()
@@ -19,10 +22,13 @@ fn invalid_bytecode_file() {
 
 #[test]
 fn non_existent_file() {
+    // Arrange
     let temp_dir = TempDir::new().unwrap();
     let non_existent_file = temp_dir.path().join("non_existent.sip");
 
     let mut cmd = Command::cargo_bin("slang").unwrap();
+
+    // Act & Assert
     cmd.arg("run")
         .arg(&non_existent_file)
         .assert()
@@ -32,6 +38,7 @@ fn non_existent_file() {
 
 #[test]
 fn permission_denied_error() {
+    // Arrange
     let temp_dir = TempDir::new().unwrap();
     let protected_file = temp_dir.path().join("protected.sip");
 
@@ -42,6 +49,8 @@ fn permission_denied_error() {
     fs::set_permissions(&protected_file, perms).unwrap();
 
     let mut cmd = Command::cargo_bin("slang").unwrap();
+
+    // Act & Assert
     cmd.arg("run")
         .arg(&protected_file)
         .assert()

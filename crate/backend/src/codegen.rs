@@ -408,9 +408,10 @@ impl Visitor<()> for CodeGenerator {
             self.visit_expression(arg)?;
         }
 
-        let fn_name_idx = self.chunk.add_identifier(call_expr.name.clone());
-        self.emit_op(OpCode::GetVariable);
-        self.emit_byte(fn_name_idx as u8);
+        // Evaluate the callee expression onto the stack.
+        // For a bare Variable this emits GetVariable; for a chained call it
+        // recursively emits the inner call, leaving the result on the stack.
+        self.visit_expression(&call_expr.callee)?;
 
         self.emit_op(OpCode::Call);
         self.emit_byte(call_expr.arguments.len() as u8);

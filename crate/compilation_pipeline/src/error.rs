@@ -11,12 +11,6 @@ pub enum ErrorStrategy {
     },
 }
 
-impl Default for ErrorStrategy {
-    fn default() -> Self {
-        Self::FailFast
-    }
-}
-
 /// Error type for stage execution failures
 #[derive(Debug, Clone)]
 pub enum StageError {

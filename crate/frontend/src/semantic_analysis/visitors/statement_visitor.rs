@@ -159,12 +159,12 @@ impl<'a> StatementVisitor<'a> {
     /// Visit a let statement
     pub fn visit_let_statement(&mut self, let_stmt: &LetStatement) -> SemanticResult {
         // Check for negative values assigned to unsigned types
-        if let Expression::Unary(unary_expr) = &let_stmt.value {
-            if unary_expr.operator == UnaryOperator::Negate {
-                if let Expression::Literal(lit) = &*unary_expr.right {
-                    if let LiteralValue::UnspecifiedInteger(n) = &lit.value {
-                        if self.context.get_type_name(&let_stmt.expr_type) == TYPE_NAME_U32
-                            || self.context.get_type_name(&let_stmt.expr_type) == TYPE_NAME_U64
+        if let Expression::Unary(unary_expr) = &let_stmt.value
+            && unary_expr.operator == UnaryOperator::Negate
+                && let Expression::Literal(lit) = &*unary_expr.right
+                    && let LiteralValue::UnspecifiedInteger(n) = &lit.value
+                        && (self.context.get_type_name(&let_stmt.expr_type) == TYPE_NAME_U32
+                            || self.context.get_type_name(&let_stmt.expr_type) == TYPE_NAME_U64)
                         {
                             let negative_value = -n;
                             return Err(SemanticAnalysisError::ValueOutOfRange {
@@ -174,10 +174,6 @@ impl<'a> StatementVisitor<'a> {
                                 location: let_stmt.location,
                             });
                         }
-                    }
-                }
-            }
-        }
 
         // Check for symbol conflicts
         if let Some(symbol) = self.context.lookup_symbol(&let_stmt.name) {

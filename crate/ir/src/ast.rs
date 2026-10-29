@@ -141,8 +141,8 @@ pub enum Statement {
 /// A function call expression
 #[derive(Debug)]
 pub struct FunctionCallExpr {
-    /// Name of the function being called
-    pub name: String,
+    /// The callee expression (e.g., a variable reference or another call)
+    pub callee: Box<Expression>,
     /// Arguments passed to the function
     pub arguments: Vec<Expression>,
     /// Type of the function call expression

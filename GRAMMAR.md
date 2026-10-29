@@ -57,17 +57,18 @@ term = factor, { ( "+" | "-" ), factor } ;
 
 factor = unary, { ( "*" | "/" ), unary } ;
 
-unary = [ "-" | "!" ], primary ;
+unary = [ "-" | "!" ], postfix ;
+
+postfix = primary, { "(", [ argument_list ], ")" } ;
 
 primary = literal
         | identifier
-        | call_expression
         | if_expression
         | block_expression
         | function_type_expression
         | "(", expression, ")" ;
 
-call_expression = identifier, "(", [ argument_list ], ")" ;
+argument_list = expression, { ",", expression } ;
 
 function_type_expression = "fn", "(", [ function_parameter_type_list ], ")", "->", type ;
 
@@ -76,8 +77,6 @@ function_parameter_type_list = type, { ",", type } ;
 if_expression = "if", expression, "{", expression, "}", "else", "{", expression, "}" ;
 
 block_expression = "{", { statement }, [ expression ], "}" ;
-
-argument_list = expression, { ",", expression } ;
 
 /* Literals */
 literal = integer_literal

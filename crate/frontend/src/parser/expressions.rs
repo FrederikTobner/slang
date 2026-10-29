@@ -45,15 +45,14 @@ pub trait ExpressionParsing {
     /// Parse unary expressions (-, !)
     fn unary(&mut self) -> Result<Expression, ParseError>;
 
+    /// Parse postfix expressions — zero or more call argument lists applied to a primary
+    fn postfix(&mut self) -> Result<Expression, ParseError>;
+
     /// Parse primary expressions (literals, variables, grouped)
     fn primary(&mut self) -> Result<Expression, ParseError>;
 
-    /// Finish parsing a function call after name and '('
-    fn finish_call(
-        &mut self,
-        name: String,
-        name_location: slang_error::location::Location,
-    ) -> Result<Expression, ParseError>;
+    /// Finish parsing a function call given an already-parsed callee expression and a consumed '('
+    fn finish_call(&mut self, callee: Expression) -> Result<Expression, ParseError>;
 
     /// Parse conditional expressions (if/else)
     fn conditional_expression(&mut self) -> Result<Expression, ParseError>;
@@ -135,16 +134,26 @@ impl<'a> ExpressionParsing for Parser<'a> {
 
     fn unary(&mut self) -> Result<Expression, ParseError> {
         if self.match_token(&Tokentype::Minus) {
-            let right = self.primary()?;
+            let right = self.postfix()?;
             return Ok(ExprFactory::unary(UnaryOperator::Negate, right));
         }
 
         if self.match_token(&Tokentype::Not) {
-            let right = self.primary()?;
+            let right = self.postfix()?;
             return Ok(ExprFactory::unary(UnaryOperator::Not, right));
         }
 
-        self.primary()
+        self.postfix()
+    }
+
+    fn postfix(&mut self) -> Result<Expression, ParseError> {
+        let mut expr = self.primary()?;
+
+        while self.match_token(&Tokentype::LeftParen) {
+            expr = self.finish_call(expr)?;
+        }
+
+        Ok(expr)
     }
 
     fn primary(&mut self) -> Result<Expression, ParseError> {
@@ -218,10 +227,6 @@ impl<'a> ExpressionParsing for Parser<'a> {
             let end_pos = position.end_pos();
             let name_location = self.location_from_range(start_pos, end_pos);
 
-            if self.match_token(&Tokentype::LeftParen) {
-                return self.finish_call(name_string, name_location);
-            }
-
             return Ok(Expression::Variable(
                 ExprFactory::variable_expr_with_location(name_string, name_location),
             ));
@@ -235,11 +240,8 @@ impl<'a> ExpressionParsing for Parser<'a> {
         ))
     }
 
-    fn finish_call(
-        &mut self,
-        name: String,
-        name_location: slang_error::location::Location,
-    ) -> Result<Expression, ParseError> {
+    fn finish_call(&mut self, callee: Expression) -> Result<Expression, ParseError> {
+        let callee_location = callee.location();
         let mut arguments = Vec::new();
 
         if !self.check(&Tokentype::RightParen) {
@@ -264,8 +266,14 @@ impl<'a> ExpressionParsing for Parser<'a> {
             ));
         }
 
+        // Span call location from callee start to closing ')' so diagnostics
+        // can highlight the full call site, including chained calls.
+        let right_paren = self.previous();
+        let end_pos = right_paren.pos + right_paren.lexeme.len();
+        let location = self.location_from_range(callee_location.position, end_pos);
+
         Ok(Expression::Call(
-            slang_ir::ExprFactory::call_expr_with_location(name, arguments, name_location),
+            slang_ir::ExprFactory::call_expr_with_location(callee, arguments, location),
         ))
     }
 

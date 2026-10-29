@@ -133,7 +133,15 @@ impl Visitor<()> for ASTPrinter {
     }
 
     fn visit_call_expression(&mut self, call_expr: &FunctionCallExpr) -> DomainResult<()> {
-        println!("{}Call: {}", self.indent(), call_expr.name);
+        match call_expr.callee.as_ref() {
+            Expression::Variable(v) => println!("{}Call: {}", self.indent(), v.name),
+            _ => {
+                println!("{}Call:", self.indent());
+                self.indent_level += 1;
+                self.visit_expression(&call_expr.callee)?;
+                self.indent_level -= 1;
+            }
+        }
 
         if !call_expr.arguments.is_empty() {
             self.indent_level += 1;

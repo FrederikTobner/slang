@@ -99,7 +99,7 @@ fn simple_expression_to_json(expr: &Expression) -> Value {
         }),
         Expression::Call(call) => json!({
             "type": "Call",
-            "function": call.name,
+            "function": simple_expression_to_json(&call.callee),
             "arguments": call.arguments.len()
         }),
         Expression::Conditional(_cond) => json!({

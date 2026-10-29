@@ -10,4 +10,3 @@ pub mod vm;
 pub use artifact_file::{SlangArtifactFile, SlangArtifactFileError};
 pub use codegen::CodeGenerator;
 pub use vm::VM;
-

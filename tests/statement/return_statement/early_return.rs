@@ -1,4 +1,4 @@
-use crate::test_utils::ProgramAssertion;
+use crate::assertions::ProgramAssertion;
 
 #[test]
 fn early_return_in_if_statement() {

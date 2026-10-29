@@ -47,21 +47,19 @@ pub fn check_negation_operation(
     operand_type: &TypeId,
 ) -> SemanticResult {
     // Handle unspecified integer literals
-    if *operand_type == TypeId::unspecified_int() {
-        if let Expression::Literal(lit) = &*unary_expr.right {
+    if *operand_type == TypeId::unspecified_int()
+        && let Expression::Literal(lit) = &*unary_expr.right {
             if let LiteralValue::UnspecifiedInteger(_value) = &lit.value {
                 return Ok(TypeId::unspecified_int());
             }
             return Ok(TypeId::unspecified_float());
         }
-    }
 
     // Handle unspecified float literals
-    if *operand_type == TypeId::unspecified_float() {
-        if let Expression::Literal(_) = &*unary_expr.right {
+    if *operand_type == TypeId::unspecified_float()
+        && let Expression::Literal(_) = &*unary_expr.right {
             return Ok(TypeId::unspecified_float());
         }
-    }
 
     // Check if the type is numeric
     let is_numeric = type_system::is_integer_type(context, operand_type)

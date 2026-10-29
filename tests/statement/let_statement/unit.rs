@@ -1,4 +1,4 @@
-use crate::test_utils::ProgramAssertion;
+use crate::assertions::ProgramAssertion;
 use rstest::rstest;
 use slang_error::ErrorCode;
 
@@ -101,4 +101,3 @@ fn string_literal() {
         .error_code(ErrorCode::TypeMismatch)
         .stderr(" Type mismatch: variable x is () but expression is string");
 }
-

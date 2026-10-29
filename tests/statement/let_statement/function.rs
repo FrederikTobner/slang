@@ -1,5 +1,5 @@
 use crate::ErrorCode;
-use crate::test_utils::ProgramAssertion;
+use crate::assertions::ProgramAssertion;
 
 #[test]
 fn with_explicit_function_type_mismatch() {

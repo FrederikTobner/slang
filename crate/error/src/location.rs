@@ -101,4 +101,3 @@ impl Default for Location {
         }
     }
 }
-

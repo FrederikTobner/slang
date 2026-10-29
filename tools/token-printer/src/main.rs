@@ -24,4 +24,3 @@ fn run() -> Result<(), String> {
 
     cli::tokenize_file(&args.input, args.format).map_err(|e| e.to_string())
 }
-

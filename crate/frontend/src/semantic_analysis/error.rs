@@ -311,7 +311,13 @@ impl SemanticAnalysisError {
                 actual,
                 ..
             } => {
-                format!("Function '{function_name}' expects {expected} arguments, but got {actual}")
+                if function_name == "<expression>" {
+                    format!("Called expression expects {expected} arguments, but got {actual}")
+                } else {
+                    format!(
+                        "Function '{function_name}' expects {expected} arguments, but got {actual}"
+                    )
+                }
             }
 
             SemanticAnalysisError::ArgumentTypeMismatch {
@@ -321,13 +327,22 @@ impl SemanticAnalysisError {
                 actual,
                 ..
             } => {
-                format!(
-                    "Type mismatch: function '{}' expects argument {} to be {}, but got {}",
-                    function_name,
-                    argument_position,
-                    context.get_type_name(expected),
-                    context.get_type_name(actual)
-                )
+                if function_name == "<expression>" {
+                    format!(
+                        "Type mismatch: Called expression expects argument {} to be {}, but got {}",
+                        argument_position,
+                        context.get_type_name(expected),
+                        context.get_type_name(actual)
+                    )
+                } else {
+                    format!(
+                        "Type mismatch: function '{}' expects argument {} to be {}, but got {}",
+                        function_name,
+                        argument_position,
+                        context.get_type_name(expected),
+                        context.get_type_name(actual)
+                    )
+                }
             }
 
             SemanticAnalysisError::ReturnOutsideFunction { .. } => {
