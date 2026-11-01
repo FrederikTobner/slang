@@ -300,7 +300,12 @@ impl SlangArtifactFile {
                     context: format!("Failed to access entry at index {i}"),
                     path: self.path.clone(),
                 })?;
-            entries.push(file.name().to_string());
+            let name = file.name().map_err(|e| SlangArtifactFileError::Zip {
+                source: e,
+                context: format!("Invalid entry name at index {i}"),
+                path: self.path.clone(),
+            })?;
+            entries.push(name.to_string());
         }
 
         Ok(entries)
