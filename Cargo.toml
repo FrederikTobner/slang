@@ -35,19 +35,19 @@ slang_backend = { path = "crate/backend" }
 slang_shared = { path = "crate/shared" }
 slang_error = { path = "crate/error" }
 # Shared external dependencies
-colored = "3.0.0"
-clap = { version = "4.5.42", features = ["derive"] }
-serde_json = "1.0.142"
-syn = "2.0.104"
-quote = "1.0.40"
-thiserror = "2.0.11"
-zip = "4.3.0"
-tempfile = "3.8.1"
+colored = "3.1.1"
+clap = { version = "4.6.7", features = ["derive"] }
+serde_json = "1.0.154"
+syn = "3.0.9"
+quote = "1.0.47"
+thiserror = "2.0.21"
+zip = "9.2.1"
+tempfile = "3.27.0"
 # Dev dependencies  
-rstest = "0.26.1"
+rstest = "0.28.0"
 peak_alloc = "0.3.0"
-assert_cmd = "2.0.12"
-predicates = "3.0.4"
+assert_cmd = "2.2.2"
+predicates = "3.1.4"
 divan = "0.1.21"
 
 # Tool-specific commands via cargo aliases

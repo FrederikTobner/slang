@@ -4,6 +4,7 @@ use clap::Parser as ClapParser;
 use colored::Colorize;
 use slang_compilation_pipeline::ChainPipeline;
 use slang_compilation_pipeline::SlangSourceFile;
+use slang_compilation_pipeline::result::CompilationResult;
 use std::fs;
 
 /// Command line interface for the Slang AST analyzer
@@ -56,7 +57,7 @@ pub fn parse_and_print_ast(
     let pipeline = ChainPipeline::parsing_only().with_parsing_observer(ASTPrinter::new());
 
     match pipeline.execute(source_file) {
-        slang_compilation_pipeline::result::CompilationResult::Success {
+        CompilationResult::Success {
             output,
             diagnostics,
         } => {
@@ -81,7 +82,7 @@ pub fn parse_and_print_ast(
                 );
             }
         }
-        slang_compilation_pipeline::result::CompilationResult::Failed { diagnostics: _ } => {
+        CompilationResult::Failed { diagnostics: _ } => {
             return Err("Failed to parse source code. Check source file for syntax errors.".into());
         }
     }
@@ -101,15 +102,14 @@ fn validate_input_file(file_path: &str) -> Result<(), String> {
         return Err(format!("'{file_path}' is not a regular file"));
     }
 
-    if let Some(extension) = path.extension() {
-        if extension != "sl" {
+    if let Some(extension) = path.extension()
+        && extension != "sl" {
             eprintln!(
                 "{}: File '{}' does not have .sl extension",
                 "Warning".yellow().bold(),
                 file_path
             );
         }
-    }
 
     Ok(())
 }

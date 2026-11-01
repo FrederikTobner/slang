@@ -90,24 +90,3 @@ fn main() {
     assert_eq!(DataType::from_str("unknown"), None);
 }
 ```
-
-## Benefits
-
-- **Reduces Boilerplate**: Eliminates tedious match statements and manual string conversions
-- **Single Source of Truth**: Type names are defined once, directly on the variants
-- **Type Safety**: The macro ensures consistency between string representations and parsing logic
-- **Maintainability**: Adding new variants automatically updates all related code
-
-## Implementation Details
-
-The `TypeName` derive macro:
-
-- Works only on enums
-- Uses the `#[name = "..."]` attribute to define custom string representations
-- Falls back to lowercase variant name if no attribute is provided
-- Generates both forward (enum → string) and reverse (string → enum) conversions
-
-## Requirements
-
-- Rust 2024 edition or later
-- Dependencies: `syn`, `quote`, and `proc-macro2`
